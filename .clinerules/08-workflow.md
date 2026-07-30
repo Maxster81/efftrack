@@ -160,7 +160,6 @@ Questa regola è **procedurale** (dice come lavorare), complementare alle regole
 - `02-services-3.md` → architettura del servizio, binding, reverse proxy
 - `03-database-4.md` → SQLite, WAL, migrazioni, lookup
 - `04-frontend-5.md` → Jinja2, vanilla JS, tema, CSS condiviso
-- `09-web-design-10.md` → HTML semantico, accessibilità, colori, tipografia, coerenza grafica
 - `05-git-6.md` → branching, commit convention, versioning
 - `06-security-7.md` → autenticazione futura, secrets, validazione
 - `07-memory-bank-8.md` → documentazione persistente del progetto

@@ -12,15 +12,6 @@
 - **Scelta preferita:** FastAPI come framework principale, salvo controindicazioni motivate.
 - **Template engine:** Jinja2 server-side come default per la UI.
 - **Interattività:** vanilla JavaScript per comportamento form/tabella; evitare SPA nelle prime fasi.
-- **Struttura consigliata per servizio principale:**
-  - `main.py`
-  - `routes.py` o cartella `routers/`
-  - `config.py`
-  - `database.py`
-  - `schemas.py`
-  - `services.py`
-  - `templates/`
-  - `static/`
 - **Business logic:** separare logica di persistenza, logica di validazione e logica di rendering.
 
 ## Sovrascrivibilità

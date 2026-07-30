@@ -1,10 +1,10 @@
 # Core Rules — Lingua, Comunicazione e Meta-Regole
 
 ## Lingua e Internazionalizzazione
-- **UI e stringhe nelle pagine:** bilingue italiano + inglese. Implementare i18n per ogni nuovo servizio.
-- **Commenti nel codice:** bilingue IT+EN.
-- **Documentazione:** tutta in doppia lingua (IT + EN).
-- **Messaggi di commit:** solo in inglese.
+- **UI e stringhe nelle pagine:** italiano
+- **Commenti nel codice:** italiano
+- **Documentazione:** italiano
+- **Messaggi di commit:** italiano
 - **Risposte all'utente:** in italiano, salvo diversa indicazione.
 
 ## Meta-Regola: Regole Sovrascrivibili

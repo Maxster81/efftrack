@@ -9,7 +9,6 @@
   ```
 - L'autenticazione parte **disattiva** per default nelle prime fasi.
 - Login user/password e segregazione utenti arrivano **solo nelle fasi finali**.
-- MFA **non richiesta** nella prima implementazione.
 
 ## Secrets
 - Tutti i secrets (SECRET_KEY, password DB, API key) vanno letti da **environment variables**, non hardcodati.
