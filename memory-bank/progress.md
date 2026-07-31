@@ -1,10 +1,10 @@
 # Progress — Effort Tracking
 
 ## Stato globale
-- **Ultima fase completata**: Fase 4b ✅ completata il 2026-07-31.
-- **Fase in corso**: nessuna. In attesa di task per la Fase 5.
+- **Ultima fase completata**: Fase 5 ✅ completata il 2026-07-31.
+- **Fase in corso**: nessuna. In attesa di task per la Fase 5b.
 - **Stato**: idle, pronto per nuovo task.
-- **Versione corrente**: `0.5.0` (tag `v0.5.0` annotato su `develop`).
+- **Versione corrente**: `0.6.0` (tag `v0.6.0` annotato su `develop`).
 - **Roadmap estesa**: aggiunte Fase 4b (sidebar hamburger), Fase 5b (copia su settimana), Fase 12 (Admin), Fase 13 (Manager); l'hardening passa da 12 a 14.
 
 ## Roadmap
@@ -100,8 +100,18 @@
 - **Commit**: `feat(ui): phase 4b sidebar navigation with hamburger menu`.
 
 ### Fase 5 — Salvataggio record
-- **Stato**: non iniziata.
+- **Stato**: ✅ completata il 2026-07-31.
 - **Obiettivo**: POST di salvataggio con validazione server-side (Pydantic) e messaggi di esito; requisito Descrizione attività vincolato a `requires_description`.
+- **Cosa è stato fatto**:
+  - **`app/schemas/effort.py`** (nuovo): `EffortEntryCreate` Pydantic con validazione server-side (user non vuoto, date, FK > 0, hours 0.25-24 multipli di 0.25, notes/description normalizzati da vuoto a None).
+  - **`app/routers/web.py`**: nuova `POST /` (`save_entry`) che valida il form (Form), verifica `requires_description` dell'attività, crea e salva `EffortEntry` e fa redirect 303 a `/?success=1` (o `/?error=descrizione`). `GET /` gestisce `success`/`error` per i banner. Label fase "Fase 5 — Salvataggio record".
+  - **`app/models/effort_entry.py`**: aggiunta colonna `user_text` (String 128, nullable) per persistere il campo User del form pre-auth.
+  - **`app/templates/index.html`**: `action="/"` sul form (POST reale), banner successo (`.form-success`) e banner errore descrizione.
+  - **`app/static/style.css`**: aggiunta classe `.form-success` (banner verde).
+  - Verifiche curl: POST valido → 303 `/?success=1` + record salvato (user_text persistito); POST attività con descrizione obbligatoria senza descrizione → 303 `/?error=descrizione` senza salvare; banner renderizzati correttamente.
+- **Versioning**: bump `VERSION` `0.5.0` → `0.6.0` (MINOR).
+- **Branch**: commit su `develop`, tag annotato `v0.6.0`. Niente `main`.
+- **Commit**: `feat(db): phase 5 save effort entry with server validation`.
 
 ### Fase 5b — Inserimento bulk "copia su settimana"
 - **Stato**: non iniziata.

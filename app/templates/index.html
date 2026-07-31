@@ -15,7 +15,13 @@
 
     <div class="form-error" id="form-error" role="alert" hidden></div>
 
-    <form class="effort-form" method="post" action="#"
+    {% if error == "descrizione" %}
+      <div class="form-error" role="alert">La Descrizione attività è obbligatoria per l'attività selezionata.</div>
+    {% elif success_message %}
+      <div class="form-success" role="status">{{ success_message }}</div>
+    {% endif %}
+
+    <form class="effort-form" method="post" action="/"
           aria-label="Form di inserimento effort" novalidate>
       <div class="form-row">
         <div class="form-group">

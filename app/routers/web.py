@@ -8,16 +8,18 @@ successive a partire dalla Fase 2.
 from __future__ import annotations
 
 from datetime import date
+from typing import Annotated
 
-from fastapi import APIRouter, Depends, Request
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi import APIRouter, Depends, Form, Request
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from sqlalchemy import select, text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.config import APP_NAME, APP_VERSION, TEMPLATES_DIR
 from app.db import get_db
-from app.models import Activity, Client, Group
+from app.models import Activity, Client, EffortEntry, Group
+from app.schemas.effort import EffortEntryCreate
 from fastapi.templating import Jinja2Templates
 
 # Template engine condiviso dal router web.
@@ -29,16 +31,27 @@ router: APIRouter = APIRouter(tags=["web"])
 
 
 @router.get("/", response_class=HTMLResponse, name="index")
-async def index(request: Request, db: Session = Depends(get_db)) -> HTMLResponse:
+async def index(
+    request: Request,
+    db: Session = Depends(get_db),
+    success: int | None = None,
+    error: str | None = None,
+) -> HTMLResponse:
     """Pagina principale: form di inserimento + tabella elenco.
 
     Fase 4: i dropdown del form sono popolati dalle tabelle lookup del DB
     (clients, groups, activities). Il salvataggio (Fase 5), l'elenco dal
     DB (Fase 6) e la selezione record (Fase 7) arrivano in fasi successive.
+    `success=1` e `error=descrizione` (query string, set dal POST) mostrano
+    rispettivamente il banner di conferma o di errore.
     """
     clients = db.execute(select(Client).order_by(Client.name)).scalars().all()
     groups = db.execute(select(Group).order_by(Group.name)).scalars().all()
     activities = db.execute(select(Activity).order_by(Activity.name)).scalars().all()
+
+    success_message: str | None = None
+    if success == 1:
+        success_message = "Record salvato correttamente."
 
     return templates.TemplateResponse(
         request=request,
@@ -46,15 +59,53 @@ async def index(request: Request, db: Session = Depends(get_db)) -> HTMLResponse
         context={
             "app_name": APP_NAME,
             "app_version": APP_VERSION,
-            "phase": "Fase 4 — Database e seed lookup",
+            "phase": "Fase 5 — Salvataggio record",
             "clients": clients,
             "groups": groups,
             "activities": activities,
             "records": [],  # elenco vuoto per ora; popolato in Fase 6
-            # Data odierna come default per nuovi inserimenti.
             "today": date.today().isoformat(),
+            "success_message": success_message,
+            "error": error,
         },
     )
+
+
+@router.post("/", response_class=HTMLResponse, name="save_entry")
+async def save_entry(
+    payload: Annotated[EffortEntryCreate, Form()],
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    """Salva un nuovo record di effort nel database.
+
+    Fase 5: persistenza reale su `effort_entries`. Verifica che l'attività
+    selezionata richieda una descrizione (`requires_description`) e crea il
+    record. In caso di errore di validazione esegue comunque un redirect con
+    un messaggio di errore (miglioramento messaggi in Fase 9).
+    """
+    activity = db.execute(
+        select(Activity).where(Activity.id == payload.activity_id)
+    ).scalar_one_or_none()
+
+    # Validazione condizionale: la descrizione è obbligatoria se richiesta.
+    if activity is not None and activity.requires_description and not payload.description:
+        return RedirectResponse("/?error=descrizione", status_code=303)
+
+    entry = EffortEntry(
+        user_id=None,  # valorizzato in Fase 11 (multiutente)
+        user_text=payload.user,
+        client_id=payload.client_id,
+        group_id=payload.group_id,
+        activity_id=payload.activity_id,
+        work_date=payload.date,
+        hours_spent=payload.hours,
+        notes=payload.notes,
+        description=payload.description,
+    )
+    db.add(entry)
+    db.commit()
+
+    return RedirectResponse("/?success=1", status_code=303)
 
 
 @router.get("/health", name="health")

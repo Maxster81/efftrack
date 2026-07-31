@@ -4,7 +4,7 @@ from __future__ import annotations
 from datetime import date, datetime, timezone
 from typing import Callable
 
-from sqlalchemy import CheckConstraint, Date, DateTime, ForeignKey, Numeric, Text
+from sqlalchemy import CheckConstraint, Date, DateTime, ForeignKey, Numeric, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base
@@ -39,6 +39,10 @@ class EffortEntry(Base):
 
     # Segregazione utente futura: colonna senza FK fino a Fase 11.
     user_id: Mapped[int | None] = mapped_column(nullable=True)
+
+    # Testo libero del campo User del form (utile per i test pre-auth;
+    # in Fase 10 verrà derivato dall'utente autenticato).
+    user_text: Mapped[str | None] = mapped_column(String(128), nullable=True)
 
     client_id: Mapped[int] = mapped_column(ForeignKey("clients.id"), nullable=False)
     group_id: Mapped[int] = mapped_column(ForeignKey("groups.id"), nullable=False)

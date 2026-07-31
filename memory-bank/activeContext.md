@@ -1,11 +1,12 @@
 # Active Context — Effort Tracking
 
 ## Stato corrente
-- **Ultima fase completata**: Fase 4b ✅ (2026-07-31).
-- **Fase in corso**: nessuna. In attesa di task per la Fase 5.
+- **Ultima fase completata**: Fase 5 ✅ (2026-07-31).
+- **Fase in corso**: nessuna. In attesa di task per la Fase 5b.
 - **Stato**: idle, pronto per nuovo task. Roadmap estesa il 2026-07-31.
-- **Versione corrente**: `0.5.0` (tag `v0.5.0` annotato su `develop`).
+- **Versione corrente**: `0.6.0` (tag `v0.6.0` annotato su `develop`).
 - **Roadmap estesa**: aggiunte Fase 4b (sidebar hamburger), Fase 5b (copia su settimana), Fase 12 (Admin), Fase 13 (Manager); hardening slitta a Fase 14. Vedi `progress.md`/`projectbrief.md`.
+- **Nota**: la tabella `effort_entries` ora ha anche la colonna `user_text` (String 128 nullable).
 - **Nota ambiente**: sviluppo su **Ubuntu in WSL** (Python 3.12.3, pip 24.0). Venv ricreato in questa macchina. Dipendenze: fastapi 0.141.1, uvicorn 0.52.0, sqlalchemy 2.0.51, pydantic 2.13.4, jinja2 3.1.6, python-multipart 0.0.32.
 
 ## Decisioni recenti
@@ -69,8 +70,21 @@
 - Struttura: hamburger + `aria-controls`, sidebar (`#app-sidebar`, `sidebar__header`, `sidebar__close`, `sidebar__menu`), overlay presenti. `form.js` e `nav.js` entrambi prima di `</body>`. `/static/nav.js` 200 text/javascript, `/static/style.css` 200, `/health` 200 `db:ok`.
 - **Verifica utente (browser)**: apertura/chiusura sidebar funzionante (hamburger, ✕, overlay, ESC).
 
-## Prossima fase (Fase 5)
-- **Salvataggio record**: POST di salvataggio con validazione server-side (Pydantic), requisito Descrizione attività vincolato a `requires_description`, messaggi di esito, persistenza su `effort_entries`. Sostituirà l'attuale 405 "method not allowed" al submit del form.
+## Modifiche di Fase 5 (salvataggio record)
+- **`app/schemas/effort.py`** (NUOVO): `EffortEntryCreate` Pydantic — user non vuoto, date, FK>0, hours 0.25-24 multiplo 0.25, notes/description normalizzati da vuoto a None.
+- **`app/routers/web.py`**: nuova `POST /` (`save_entry`) con `Annotated[EffortEntryCreate, Form()]` — valida, verifica `requires_description` dell'attività, salva `EffortEntry` e redirect 303. `GET /` gestisce `success`/`error` per i banner. Label fase "Fase 5 — Salvataggio record".
+- **`app/models/effort_entry.py`**: aggiunta colonna `user_text` (String 128 nullable) per persistere il campo User pre-auth.
+- **`app/templates/index.html`**: `action="/"` (POST reale), banner `.form-success` e banner errore descrizione.
+- **`app/static/style.css`**: aggiunta `.form-success` (verde).
+
+## Verifiche Fase 5 (curl end-to-end)
+- POST valido (attività 1, no desc) → 303 `/?success=1`; record salvato con `user_text="Mario"` e `hours_spent=7.5`.
+- POST attività 2 (desc obbligatoria) senza descrizione → 303 `/?error=descrizione`, nessun record.
+- Banner: `?success=1` mostra `.form-success` + messaggio; `?error=descrizione` mostra errore; GET normale nessun banner.
+- DB rigenerato con colonna `user_text`.
+
+## Prossima fase (Fase 5b)
+- **Inserimento bulk "copia su settimana"**: pulsante accanto a "Salva" che prende i valori del form corrente (cliente, gruppo, attività, ore) e crea un record per ogni giorno feriale (lun→ven) della settimana corrente, con data corrispondente. Validazione server-side per ciascun record. Dipende dalla Fase 5 (salvataggio).
 
 ## Fasi successive (dopo 4b)
 - **Fase 5 — Salvataggio record**: POST di salvataggio con validazione server-side (Pydantic), requisito Descrizione attività vincolato a `requires_description`, messaggi di esito. Persistenza su `effort_entries`.

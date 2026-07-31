@@ -83,6 +83,7 @@ class TestEffortEntry(DatabaseTestCase):
 
         entry = EffortEntry(
             user_id=None,
+            user_text="Test User",
             client_id=client.id,
             group_id=group.id,
             activity_id=activity.id,
@@ -98,6 +99,7 @@ class TestEffortEntry(DatabaseTestCase):
         self.assertIsNotNone(saved)
         self.assertEqual(saved.hours_spent, 7.5)
         self.assertEqual(saved.client.name, client.name)
+        self.assertEqual(saved.user_text, "Test User")
 
 
 if __name__ == "__main__":
