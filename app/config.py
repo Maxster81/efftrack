@@ -46,3 +46,12 @@ PORT: int = int(os.environ.get("EFFORT_TRACKING_PORT", "8000"))
 
 APP_NAME: str = "Effort Tracking"
 APP_VERSION: str = "0.1.0"
+
+
+# --- Path applicativi (templates, static) ------------------------------------
+
+# Directory dei template Jinja2 (app/templates/).
+TEMPLATES_DIR: Path = BASE_DIR / "app" / "templates"
+
+# Directory degli static files (app/static/).
+STATIC_DIR: Path = BASE_DIR / "app" / "static"

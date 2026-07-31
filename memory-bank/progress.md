@@ -1,9 +1,10 @@
 # Progress — Effort Tracking
 
 ## Stato globale
-- **Ultima fase completata**: Fase 0 ✅ completata il 2026-07-31.
-- **Fase in corso**: **Fase 1** — Pagina HTML statica raggiungibile.
-- **Stato**: in attesa di nuovo task.
+- **Ultima fase completata**: Fase 1 ✅ completata il 2026-07-31.
+- **Fase in corso**: nessuna. In attesa di task per la Fase 2.
+- **Stato**: idle, pronto per nuovo task.
+- **Versione corrente**: `0.1.1` (tag `v0.1.1` annotato su `develop`).
 
 ## Roadmap
 
@@ -20,8 +21,18 @@
   - Tag annotato `v0.1.0`.
 
 ### Fase 1 — Pagina HTML statica raggiungibile
-- **Stato**: in corso.
-- **Obiettivo**: `GET /` restituisce una pagina HTML statica "server raggiungibile" via browser (in pratica già in piedi dalla Fase 0, da consolidare).
+- **Stato**: ✅ completata il 2026-07-31.
+- **Obiettivo**: `GET /` restituisce una pagina HTML statica "server raggiungibile" via browser. In pratica la pagina era già in piedi dalla Fase 0: la Fase 1 consolida la raggiungibilità con refactor strutturale e verifiche end-to-end.
+- **Cosa è stato fatto**:
+  - Refactor routing: `GET /` e `GET /health` spostate in `app/routers/web.py` come `APIRouter(tags=["web"])`.
+  - Nuovo `app/routers/api.py` con `APIRouter(prefix="/api", tags=["api"])` come placeholder per future API JSON.
+  - `app/main.py` snellito: solo app, lifespan, mount static, `include_router` per i due router.
+  - `app/config.py` esteso con `TEMPLATES_DIR` e `STATIC_DIR` calcolati da `BASE_DIR`.
+  - Verifiche curl su `127.0.0.1:8000`: `/` (200, `text/html`), `/health` (200, JSON `status:ok` `db:ok`), `/docs` (200), `/static/style.css` (200, `text/css`).
+  - Convenzione di porta operativa: tutte le verifiche automatiche di Cline vanno su `127.0.0.1:8000`; se la porta è occupata, si killa il processo e si riparte (decisione utente).
+- **Versioning**: bump `VERSION` `0.1.0` → `0.1.1` (PATCH, confermato dall'utente).
+- **Branch**: commit su `develop`, tag annotato `v0.1.1` sullo stesso commit. Niente `main`.
+- **Commit**: `refactor(routing): phase 1 web router extraction`.
 
 ### Fase 2 — Layout statico stile effort tracking
 - **Stato**: non iniziata.
