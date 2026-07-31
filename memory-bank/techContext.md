@@ -63,9 +63,20 @@ Poi:
 - Dropdown mai fidati: validati lato server prima della persistenza.
 - Campi numerici vincolati a range consentiti.
 
+## Test
+- **Framework**: `unittest` (standard library), nessuna dipendenza extra.
+- **Esecuzione**: `.venv/bin/python -m unittest discover -s tests -v`
+- **DB di test**: SQLite in-memory isolato (`tests/test_models.py`), separato dal DB di sviluppo `data/efftrack.db`.
+- Se in futuro i test crescono molto, valuteremo `pytest` (proposta con analisi pro/contro).
+
+## Rigenerazione DB di sviluppo
+- Il DB `data/efftrack.db` è **gitignored** e viene creato/seeded automaticamente al primo avvio (lifespan di `app/main.py`).
+- Se cambia lo schema (es. rimozione colonna), il DB va **cancellato** (`rm -f data/efftrack.db data/efftrack.db-shm data/efftrack.db-wal`) e rigenerato riavviando il server.
+
 ## Tool di sviluppo
 - `git` per versionamento, branching su `develop`.
 - `pip` per dipendenze.
+- `unittest` per i test automatici.
 - Nessun tool esotico: editor + browser + curl.
 
 ## Note di compatibilità

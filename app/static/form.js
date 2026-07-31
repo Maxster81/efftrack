@@ -1,9 +1,11 @@
 /* ------------------------------------------------------------
- * Effort Tracking — logica form (Fase 3).
+ * Effort Tracking — logica form (Fase 3, aggiornata in Fase 4).
  *
  * Show/hide condizionale del campo "Descrizione attività" e
  * validazione client-side del form. JavaScript vanilla, niente
  * dipendenze esterne. La validazione server-side arriverà in Fase 5.
+ * In Fase 4 il show/hide usa `data-requires-description` dell'attività
+ * selezionata (popolata dal DB), non più un confronto su stringa fissa.
  * ------------------------------------------------------------ */
 (function () {
   "use strict";
@@ -14,9 +16,6 @@
   var activitySelect = document.getElementById("effort-activity");
   var descriptionGroup = document.getElementById("description-group");
   var descriptionInput = document.getElementById("effort-description");
-
-  // Valore che rende visibile (e obbligatoria) la descrizione.
-  var SUPPORT_ACTIVITY = "SOC-Supporto Specialistico";
 
   // --- Utility: messaggio + gestione classe errore ---
   function showError(message) {
@@ -50,8 +49,16 @@
   }
 
   // --- Show/hide campo Descrizione ---
+  // L'attività selezionata espone `data-requires-description` (true/false):
+  // se true, la descrizione attività è obbligatoria e il campo va mostrato.
+  function activityRequiresDescription() {
+    if (!activitySelect || !activitySelect.selectedOptions.length) { return false; }
+    var option = activitySelect.selectedOptions[0];
+    return option.getAttribute("data-requires-description") === "true";
+  }
+
   function syncDescriptionVisibility() {
-    var visible = activitySelect && activitySelect.value === SUPPORT_ACTIVITY;
+    var visible = activityRequiresDescription();
     if (descriptionGroup) {
       descriptionGroup.classList.toggle("is-hidden", !visible);
     }
@@ -126,7 +133,7 @@
     valid = valid && ok;
 
     // Descrizione: obbligatoria solo se l'attività la richiede.
-    var descRequired = activitySelect && activitySelect.value === SUPPORT_ACTIVITY;
+    var descRequired = activityRequiresDescription();
     if (descRequired) {
       ok = validateRequired(descriptionInput, "La Descrizione attività è obbligatoria per il Supporto Specialistico.");
       mark(descriptionInput, ok);

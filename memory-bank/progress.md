@@ -1,10 +1,10 @@
 # Progress — Effort Tracking
 
 ## Stato globale
-- **Ultima fase completata**: Fase 3 ✅ completata il 2026-07-31.
-- **Fase in corso**: nessuna. In attesa di task per la Fase 4.
+- **Ultima fase completata**: Fase 4 ✅ completata il 2026-07-31.
+- **Fase in corso**: nessuna. In attesa di task per la Fase 5.
 - **Stato**: idle, pronto per nuovo task.
-- **Versione corrente**: `0.3.0` (tag `v0.3.0` annotato su `develop`).
+- **Versione corrente**: `0.4.0` (tag `v0.4.0` annotato su `develop`).
 
 ## Roadmap
 
@@ -68,12 +68,26 @@
 - **Commit**: `feat(ui): phase 3 interactive form with validation`.
 
 ### Fase 4 — Database e seed lookup
-- **Stato**: non iniziata.
-- **Obiettivo**: SQLAlchemy + SQLite + tabelle lookup (`clients`, `groups`, `activities`) + tabella `effort_entries` (con `user_id` nullable FK) + seed iniziale. Sostituire dropdown hardcoded della Fase 3 con contenuto DB. Predisposizione test automatici.
+- **Stato**: ✅ completata il 2026-07-31.
+- **Obiettivo**: SQLAlchemy + SQLite + tabelle lookup (`clients`, `groups`, `activities`) + tabella `effort_entries` + seed iniziale. Sostituire dropdown hardcoded con contenuto DB. Predisposizione test automatici.
+- **Cosa è stato fatto**:
+  - **Modelli ORM** (nuovi in `app/models/`): `Client`, `Group`, `Activity` (con `requires_description`) e `EffortEntry` (FK su clients/groups/activities, `work_date`, `hours_spent` CHECK `>0 AND <=24`, `notes`/`description` nullable, `created_at`/`updated_at` UTC naive, `user_id` nullable senza FK).
+  - **`app/core/seed.py`** (nuovo): `seed_lookup_tables` idempotente — clients INAIL/MDS, groups GRUPPO SOC, activities SOC-Conduzione(false)/SOC-Supporto Specialistico(true).
+  - **`app/main.py`**: nel lifespan, dopo `create_all`, chiama il seed; `import app.models` per registrare lo schema.
+  - **`app/routers/web.py`**: `index` carica i lookup dal DB (order_by name) e passa `today` per il default data.
+  - **`app/templates/index.html`**: dropdown dinamici (solo `name`, valori = FK id), campo Data con `value=today`.
+  - **`app/static/form.js`**: show/hide Descrizione attività basato su `data-requires-description` (non più su stringa).
+  - **`tests/test_models.py`** (nuovo): 6 test unittest (schema, seed, seed idempotente, inserimento EffortEntry) su SQLite in-memory isolato. Tutti OK.
+  - **Decisione utente**: rimossa colonna `code` dai lookup (basta `name` UNIQUE) — eliminata duplicazione nei dropdown. DB di sviluppo rigenerato.
+  - **Data odierna**: campo Data prepopolato con `date.today()` lato server.
+  - Verifica utente: dropdown puliti, data odierna, "Salva" → 405 atteso (persistenza Fase 5).
+- **Versioning**: bump `VERSION` `0.3.0` → `0.4.0` (MINOR).
+- **Branch**: commit su `develop`, tag annotato `v0.4.0`. Niente `main`.
+- **Commit**: `feat(db): phase 4 database schema and lookup seed`.
 
 ### Fase 5 — Salvataggio record
 - **Stato**: non iniziata.
-- **Obiettivo**: POST di salvataggio con validazione server-side e messaggi di esito.
+- **Obiettivo**: POST di salvataggio con validazione server-side (Pydantic) e messaggi di esito; requisito Descrizione attività vincolato a `requires_description`.
 
 ### Fase 6 — Elenco record
 - **Stato**: non iniziata.

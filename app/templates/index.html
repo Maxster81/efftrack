@@ -26,25 +26,28 @@
 
         <div class="form-group">
           <label for="effort-date">Data</label>
-          <input type="date" id="effort-date" name="date" />
+          <input type="date" id="effort-date" name="date" value="{{ today }}" />
         </div>
       </div>
 
       <div class="form-row">
         <div class="form-group">
           <label for="effort-client">Cliente</label>
-          <select id="effort-client" name="client">
+          <select id="effort-client" name="client_id">
             <option value="">-- Seleziona --</option>
-            <option value="INAIL">INAIL</option>
-            <option value="MDS">MDS</option>
+            {% for c in clients %}
+              <option value="{{ c.id }}">{{ c.name }}</option>
+            {% endfor %}
           </select>
         </div>
 
         <div class="form-group">
           <label for="effort-group">Gruppo</label>
-          <select id="effort-group" name="group">
+          <select id="effort-group" name="group_id">
             <option value="">-- Seleziona --</option>
-            <option value="GRUPPO SOC">GRUPPO SOC</option>
+            {% for g in groups %}
+              <option value="{{ g.id }}">{{ g.name }}</option>
+            {% endfor %}
           </select>
         </div>
       </div>
@@ -52,10 +55,12 @@
       <div class="form-row">
         <div class="form-group">
           <label for="effort-activity">Attività</label>
-          <select id="effort-activity" name="activity">
+          <select id="effort-activity" name="activity_id">
             <option value="">-- Seleziona --</option>
-            <option value="SOC-Conduzione">SOC-Conduzione</option>
-            <option value="SOC-Supporto Specialistico">SOC-Supporto Specialistico</option>
+            {% for a in activities %}
+              <option value="{{ a.id }}"
+                      data-requires-description="{{ a.requires_description|lower }}">{{ a.name }}</option>
+            {% endfor %}
           </select>
         </div>
 

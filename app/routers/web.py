@@ -7,13 +7,17 @@ successive a partire dalla Fase 2.
 """
 from __future__ import annotations
 
-from fastapi import APIRouter, Request
+from datetime import date
+
+from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse, JSONResponse
-from sqlalchemy import text
+from sqlalchemy import select, text
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.engine import Engine
+from sqlalchemy.orm import Session
 
 from app.config import APP_NAME, APP_VERSION, TEMPLATES_DIR
+from app.db import get_db
+from app.models import Activity, Client, Group
 from fastapi.templating import Jinja2Templates
 
 # Template engine condiviso dal router web.
@@ -25,22 +29,30 @@ router: APIRouter = APIRouter(tags=["web"])
 
 
 @router.get("/", response_class=HTMLResponse, name="index")
-async def index(request: Request) -> HTMLResponse:
+async def index(request: Request, db: Session = Depends(get_db)) -> HTMLResponse:
     """Pagina principale: form di inserimento + tabella elenco.
 
-    Fase 2: layout statico stile effort tracking. Il form e la tabella
-    sono renderizzati lato server ma senza logica reale: il salvataggio
-    (Fase 5), l'elenco dal DB (Fase 6) e la selezione record (Fase 7)
-    arriveranno nelle fasi successive.
+    Fase 4: i dropdown del form sono popolati dalle tabelle lookup del DB
+    (clients, groups, activities). Il salvataggio (Fase 5), l'elenco dal
+    DB (Fase 6) e la selezione record (Fase 7) arrivano in fasi successive.
     """
+    clients = db.execute(select(Client).order_by(Client.name)).scalars().all()
+    groups = db.execute(select(Group).order_by(Group.name)).scalars().all()
+    activities = db.execute(select(Activity).order_by(Activity.name)).scalars().all()
+
     return templates.TemplateResponse(
         request=request,
         name="index.html",
         context={
             "app_name": APP_NAME,
             "app_version": APP_VERSION,
-            "phase": "Fase 2 — Layout statico stile effort tracking",
+            "phase": "Fase 4 — Database e seed lookup",
+            "clients": clients,
+            "groups": groups,
+            "activities": activities,
             "records": [],  # elenco vuoto per ora; popolato in Fase 6
+            # Data odierna come default per nuovi inserimenti.
+            "today": date.today().isoformat(),
         },
     )
 

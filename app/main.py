@@ -19,9 +19,14 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
 from app.config import APP_NAME, APP_VERSION, STATIC_DIR
-from app.db import Base, engine
+from app.core.seed import seed_lookup_tables
+from app.db import Base, SessionLocal, engine
 from app.routers.api import router as api_router
 from app.routers.web import router as web_router
+
+# Import dei modelli: registra le tabelle su Base.metadata così che
+# `create_all` (nel lifespan) crei lo schema completo.
+import app.models  # noqa: F401,E402
 
 
 @asynccontextmanager
@@ -38,6 +43,12 @@ async def lifespan(app: FastAPI):
 
     # Crea le tabelle se non esistono (idempotente).
     Base.metadata.create_all(bind=engine)
+
+    # Popola le tabelle lookup (clients, groups, activities) se vuote.
+    # Il seed è idempotente: non duplica dati a ogni riavvio.
+    with SessionLocal() as db:
+        seed_lookup_tables(db)
+
     yield
     # Niente cleanup specifico allo shutdown per ora.
 
