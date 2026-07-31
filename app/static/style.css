@@ -1,0 +1,140 @@
+/* ------------------------------------------------------------
+ * Effort Tracking — fogli di stile condivisi.
+ *
+ * Fase 0: stile molto minimale, solo per la pagina di benvenuto.
+ * Le regole specifiche del form e della tabella verranno aggiunte
+ * nelle fasi successive (Fase 2 in poi).
+ *
+ * Palette: blu navy + grigi neutri (vedi memory-bank/projectbrief.md).
+ * Variabili CSS in :root per consentire un futuro tema dark/light
+ * senza refactoring.
+ * ------------------------------------------------------------ */
+
+:root {
+  /* Palette principale */
+  --color-primary: #1e3a5f;          /* blu navy */
+  --color-primary-contrast: #ffffff;
+  --color-primary-hover: #2a4d7a;
+
+  --color-accent: #c9d6e8;            /* azzurro chiaro per riga selezionata (futuro) */
+  --color-accent-strong: #4a78b8;     /* azzurro più carico */
+
+  /* Sfondo e superfici */
+  --color-bg: #f4f6f8;
+  --color-surface: #ffffff;
+  --color-surface-alt: #eef1f4;
+
+  /* Testi */
+  --color-text: #1f2933;
+  --color-text-muted: #5a6573;
+  --color-text-on-primary: #ffffff;
+
+  /* Bordi */
+  --color-border: #d6dbe1;
+  --color-border-strong: #b6bdc6;
+
+  /* Tipografia */
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+               "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* Spaziature */
+  --space-xs: 0.25rem;
+  --space-sm: 0.5rem;
+  --space-md: 1rem;
+  --space-lg: 1.5rem;
+  --space-xl: 2rem;
+
+  /* Raggi */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+}
+
+/* Predisposizione tema dark (toggle UI arriverà in Fase 9) */
+[data-theme="dark"] {
+  --color-primary: #4a78b8;
+  --color-bg: #14181d;
+  --color-surface: #1c232b;
+  --color-surface-alt: #232c36;
+  --color-text: #e6e9ed;
+  --color-text-muted: #99a2ad;
+  --color-border: #2f3842;
+  --color-border-strong: #4a5563;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-sans);
+  background: var(--color-bg);
+  color: var(--color-text);
+  line-height: 1.5;
+}
+
+a {
+  color: var(--color-primary);
+  text-decoration: none;
+}
+a:hover { text-decoration: underline; }
+
+/* ---------- Header ---------- */
+.app-header {
+  background: var(--color-primary);
+  color: var(--color-text-on-primary);
+  padding: var(--space-md) var(--space-lg);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+}
+.app-header__inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+}
+.app-header__title {
+  font-size: 1.25rem;
+  margin: 0;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.app-header__phase {
+  font-size: 0.9rem;
+  opacity: 0.85;
+}
+
+/* ---------- Main ---------- */
+.app-main {
+  max-width: 1100px;
+  margin: var(--space-xl) auto;
+  padding: 0 var(--space-lg);
+}
+
+/* ---------- Footer ---------- */
+.app-footer {
+  text-align: center;
+  padding: var(--space-lg);
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+}
+
+/* ---------- Welcome card (Fase 0) ---------- */
+.welcome-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-xl);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+.welcome-card h2 {
+  margin-top: 0;
+  color: var(--color-primary);
+}
+.welcome-list {
+  margin-top: var(--space-lg);
+  padding-left: var(--space-lg);
+}
+.welcome-list li { margin-bottom: var(--space-sm); }

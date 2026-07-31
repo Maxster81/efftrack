@@ -1,0 +1,50 @@
+# --- Python / venv ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# --- Distribuzione ---
+build/
+dist/
+*.egg-info/
+*.egg
+
+# --- Env e secrets ---
+.env
+.env.local
+*.pem
+*.key
+
+# --- Dati e database locale ---
+data/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# --- IDE / editor ---
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# --- Log ---
+*.log
+logs/
+
+# --- File di test / coverage ---
+.coverage
+htmlcov/
+coverage.xml
+
+# --- Sistema ---
+Thumbs.db

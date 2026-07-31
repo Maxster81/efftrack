@@ -195,3 +195,7 @@ Prima devi produrre:
 - Accessibilità di base obbligatoria
 - UI professionale e semplice da usare
 - Ogni fase deve lasciare un risultato verificabile
+
+## Imprecisioni da parte utente
+- le cline rules sono state adattate da altro progetto, per cui se trovi qualcosa relativo i18n, per cui relativo a traduzioni da Ita a ENG, non devi prenderle in considerazione.
+- se trovi riferimenti a una cline rule chiamata 09-web-design (o simile), non prenderla in considerazione. Il web design in questo momento è l'ultimo problema. Provvederemo successivamente alle migliorie grafiche.

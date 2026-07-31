@@ -1,0 +1,50 @@
+# =============================================================================
+# Effort Tracking — systemd service unit (TEMPLATE, NON ATTIVATO)
+# =============================================================================
+# Questo file è un template documentale. NON viene attivato automaticamente.
+# Per usarlo in produzione:
+#   1. Copialo in /etc/systemd/system/efftrack.service
+#      sudo cp systemd/efftrack.service /etc/systemd/system/efftrack.service
+#   2. Crea l'utente dedicato (una tantum):
+#      sudo useradd --system --home /opt/efftrack --shell /usr/sbin/nologin efftrack
+#   3. Crea la cartella di deploy e dai i permessi:
+#      sudo mkdir -p /opt/efftrack
+#      sudo chown -R efftrack:efftrack /opt/efftrack
+#   4. Crea /etc/efftrack.env con le variabili (vedi .env.example).
+#   5. Ricarica systemd, abilita e avvia:
+#      sudo systemctl daemon-reload
+#      sudo systemctl enable --now efftrack.service
+#   6. Verifica:
+#      sudo systemctl status efftrack.service
+#      curl http://127.0.0.1:8000/health
+# =============================================================================
+
+[Unit]
+Description=Effort Tracking web server
+After=network.target
+
+[Service]
+Type=simple
+User=efftrack
+Group=efftrack
+WorkingDirectory=/opt/efftrack
+EnvironmentFile=/etc/efftrack.env
+
+# Avvio con il venv del progetto. Adatta il path se installi altrove.
+ExecStart=/opt/efftrack/.venv/bin/uvicorn app.main:app \
+    --host 127.0.0.1 \
+    --port 8000 \
+    --workers 1
+
+Restart=always
+RestartSec=3
+
+# Hardening di base (rivisto in Fase 12).
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+ReadWritePaths=/opt/efftrack/data
+
+[Install]
+WantedBy=multi-user.target

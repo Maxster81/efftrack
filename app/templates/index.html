@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block title %}{{ app_name }} &mdash; {{ phase }}{% endblock %}
+
+{% block content %}
+  <section class="welcome-card" aria-labelledby="welcome-title">
+    <h2 id="welcome-title">Server attivo</h2>
+    <p>
+      Il web server <strong>{{ app_name }}</strong> è in esecuzione.
+      Questa è la pagina di benvenuto della <strong>{{ phase }}</strong>.
+    </p>
+    <p>
+      Nei prossimi step troverai qui il form di inserimento e la tabella
+      con l'elenco dei record.
+    </p>
+
+    <ul class="welcome-list">
+      <li><a href="/health">/health</a> &mdash; stato applicazione e database</li>
+      <li><a href="/docs">/docs</a> &mdash; documentazione OpenAPI (FastAPI)</li>
+    </ul>
+  </section>
+{% endblock %}

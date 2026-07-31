@@ -27,7 +27,7 @@ Prima di eseguire qualsiasi comando Git che coinvolga `main`:
 | *"pusherò io"* o *"fai il commit"* | ❌ Mai toccare main |
 | *"porta in produzione"* | ❌ Chiedere: "vuoi che faccia merge su main?" |
 | *"fai il merge di activeContext.md su main"* | ✅ Un merge (se già autorizzato nel msg), poi checkout develop |
-| *nessun messaggio su main* | ❌ Mai toccare main, anche se poco prima era stato autorizzato |
+| *nessun messaggio su main* | ❌ Mai toccare main, anche se poco prima era autorizzato |
 
 ### Eccezioni
 
@@ -68,14 +68,14 @@ Il progetto segue il **Semantic Versioning** (MAJOR.MINOR.PATCH).
 - **PATCH** — bug fix, refactoring interno, miglioramenti UI/CSS, aggiornamento dipendenze.
 
 ### File VERSION
-La versione corrente del progetto è tracciata nel file `VERSION` nella root del repository.
-Ogni servizio o package principale può inoltre avere la propria versione in `__init__.py`.
+La versione corrente del progetto è tracciata **solo** nel file `VERSION` nella root del repository.
+In questo progetto esiste un unico servizio, quindi non serve replicare la versione in altri punti.
 
 ### Regola: bump obbligatorio ad ogni commit funzionale
 Ogni volta che Cline fa un commit che modifica codice applicativo, UI/CSS o file di configurazione (esclusa la sola documentazione), **deve**:
 1. Valutare se il cambiamento è MAJOR, MINOR o PATCH secondo SemVer.
-2. Aggiornare `VERSION` e tutti i `__init__.py` dei servizi toccati **prima** di creare il commit.
-3. Includere `VERSION` e tutti i `__init__.py` aggiornati **nello stesso commit** delle modifiche funzionali.
+2. Aggiornare `VERSION` **prima** di creare il commit.
+3. Includere `VERSION` aggiornato **nello stesso commit** delle modifiche funzionali.
 4. Creare un tag git annotato sullo stesso commit del bump.
 
 ### Convenzione tag

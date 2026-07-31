@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}{{ app_name }}{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', path='style.css') }}" />
+</head>
+<body>
+  <header class="app-header" role="banner">
+    <div class="app-header__inner">
+      <h1 class="app-header__title">{{ app_name }}</h1>
+      <span class="app-header__phase" aria-label="Fase corrente">{{ phase }}</span>
+    </div>
+  </header>
+
+  <main class="app-main" role="main">
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="app-footer" role="contentinfo">
+    <small>{{ app_name }} &middot; v{{ app_version }}</small>
+  </footer>
+</body>
+</html>
