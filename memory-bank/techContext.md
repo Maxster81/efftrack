@@ -1,5 +1,11 @@
 # Tech Context — Effort Tracking
 
+## Ambiente di sviluppo
+- **OS**: Ubuntu in **WSL** (Windows Subsystem for Linux), senza display grafico.
+  - Niente `xdg-open`/`open` per aprire il browser: per verifiche visive l'utente apre l'URL dal browser sul lato Windows (es. `http://localhost:8000/`).
+  - I comandi Cline devono usare tool CLI standard (`curl`, `pgrep`, `pkill`, `git`), mai comandi GUI.
+- **Versione rilevata**: Python 3.12.3, pip 24.0.
+
 ## Linguaggio e runtime
 - **Python**: 3.10+ (per `X | None` syntax e performance).
 - **Virtualenv**: `python3 -m venv .venv`.

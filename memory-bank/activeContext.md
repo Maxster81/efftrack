@@ -45,6 +45,7 @@ Tutti i codici e i content-type sono quelli attesi. Niente regressioni.
 - **Verifiche automatiche di Cline**: sempre su `127.0.0.1:8000` (o `0.0.0.0:8000` se serve accesso da rete).
 - **Se la 8000 è occupata**, Cline uccide il processo e riavvia.
 - Regola valida per tutte le fasi successive. Decisione utente 2026-07-31.
+- **Ambiente**: sviluppo su **Ubuntu in WSL** (senza display grafico). Niente `xdg-open`/`open` per aprire il browser: per verifiche visive l'utente apre l'URL nel browser sul lato Windows (es. `http://localhost:8000/`). I comandi Cline usano solo tool CLI standard (`curl`, `pgrep`, `pkill`, `git`). Dettagli in `techContext.md`.
 
 ## Regola operativa attiva (workflow)
 1. Implemento la fase corrente.
