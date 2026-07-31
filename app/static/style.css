@@ -295,3 +295,25 @@ a:hover { text-decoration: underline; }
   padding: var(--space-xl) var(--space-md) !important;
   font-style: italic;
 }
+
+/* ---------- Form: stato nascosto, errori (Fase 3) ---------- */
+.is-hidden {
+  display: none !important;
+}
+.form-group.is-invalid input,
+.form-group.is-invalid select,
+.form-group.is-invalid textarea {
+  border-color: #c0392b;
+  box-shadow: 0 0 0 3px rgba(192, 57, 43, 0.12);
+  background: #fdf0ef;
+}
+.form-error {
+  margin-bottom: var(--space-md);
+  padding: var(--space-sm) var(--space-md);
+  background: #fdecea;
+  border: 1px solid #e74c3c;
+  border-left: 4px solid #c0392b;
+  border-radius: var(--radius-sm);
+  color: #a93226;
+  font-size: 0.92rem;
+}

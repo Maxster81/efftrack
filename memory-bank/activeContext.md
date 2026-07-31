@@ -1,11 +1,11 @@
 # Active Context — Effort Tracking
 
 ## Stato corrente
-- **Ultima fase completata**: Fase 2 ✅ (2026-07-31).
-- **Fase in corso**: nessuna. In attesa di task per la Fase 3.
+- **Ultima fase completata**: Fase 3 ✅ (2026-07-31).
+- **Fase in corso**: nessuna. In attesa di task per la Fase 4.
 - **Stato**: idle, pronto per nuovo task.
-- **Versione corrente**: `0.2.0` (tag `v0.2.0` annotato su `develop`).
-- **Nota ambiente**: in questa sessione è stato ricreato il `.venv` su un nuovo OS (Python 3.12.3, pip 24.0). Dipendenze installate: fastapi 0.141.1, uvicorn 0.52.0, sqlalchemy 2.0.51, pydantic 2.13.4, jinja2 3.1.6, python-multipart 0.0.32.
+- **Versione corrente**: `0.3.0` (tag `v0.3.0` annotato su `develop`).
+- **Nota ambiente**: sviluppo su **Ubuntu in WSL** (Python 3.12.3, pip 24.0). Venv ricreato in questa macchina. Dipendenze: fastapi 0.141.1, uvicorn 0.52.0, sqlalchemy 2.0.51, pydantic 2.13.4, jinja2 3.1.6, python-multipart 0.0.32.
 
 ## Decisioni recenti
 - **Stack**: FastAPI + Jinja2 + SQLAlchemy 2.x + SQLite.
@@ -14,38 +14,38 @@
 - **Struttura**: repo unico con layout modulare (`app/{routers,services,repositories,schemas,models,core}`).
 - **Systemd**: template `efftrack.service` creato in Fase 0 ma non attivato.
 - **Branching**: `main` intoccato salvo autorizzazione esplicita. Tutto il lavoro su `develop`.
-- **Versioning**: SemVer, file `VERSION` (unico). Bump confermato a `0.2.0` per la Fase 2 (MINOR: nuova funzionalità UI).
+- **Versioning**: SemVer, file `VERSION` (unico). Bump confermato a `0.3.0` per la Fase 3 (MINOR: nuova funzionalità).
+- **Campo User**: scrivibile nelle fasi pre-auth (intenzionale, per "firmare" i record senza login). In Fase 10 diventerà read-only derivato dalla sessione. Nota in `productContext.md`.
+- **Etichetta descrizione**: rinominata in **"Descrizione attività"** per coerenza col vecchio tool.
+- **Note**: campo **opzionale** (mai obbligatorio). **Descrizione attività**: obbligatoria **solo** quando l'attività è "SOC-Supporto Specialistico" (campo visibile). Chiarimento utente in Fase 3.
+- **Bind server**: in sviluppo bind su `0.0.0.0` (accessibile da browser Windows via rete WSL). Verificato efficace in Fase 3 (richieste ricevute da IP host 172.20.144.1).
 - **Import di `Engine`**: notato `from sqlalchemy.engine import Engine` in `app/routers/web.py` non usato (potrebbe essere legacy). Da verificare/ripulire in un refactor futuro.
 
-## Modifiche di Fase 2 (layout statico stile effort tracking)
-- **`app/templates/base.html`**: aggiunta icona utente decorativa (SVG sagoma persona) nell'header in alto a destra, come placeholder per il futuro login (Fase 10). Wrapper `.app-header__actions` con fase + icona.
-- **`app/templates/index.html`**: sostituita la welcome card con il layout reale a due sezioni:
-  - Form di inserimento (card `.form-card`) con campi User, Data, Cliente, Gruppo, Attività, Ore Spese, Note, Descrizione + pulsante Salva centrale.
-  - Tabella elenco (card `.records-card`) con header a 7 colonne (Data, Cliente, Gruppo, Attività, Ore, Note, Descrizione), contatore `({{ records|length }} record)` e stato vuoto "Nessuna registrazione presente."
-  - Il campo **Descrizione** è sempre visibile in Fase 2; lo show/hide condizionale per "Supporto Specialistico" arriva in Fase 3.
-- **`app/static/style.css`**: rimosse le regole della welcome card (Fasi 0/1), aggiunte regole per form card, form grid a 2 colonne responsive (breakpoint 720px), input/select/textarea con focus ring blu navy, pulsante Salva primario (.btn-primary), tabella con header blu navy, righe alternate e hover, messaggio vuoto. Tutto basato sulle variabili CSS esistenti.
-- **`app/routers/web.py`**: aggiornata label di fase a "Fase 2 — Layout statico stile effort tracking", aggiunto `records: []` nel context (predisposizione Fase 6).
-- **`app/config.py`**: `APP_VERSION` aggiornata da `0.1.0` a `0.2.0` — corretta una discrepanza rimasta dalla Fase 1 (il file VERSION era già a `0.1.1` mentre config restava `0.1.0`).
+## Modifiche di Fase 3 (form interattivo con lookup hardcoded)
+- **`app/static/form.js`** (NUOVO): JavaScript vanilla con:
+  - **Show/hide** del campo "Descrizione attività": visibile solo se Attività = "SOC-Supporto Specialistico"; all'avvio nascosto.
+  - **Validazione client-side** al submit: User, Data, Cliente, Gruppo, Attività, Ore Spese obbligatori; Ore 0.25..24 step 0.25 (gestisce virgola). Descrizione attività obbligatoria solo se visibile. Note mai obbligatoria.
+  - Errori: classe `.is-invalid` sui campi, banner `#form-error role="alert"`, focus sul primo campo non valido; reset errore su input/change.
+- **`app/static/style.css`**: aggiunte `.is-hidden`, `.form-group.is-invalid *`, `.form-error`. Nessuna modifica alle regole esistenti.
+- **`app/templates/index.html`**: area errore `#form-error` (hidden); label form e `<th>` tabella rinominati "Descrizione attività"; gruppo Descrizione inizialmente `is-hidden`; `novalidate` sul form (validazione gestita da JS); incluso `form.js` con `defer`.
+- **`app/templates/base.html`**: aggiunto blocco `{% block scripts %}` prima di `</body>`.
 
-## Verifiche tecniche di Fase 2 (curl su 127.0.0.1:8000)
-- `GET /` → **HTTP 200**, `text/html; charset=utf-8`, 4949 byte. Struttura verificata: titolo "Fase 2 — Layout statico stile effort tracking", 7 `<th scope="col">` corretti, messaggio "Nessuna registrazione presente", conteggio `(0 record)`, icona utente `.app-header__user-icon`, placeholder Descrizione "Obbligatoria per l'attività Supporto Specialistico".
-- `GET /health` → **HTTP 200**, `{"app":"Effort Tracking","version":"0.2.0","status":"ok","db":"ok"}`.
-- `GET /static/style.css` → **HTTP 200**, `text/css; charset=utf-8`.
-- `GET /docs` → **HTTP 200**, `text/html; charset=utf-8`.
+## Verifiche Fase 3 (curl su 0.0.0.0:8000 e browser)
+- Riavvio server su `0.0.0.0:8000` (corretto binding da 127.0.0.1 → 0.0.0.0).
+- `GET /` → 200 `text/html` (5155 byte); `GET /health` → 200 `version:0.3.0`; `GET /static/form.js` → 200 `text/javascript`; `GET /static/style.css` → 200 `text/css`.
+- Log server: richieste da IP host Windows (172.20.144.1) con 200 — raggiungibilità da browser confermata.
+- **Verifica utente (browser)**: (1) submit a vuoto → warning e campi evidenziati; (2) "Supporto Specialistico" → compare "Descrizione attività"; (3) compilato completo + Salva → "method not allowed" (atteso, nessun POST reale fino a Fase 5).
 
-Tutti i codici e i content-type sono quelli attesi. Niente regressioni.
+## Separazione backend / frontend (Fase 3)
+- **Area UI**: `form.js` (nuovo), `style.css`, `index.html`, `base.html`.
+- **Area applicativa**: nessuna modifica (nessun POST reale).
+- **Area documentale**: aggiornamento `activeContext.md`, `progress.md`.
 
-## Separazione backend / frontend (Fase 2)
-- **Area UI**: `base.html` (icona utente), `index.html` (form + tabella), `style.css` (nuove regole).
-- **Area applicativa**: `web.py` (label fase + context records), `config.py` (APP_VERSION).
-- **Area documentale**: aggiornamento `activeContext.md` e `progress.md`.
-
-## Convenzione operativa: porta di sviluppo (decisa in Fase 1)
-- **Porta canonica del progetto**: `8000` (default in `app/config.py`).
-- **Verifiche automatiche di Cline**: sempre su `127.0.0.1:8000` (o `0.0.0.0:8000` se serve accesso da rete).
-- **Se la 8000 è occupata**, Cline uccide il processo e riavvia.
-- Regola valida per tutte le fasi successive. Decisione utente 2026-07-31.
-- **Ambiente**: sviluppo su **Ubuntu in WSL** (senza display grafico). Niente `xdg-open`/`open` per aprire il browser: per verifiche visive l'utente apre l'URL nel browser sul lato Windows (es. `http://localhost:8000/`). I comandi Cline usano solo tool CLI standard (`curl`, `pgrep`, `pkill`, `git`). Dettagli in `techContext.md`.
+## Convenzione operativa: porta e binding (aggiornata in Fase 3)
+- **Porta canonica**: `8000`.
+- **Binding in sviluppo**: `0.0.0.0` (per raggiungibilità da rete/WSL/browser Windows). Niente binding su 127.0.0.1 in dev.
+- **Se la 8000 è occupata**: uccidere il processo e riavviare.
+- **Ambiente**: Ubuntu in WSL, niente display grafico; niente `xdg-open`/`open`. Per verifiche visive l'utente apre `http://localhost:8000/` nel browser Windows. Tool CLI standard solo (`curl`, `pgrep`, `pkill`, `git`). Dettagli in `techContext.md`.
 
 ## Regola operativa attiva (workflow)
 1. Implemento la fase corrente.
@@ -57,16 +57,19 @@ Tutti i codici e i content-type sono quelli attesi. Niente regressioni.
 ## Decisione speciale di Fase 0 (eccezione una tantum)
 - L'utente ha autorizzato esplicitamente un commit iniziale su `main` per depositare la base funzionante. Subito dopo è stato creato il branch `develop`. Da qui in avanti `main` non viene più toccato senza autorizzazione esplicita nel messaggio corrente.
 
-## Prossima fase (Fase 3)
-- **Form interattivo con lookup hardcoded**:
-  - Dropdown reali (già presenti come hardcoded in Fase 2).
-  - Show/hide condizionale del campo **Descrizione** quando l'attività selezionata è "SOC-Supporto Specialistico".
-  - Validazioni base client-side.
-  - Primo JavaScript vanilla (`static/*.js`).
+## Prossima fase (Fase 4)
+- **Database e seed lookup**:
+  - SQLAlchemy + SQLite (WAL + foreign keys già configurati in `app/db.py`).
+  - Tabelle lookup: `clients`, `groups`, `activities` (con `requires_description BOOL`).
+  - Tabella `effort_entries` (con `user_id` nullable FK, ready per Fase 11).
+  - Seed iniziale: INAIL, MDS; GRUPPO SOC; SOC-Conduzione (no desc via), SOC-Supporto Specialistico (sì desc via).
+  - Predisposizione per i test automatici (da Fase 4 in poi).
+  - I dropdown hardcoded della Fase 3 verranno sostituiti dal contenuto del DB.
 
 ## Rischi / punti aperti
 - Tema dark/light rimandato a Fase 9 (accettato come debito temporaneo).
-- Migrazioni schema: `ALTER TABLE` a startup invece di Alembic fino a Fase 9.
-- Nessun test automatico fino a Fase 4.
-- `user_id` presente come colonna nullable dal momento dell'introduzione della tabella `effort_entries` (Fase 4), non valorizzato fino a Fase 11.
+- Migrazioni schema: `CREATE TABLE IF NOT EXISTS` / `ALTER TABLE` controllato a startup fino a Fase 9; Alembic proposto se cresce la complessità.
+- Nessun test automatico finora (previsti da Fase 4).
+- `user_id` nullable in `effort_entries` dal suo inserimento, valorizzato in Fase 11.
 - Import `Engine` non usato in `app/routers/web.py` (da ripulire in refactor futuro).
+- POST "method not allowed" al submit del form: atteso, sarà implementato in Fase 5.

@@ -1,10 +1,10 @@
 # Progress — Effort Tracking
 
 ## Stato globale
-- **Ultima fase completata**: Fase 2 ✅ completata il 2026-07-31.
-- **Fase in corso**: nessuna. In attesa di task per la Fase 3.
+- **Ultima fase completata**: Fase 3 ✅ completata il 2026-07-31.
+- **Fase in corso**: nessuna. In attesa di task per la Fase 4.
 - **Stato**: idle, pronto per nuovo task.
-- **Versione corrente**: `0.2.0` (tag `v0.2.0` annotato su `develop`).
+- **Versione corrente**: `0.3.0` (tag `v0.3.0` annotato su `develop`).
 
 ## Roadmap
 
@@ -53,12 +53,23 @@
 - **Commit**: `feat(ui): phase 2 static effort tracking layout`.
 
 ### Fase 3 — Form interattivo con lookup hardcoded
-- **Stato**: non iniziata.
+- **Stato**: ✅ completata il 2026-07-31.
 - **Obiettivo**: form reale con dropdown hardcoded, validazione base, show/hide campo Descrizione. Primo JS vanilla (`static/*.js`).
+- **Cosa è stato fatto**:
+  - **`app/static/form.js`** (nuovo): show/hide "Descrizione attività" se attivita = "SOC-Supporto Specialistico"; validazione client-side (User, Data, Cliente, Gruppo, Attività, Ore obbligatori; Ore 0.25..24 step 0.25 con virgola; Descrizione attività obbligatoria solo se visibile; Note opzionale); errori `.is-invalid` + banner `#form-error role="alert"` + focus primo campo non valido.
+  - **`app/static/style.css`**: aggiunte `.is-hidden`, `.form-group.is-invalid *`, `.form-error`.
+  - **`app/templates/index.html`**: area errore, label e header tabella rinominati "Descrizione attività", gruppo descrizione inizialmente `is-hidden`, `novalidate`, script `form.js` con `defer`.
+  - **`app/templates/base.html`**: aggiunto blocco `{% block scripts %}`.
+  - **Binding corretto**: server riavviato su `0.0.0.0:8000` (prima era erroneamente su 127.0.0.1, non raggiungibile dal browser Windows). Verificato accesso da IP host WSL (172.20.144.1).
+  - Verifiche curl: `/` (200, 5155 byte), `/health` (200), `/static/form.js` (200 text/javascript), `/static/style.css` (200).
+  - **Verifica utente (browser)**: warning su submit vuoto; show/hide Descrizione attività con Supporto Specialistico; submit completo → method not allowed (atteso fino a Fase 5).
+- **Versioning**: bump `VERSION` `0.2.0` → `0.3.0` (MINOR: nuova funzionalità).
+- **Branch**: commit su `develop`, tag annotato `v0.3.0`. Niente `main`.
+- **Commit**: `feat(ui): phase 3 interactive form with validation`.
 
 ### Fase 4 — Database e seed lookup
 - **Stato**: non iniziata.
-- **Obiettivo**: SQLAlchemy + SQLite + tabelle lookup + tabella `effort_entries` + seed iniziale.
+- **Obiettivo**: SQLAlchemy + SQLite + tabelle lookup (`clients`, `groups`, `activities`) + tabella `effort_entries` (con `user_id` nullable FK) + seed iniziale. Sostituire dropdown hardcoded della Fase 3 con contenuto DB. Predisposizione test automatici.
 
 ### Fase 5 — Salvataggio record
 - **Stato**: non iniziata.
