@@ -1,12 +1,12 @@
 # Active Context — Effort Tracking
 
 ## Stato corrente
-- **Ultima fase completata**: Fase 7 ✅ (2026-07-31) — selezione record, update e delete.
-- **Fase in corso**: nessuna. In attesa di task per la Fase 8 (Export CSV/XLSX).
+- **Ultima fase completata**: Fase 8 ✅ (2026-07-31) — export CSV con filtro mese.
+- **Fase in corso**: nessuna. In attesa di task per la Fase 9 (Refactoring, logging, env, systemd).
 - **Stato**: idle, pronto per nuovo task.
-- **Versione corrente**: `0.9.0` (tag `v0.9.0` annotato su `develop`).
+- **Versione corrente**: `0.10.0` (tag `v0.10.0` annotato su `develop`).
 - **Roadmap estesa**: aggiunte Fase 4b (sidebar hamburger), Fase 5b (copia su settimana), Fase 12 (Admin), Fase 13 (Manager); hardening slitta a Fase 14. Vedi `progress.md`/`projectbrief.md`.
-- **Nota**: la tabella `effort_entries` ha la colonna `user_text` (String 128 nullable). Contiene dati reali (106 record: 100 fixture gen-lug 2026 + 6 preesistenti). Merge su `main` autorizzato dall'utente.
+- **Nota**: la tabella `effort_entries` ha la colonna `user_text` (String 128 nullable). Contiene dati reali (105+ record: fixture gen-lug 2026 + preesistenti). Merge su `main` autorizzato dall'utente in Fase 6.
 - **Nota ambiente**: sviluppo su **Ubuntu in WSL** (Python 3.12.3, pip 24.0). Venv ricreato in questa macchina. Dipendenze: fastapi 0.141.1, uvicorn 0.52.0, sqlalchemy 2.0.51, pydantic 2.13.4, jinja2 3.1.6, python-multipart 0.0.32.
 
 ## Decisioni recenti
@@ -123,11 +123,26 @@
 - Retrocompatibilità: insert senza `record_id` → `/?success=1`; banner success=2 e success=3 renderizzati.
 - Static: row-select.js/form.js/style.css 200.
 
-## Prossima fase (Fase 8)
-- **Export CSV/XLSX**: esportazione con filtri base (mese/anno, eventualmente range di date). Da definire formato (CSV nativo Python + XLSX via openpyxl, da proporre).
+## Modifiche di Fase 8 (export CSV)
+- **`app/routers/web.py`**:
+  - Nuova route `GET /export` (`export_csv`, nome `export_csv`): accetta `month` opzionale (`?month=YYYY-MM`), carica i record con eager-load e ordina per data crescente, filtra per mese se presente.
+  - Nuova funzione `_build_csv(records)` separata dall'endpoint per testabilità: genera il contenuto CSV con BOM UTF-8 (`\ufeff`), header `_CSV_HEADER` (Data, Cliente, Gruppo, Attività, Utente, Ore, Note, Descrizione attività), date in formato `DD/MM/YYYY`.
+  - `StreamingResponse` con `media_type="text/csv; charset=utf-8"` e `Content-Disposition: attachment; filename="effort_YYYY-MM.csv"` (o `effort_tutti.csv` senza filtro).
+  - Costante `_CSV_HEADER` aggiunta in cima al modulo.
+- **`app/templates/index.html`**: nella `filter-bar`, aggiunto `<span class="filter-bar__spacer">` (flessibile) e link `<a class="filter-bar__export" role="button">Esporta CSV</a>` all'estrema destra; href `/export` con `?month={{ selected_month }}` se un mese è selezionato. Commento intestazione aggiornato a "Fase 8 — Export CSV".
+- **`app/static/style.css`**: classi `.filter-bar__spacer` (flex: 1 1 auto, spinge il pulsante a destra) e `.filter-bar__export` (stile outline navy coerente con `.btn-secondary`, hover con sfondo accent, focus-visible).
+- **`tests/test_models.py`**: nuova classe `TestExportCsv` con test `test_build_csv_header_and_row` che verifica BOM, header e riga formattata (date DD/MM/YYYY, campi presenti). Totale 8 test.
+- **Label fase**: aggiornata a "Fase 8 — Export CSV".
 
-## Fasi successive (dopo 7)
-- **Fasi 8–9**: export, refactoring (logging, .env, systemd, toggle dark/light).
+## Verifiche Fase 8 (test + curl)
+- **Test**: 8/8 OK.
+- `GET /export` → 200, `Content-Type: text/csv; charset=utf-8`, `Content-Disposition: attachment; filename="effort_tutti.csv"`, BOM presente, header corretto, dati presenti.
+- `GET /export?month=2026-01` → 200, `filename="effort_2026-01.csv"`, 11 record + header.
+- `GET /` → contiene label "Fase 8 — Export CSV" e link "Esporta CSV".
+- **Verifica utente (browser)**: pulsante "Esporta CSV" a destra del dropdown mese; download del CSV; il download rispetta il filtro mese selezionato.
+
+## Fasi successive (dopo 8)
+- **Fase 9**: refactoring, logging, .env, systemd, toggle dark/light.
 - **Fasi 10–11**: auth locale, multiutente/segregazione.
 - **Fase 12 — Admin**: tabella `roles`, CRUD utenti + assegnazione ruoli, CRUD lookup, sezione `/admin`.
 - **Fase 13 — Manager**: vista/export dei record del proprio gruppo, senza gestione lookup/utenti.

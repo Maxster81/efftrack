@@ -4,12 +4,14 @@
 
 {% block content %}
   {# ------------------------------------------------------------
-     Fase 7 — Selezione record e update.
+     Fase 8 — Export CSV.
      Form in alto, tabella elenco in basso. La tabella mostra i
      record dal DB con filtro per mese. Click su una riga popola il
      form con i dati del record (modalità modifica); il pulsante
      "Salva" aggiorna il record selezionato invece di inserirne uno
      nuovo. Il pulsante "Copia su settimana" è nascosto in modifica.
+     Pulsante "Esporta CSV" a destra del filtro mese: rispetta il
+     filtro selezionato e scarica il CSV corrispondente.
      ------------------------------------------------------------ #}
 
   <section class="form-card" aria-labelledby="form-title">
@@ -128,6 +130,9 @@
             <option value="{{ value }}" {% if value == selected_month %}selected{% endif %}>{{ label }}</option>
           {% endfor %}
         </select>
+        <span class="filter-bar__spacer" aria-hidden="true"></span>
+        <a class="filter-bar__export" href="/export{% if selected_month %}?month={{ selected_month }}{% endif %}"
+           role="button">Esporta CSV</a>
       </form>
     {% endif %}
 

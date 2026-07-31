@@ -73,6 +73,51 @@ class TestSeed(DatabaseTestCase):
         self.assertEqual(n_clients, 2)
 
 
+class TestExportCsv(DatabaseTestCase):
+    """Test della generazione del CSV di export (Fase 8)."""
+
+    def test_build_csv_header_and_row(self) -> None:
+        """Il CSV contiene il BOM, l'header e una riga formattata."""
+        from app.routers.web import _build_csv
+
+        client = self.db.execute(select(Client)).scalars().first()
+        group = self.db.execute(select(Group)).scalars().first()
+        activity = self.db.execute(select(Activity)).scalars().first()
+
+        from datetime import date
+
+        entry = EffortEntry(
+            user_id=None,
+            user_text="Mario",
+            client_id=client.id,
+            group_id=group.id,
+            activity_id=activity.id,
+            work_date=date(2026, 7, 31),
+            hours_spent=7.5,
+            notes="Nota di test",
+            description=None,
+        )
+        # Assegna le relazioni direttamente sull'oggetto: `_build_csv`
+        # accede a `client.name`, `group.name` e `activity.name`.
+        entry.client = client
+        entry.group = group
+        entry.activity = activity
+        self.db.add(entry)
+        self.db.commit()
+
+        csv_lines = _build_csv([entry]).splitlines()
+        # La prima riga inizia con il BOM UTF-8.
+        self.assertTrue(csv_lines[0].startswith("\ufeffData"))
+        self.assertEqual(len(csv_lines), 2)
+        row = csv_lines[1]
+        self.assertIn("31/07/2026", row)
+        self.assertIn("Mario", row)
+        self.assertIn("INAIL", row)
+        self.assertIn("GRUPPO SOC", row)
+        self.assertIn("7.5", row)
+        self.assertIn("Nota di test", row)
+
+
 class TestEffortEntry(DatabaseTestCase):
     def test_insert_entry(self) -> None:
         client = self.db.execute(select(Client)).scalars().first()

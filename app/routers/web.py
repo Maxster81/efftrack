@@ -7,11 +7,13 @@ successive a partire dalla Fase 2.
 """
 from __future__ import annotations
 
+import csv
+import io
 from datetime import date, timedelta
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Form, Request
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, StreamingResponse
 from pydantic import ValidationError
 from sqlalchemy import func, select, text
 from sqlalchemy.exc import SQLAlchemyError
@@ -34,6 +36,18 @@ router: APIRouter = APIRouter(tags=["web"])
 _MESI_ITALIANI = [
     "", "Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno",
     "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre",
+]
+
+# Header del CSV di export (Fase 8), coerente con le colonne della tabella.
+_CSV_HEADER = [
+    "Data",
+    "Cliente",
+    "Gruppo",
+    "Attività",
+    "Utente",
+    "Ore",
+    "Note",
+    "Descrizione attività",
 ]
 
 
@@ -99,7 +113,7 @@ async def index(
         context={
             "app_name": APP_NAME,
             "app_version": APP_VERSION,
-            "phase": "Fase 7 — Selezione record e update",
+            "phase": "Fase 8 — Export CSV",
             "clients": clients,
             "groups": groups,
             "activities": activities,
@@ -262,6 +276,69 @@ def _save_week(payload: EffortEntryCreate, db: Session) -> RedirectResponse:
         )
     db.commit()
     return RedirectResponse("/?success=1", status_code=303)
+
+
+@router.get("/export", response_class=StreamingResponse, name="export_csv")
+async def export_csv(
+    db: Session = Depends(get_db),
+    month: str | None = None,
+) -> StreamingResponse:
+    """Esporta i record di effort in formato CSV.
+
+    Fase 8: genera un CSV con le stesse colonne della tabella (Data,
+    Cliente, Gruppo, Attività, Utente, Ore, Note, Descrizione attività).
+    Il parametro opzionale `month` (es. `?month=2026-07`) filtra i record
+    di quel mese; senza filtro vengono esportati tutti i record. La data
+    è formattata DD/MM/YYYY. Il file inizia con il BOM UTF-8 per una
+    corretta apertura in Excel/Windows.
+    """
+    stmt = (
+        select(EffortEntry)
+        .options(
+            selectinload(EffortEntry.client),
+            selectinload(EffortEntry.group),
+            selectinload(EffortEntry.activity),
+        )
+        .order_by(EffortEntry.work_date.asc())
+    )
+    if month:
+        stmt = stmt.where(func.strftime("%Y-%m", EffortEntry.work_date) == month)
+    records = db.execute(stmt).scalars().all()
+
+    filename = f"effort_{month}.csv" if month else "effort_tutti.csv"
+    return StreamingResponse(
+        iter([_build_csv(records)]),
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+def _build_csv(records: list[EffortEntry]) -> str:
+    """Costruisce il contenuto CSV (con BOM UTF-8) dai record di effort.
+
+    Fase 8: le righe seguono l'ordine de `records` così come passato dal
+    chiamante (l'endpoint le ordina per data crescente). Header coerente
+    con le colonne della tabella. La funzione è separata dall'endpoint
+    per renderne il contenuto facilmente testabile senza richieste HTTP.
+    """
+    buffer = io.StringIO()
+    buffer.write("\ufeff")  # BOM UTF-8 per compatibilità Excel/Windows.
+    writer = csv.writer(buffer)
+    writer.writerow(_CSV_HEADER)
+    for record in records:
+        writer.writerow(
+            [
+                record.work_date.strftime("%d/%m/%Y"),
+                record.client.name,
+                record.group.name,
+                record.activity.name,
+                record.user_text or "",
+                record.hours_spent,
+                record.notes or "",
+                record.description or "",
+            ]
+        )
+    return buffer.getvalue()
 
 
 @router.get("/health", name="health")
