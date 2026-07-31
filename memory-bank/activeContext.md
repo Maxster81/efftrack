@@ -1,12 +1,12 @@
 # Active Context — Effort Tracking
 
 ## Stato corrente
-- **Ultima fase completata**: Fase 5 ✅ (2026-07-31).
-- **Fase in corso**: nessuna. In attesa di task per la Fase 5b.
+- **Ultima fase completata**: Fase 5b ✅ (2026-07-31).
+- **Fase in corso**: nessuna. In attesa di task per la Fase 6.
 - **Stato**: idle, pronto per nuovo task. Roadmap estesa il 2026-07-31.
-- **Versione corrente**: `0.6.0` (tag `v0.6.0` annotato su `develop`).
+- **Versione corrente**: `0.7.0` (tag `v0.7.0` annotato su `develop`).
 - **Roadmap estesa**: aggiunte Fase 4b (sidebar hamburger), Fase 5b (copia su settimana), Fase 12 (Admin), Fase 13 (Manager); hardening slitta a Fase 14. Vedi `progress.md`/`projectbrief.md`.
-- **Nota**: la tabella `effort_entries` ora ha anche la colonna `user_text` (String 128 nullable).
+- **Nota**: la tabella `effort_entries` ha la colonna `user_text` (String 128 nullable) e ora contiene dati reali (6 record: 5 settimana user Metro + 1 user Massimo).
 - **Nota ambiente**: sviluppo su **Ubuntu in WSL** (Python 3.12.3, pip 24.0). Venv ricreato in questa macchina. Dipendenze: fastapi 0.141.1, uvicorn 0.52.0, sqlalchemy 2.0.51, pydantic 2.13.4, jinja2 3.1.6, python-multipart 0.0.32.
 
 ## Decisioni recenti
@@ -83,8 +83,19 @@
 - Banner: `?success=1` mostra `.form-success` + messaggio; `?error=descrizione` mostra errore; GET normale nessun banner.
 - DB rigenerato con colonna `user_text`.
 
-## Prossima fase (Fase 5b)
-- **Inserimento bulk "copia su settimana"**: pulsante accanto a "Salva" che prende i valori del form corrente (cliente, gruppo, attività, ore) e crea un record per ogni giorno feriale (lun→ven) della settimana corrente, con data corrispondente. Validazione server-side per ciascun record. Dipende dalla Fase 5 (salvataggio).
+## Modifiche di Fase 5b (inserimento bulk "copia su settimana")
+- **`app/routers/web.py`**: parametro `action` nel form (`single`/`week`), funzione `_save_week` (calcola il lunedì della settimana della data e crea 5 record lun→ven), fattorizzata `_save_single`. **Fix FastAPI**: `Annotated[EffortEntryCreate, Form()]` combinato con altri `Form()` causava 422 → campi form dichiarati singolarmente + costruzione del modello Pydantic dentro la funzione (validazione server-side completa). Aggiunto `error=validazione` con relativo banner.
+- **`app/templates/index.html`**: pulsante "Copia su settimana" (`name="action" value="week"`) accanto a "Salva" (`value="single"`); banner `validazione`.
+- **`app/static/style.css`**: classe `.btn-secondary` (outline navy) + gap in `.form-actions`.
+
+## Verifiche Fase 5b (curl end-to-end + browser)
+- POST `action=week` con data 31/07/2026 → 303 `/?success=1`; creati 5 record lun 27→ven 31 (user 'Bulk', 8h, notes 'batch').
+- POST `action=week` con attività Supporto Specialistico senza descrizione → 303 `/?error=descrizione`, 0 record.
+- **Verifica utente (browser)**: "Copia su settimana" → banner verde; confermato nel DB 5 record settimana (user Metro, 8h, lun 06→ven 10/07/2026).
+
+## Prossima fase (Fase 6)
+- **Elenco record**: tabella inferiore caricata dal DB, ordinata per data decrescente.
+- **Estensione concordata**: dropdown filtro mese/anno sopra la tabella, popolato con i mesi distinti presenti nei record (`SELECT DISTINCT strftime('%Y-%m', work_date)`). Selezione → `GET /?month=YYYY-MM`, mostra solo i record del mese. Il mese non viene persistito (derivato da work_date).
 
 ## Fasi successive (dopo 4b)
 - **Fase 5 — Salvataggio record**: POST di salvataggio con validazione server-side (Pydantic), requisito Descrizione attività vincolato a `requires_description`, messaggi di esito. Persistenza su `effort_entries`.

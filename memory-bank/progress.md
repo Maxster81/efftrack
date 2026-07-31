@@ -1,10 +1,10 @@
 # Progress — Effort Tracking
 
 ## Stato globale
-- **Ultima fase completata**: Fase 5 ✅ completata il 2026-07-31.
-- **Fase in corso**: nessuna. In attesa di task per la Fase 5b.
+- **Ultima fase completata**: Fase 5b ✅ completata il 2026-07-31.
+- **Fase in corso**: nessuna. In attesa di task per la Fase 6.
 - **Stato**: idle, pronto per nuovo task.
-- **Versione corrente**: `0.6.0` (tag `v0.6.0` annotato su `develop`).
+- **Versione corrente**: `0.7.0` (tag `v0.7.0` annotato su `develop`).
 - **Roadmap estesa**: aggiunte Fase 4b (sidebar hamburger), Fase 5b (copia su settimana), Fase 12 (Admin), Fase 13 (Manager); l'hardening passa da 12 a 14.
 
 ## Roadmap
@@ -114,12 +114,21 @@
 - **Commit**: `feat(db): phase 5 save effort entry with server validation`.
 
 ### Fase 5b — Inserimento bulk "copia su settimana"
-- **Stato**: non iniziata.
+- **Stato**: ✅ completata il 2026-07-31.
 - **Obiettivo**: pulsante "Copia su settimana" accanto a Salva: prende i valori del form corrente (cliente, gruppo, attività, ore) e crea un record per ogni giorno feriale (lunedì→venerdì) della settimana corrente, con data corrispondente. Stessi valori, date diverse. Validazione server-side per ciascun record.
+- **Cosa è stato fatto**:
+  - **`app/routers/web.py`**: parametro `action` nel form (`single`/`week`); funzione `_save_week` che calcola il lunedì della settimana della data e crea 5 record lun→ven; fattorizzata `_save_single`. **Fix**: `Annotated[EffortEntryCreate, Form()]` con altri `Form()` causava 422 → dichiarati i campi form singolarmente e costruito il modello Pydantic dentro la funzione. Banner per `error=validazione`.
+  - **`app/templates/index.html`**: pulsante "Copia su settimana" (`name="action" value="week"`) accanto a "Salva" (`value="single"`); banner errore validazione.
+  - **`app/static/style.css`**: classe `.btn-secondary` (outline navy) + gap nelle `.form-actions`.
+  - Verifiche curl: POST `action=week` con data 31/07/2026 → 303 `/?success=1`; creati 5 record lun 27→ven 31 ('Bulk', 8h, notes batch). POST `action=week` con attività Supporto Specialistico senza descrizione → 303 `/?error=descrizione`, 0 record.
+  - **Verifica utente (browser)**: "Copia su settimana" → banner verde, 5 record settimana (user Metro, 8h) salvati nel DB.
+- **Versioning**: bump `VERSION` `0.6.0` → `0.7.0` (MINOR).
+- **Branch**: commit su `develop`, tag annotato `v0.7.0`. Niente `main`.
+- **Commit**: `feat(db): phase 5b bulk copy effort on week`.
 
 ### Fase 6 — Elenco record
 - **Stato**: non iniziata.
-- **Obiettivo**: tabella inferiore caricata dal DB, ordinata per data decrescente.
+- **Obiettivo**: tabella inferiore caricata dal DB, ordinata per data decrescente. (Estensione concordata: filtro mese/anno tramite dropdown sopra la tabella, basato sui mesi distinti presenti nei record.)
 
 ### Fase 7 — Selezione record e update
 - **Stato**: non iniziata.

@@ -7,11 +7,12 @@ successive a partire dalla Fase 2.
 """
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, timedelta
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from pydantic import ValidationError
 from sqlalchemy import select, text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
@@ -73,16 +74,40 @@ async def index(
 
 @router.post("/", response_class=HTMLResponse, name="save_entry")
 async def save_entry(
-    payload: Annotated[EffortEntryCreate, Form()],
+    user: Annotated[str, Form()],
+    date: Annotated[date, Form()],
+    client_id: Annotated[int, Form(gt=0)],
+    group_id: Annotated[int, Form(gt=0)],
+    activity_id: Annotated[int, Form(gt=0)],
+    hours: Annotated[float, Form()],
+    notes: Annotated[str | None, Form()] = None,
+    description: Annotated[str | None, Form()] = None,
+    action: Annotated[str, Form()] = "single",
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
     """Salva un nuovo record di effort nel database.
 
-    Fase 5: persistenza reale su `effort_entries`. Verifica che l'attività
-    selezionata richieda una descrizione (`requires_description`) e crea il
-    record. In caso di errore di validazione esegue comunque un redirect con
-    un messaggio di errore (miglioramento messaggi in Fase 9).
+    Fase 5: persistenza reale su `effort_entries`. `action` può essere
+    "single" (salvataggio di un singolo record) oppure "week" (copia su
+    settimana: crea un record per ogni giorno feriale lun→ven della
+    settimana che contiene la data del form). Verifica che l'attività
+    richieda una descrizione prima di creare i record.
     """
+    # Costruisce il modello Pydantic per la validazione server-side completa.
+    try:
+        payload = EffortEntryCreate(
+            user=user,
+            date=date,
+            client_id=client_id,
+            group_id=group_id,
+            activity_id=activity_id,
+            hours=hours,
+            notes=notes,
+            description=description,
+        )
+    except ValidationError:
+        return RedirectResponse("/?error=validazione", status_code=303)
+
     activity = db.execute(
         select(Activity).where(Activity.id == payload.activity_id)
     ).scalar_one_or_none()
@@ -91,8 +116,16 @@ async def save_entry(
     if activity is not None and activity.requires_description and not payload.description:
         return RedirectResponse("/?error=descrizione", status_code=303)
 
+    if action == "week":
+        return _save_week(payload, db)
+
+    return _save_single(payload, db)
+
+
+def _save_single(payload: EffortEntryCreate, db: Session) -> RedirectResponse:
+    """Crea e salva un singolo record di effort."""
     entry = EffortEntry(
-        user_id=None,  # valorizzato in Fase 11 (multiutente)
+        user_id=None,
         user_text=payload.user,
         client_id=payload.client_id,
         group_id=payload.group_id,
@@ -104,7 +137,28 @@ async def save_entry(
     )
     db.add(entry)
     db.commit()
+    return RedirectResponse("/?success=1", status_code=303)
 
+
+def _save_week(payload: EffortEntryCreate, db: Session) -> RedirectResponse:
+    """Copia il form su tutti i giorni feriali della settimana della data."""
+    # Lunedì della settimana che contiene la data selezionata (lun=0).
+    monday = payload.date - timedelta(days=payload.date.weekday())
+    for offset in range(5):  # lun, mar, mer, gio, ven
+        db.add(
+            EffortEntry(
+                user_id=None,
+                user_text=payload.user,
+                client_id=payload.client_id,
+                group_id=payload.group_id,
+                activity_id=payload.activity_id,
+                work_date=monday + timedelta(days=offset),
+                hours_spent=payload.hours,
+                notes=payload.notes,
+                description=payload.description,
+            )
+        )
+    db.commit()
     return RedirectResponse("/?success=1", status_code=303)
 
 

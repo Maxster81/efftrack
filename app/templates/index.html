@@ -17,6 +17,8 @@
 
     {% if error == "descrizione" %}
       <div class="form-error" role="alert">La Descrizione attività è obbligatoria per l'attività selezionata.</div>
+    {% elif error == "validazione" %}
+      <div class="form-error" role="alert">Dati del form non validi. Controlla i campi compilati.</div>
     {% elif success_message %}
       <div class="form-success" role="status">{{ success_message }}</div>
     {% endif %}
@@ -90,7 +92,8 @@
       </div>
 
       <div class="form-actions">
-        <button type="submit" class="btn-primary">Salva</button>
+        <button type="submit" class="btn-primary" name="action" value="single">Salva</button>
+        <button type="submit" class="btn-secondary" name="action" value="week">Copia su settimana</button>
       </div>
     </form>
   </section>
