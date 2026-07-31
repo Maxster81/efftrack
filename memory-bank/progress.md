@@ -2,9 +2,10 @@
 
 ## Stato globale
 - **Ultima fase completata**: Fase 4 ✅ completata il 2026-07-31.
-- **Fase in corso**: nessuna. In attesa di task per la Fase 5.
-- **Stato**: idle, pronto per nuovo task.
+- **Fase in corso**: nessuna. In attesa di task per la Fase 4b.
+- **Stato**: idle, pronto per nuovo task. Roadmap estesa il 2026-07-31.
 - **Versione corrente**: `0.4.0` (tag `v0.4.0` annotato su `develop`).
+- **Roadmap estesa**: aggiunte Fase 4b (sidebar hamburger), Fase 5b (copia su settimana), Fase 12 (Admin), Fase 13 (Manager); l'hardening passa da 12 a 14.
 
 ## Roadmap
 
@@ -85,9 +86,17 @@
 - **Branch**: commit su `develop`, tag annotato `v0.4.0`. Niente `main`.
 - **Commit**: `feat(db): phase 4 database schema and lookup seed`.
 
+### Fase 4b — Sidebar navigazione con hamburger menu
+- **Stato**: non iniziata.
+- **Obiettivo**: barra laterale (drawer) con pulsante hamburger nell'header, visibile in tutto il web server e per tutti gli utenti. Contenitore vuoto per ora; le voci di menu verranno popolate in base al ruolo utente a partire dalle Fasi 12–13 (Admin/Manager/User).
+
 ### Fase 5 — Salvataggio record
 - **Stato**: non iniziata.
 - **Obiettivo**: POST di salvataggio con validazione server-side (Pydantic) e messaggi di esito; requisito Descrizione attività vincolato a `requires_description`.
+
+### Fase 5b — Inserimento bulk "copia su settimana"
+- **Stato**: non iniziata.
+- **Obiettivo**: pulsante "Copia su settimana" accanto a Salva: prende i valori del form corrente (cliente, gruppo, attività, ore) e crea un record per ogni giorno feriale (lunedì→venerdì) della settimana corrente, con data corrispondente. Stessi valori, date diverse. Validazione server-side per ciascun record.
 
 ### Fase 6 — Elenco record
 - **Stato**: non iniziata.
@@ -113,7 +122,15 @@
 - **Stato**: non iniziata.
 - **Obiettivo**: `user_id` valorizzato, segregazione dei dati, predisposizione ruoli.
 
-### Fase 12 — Hardening produzione
+### Fase 12 — Gestione ruoli e amministrazione (Admin)
+- **Stato**: non iniziata.
+- **Obiettivo**: tabella `roles` (admin/manager/user) e FK su `users`. L'Admin può: CRUD utenti e assegnazione ruoli; CRUD lookup (clienti, gruppi, attività). Sezione `/admin` visibile solo al ruolo admin. I dropdown non saranno più statici dopo il seed.
+
+### Fase 13 — Export manager e gestione gruppo (Manager)
+- **Stato**: non iniziata.
+- **Obiettivo**: il Manager vede i record di tutti gli utenti del proprio gruppo e può esportarne i dati (CSV/XLSX), ma NON modifica lookup né gestisce utenti (quello è admin). Serve associazione utente→gruppo.
+
+### Fase 14 — Hardening produzione
 - **Stato**: non iniziata.
 - **Obiettivo**: controllo validazioni, gestione errori, backup SQLite, note migrazione PostgreSQL.
 
