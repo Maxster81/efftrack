@@ -1,10 +1,10 @@
 # Active Context — Effort Tracking
 
 ## Stato corrente
-- **Ultima fase completata**: Fase 6 ✅ (2026-07-31).
-- **Fase in corso**: nessuna. In attesa di task per la Fase 7.
-- **Stato**: idle, pronto per nuovo task. Merge autorizzato su `main` (2026-07-31).
-- **Versione corrente**: `0.8.0` (tag `v0.8.0` annotato su `develop`).
+- **Ultima fase completata**: Fase 7 ✅ (2026-07-31) — selezione record, update e delete.
+- **Fase in corso**: nessuna. In attesa di task per la Fase 8 (Export CSV/XLSX).
+- **Stato**: idle, pronto per nuovo task.
+- **Versione corrente**: `0.9.0` (tag `v0.9.0` annotato su `develop`).
 - **Roadmap estesa**: aggiunte Fase 4b (sidebar hamburger), Fase 5b (copia su settimana), Fase 12 (Admin), Fase 13 (Manager); hardening slitta a Fase 14. Vedi `progress.md`/`projectbrief.md`.
 - **Nota**: la tabella `effort_entries` ha la colonna `user_text` (String 128 nullable). Contiene dati reali (106 record: 100 fixture gen-lug 2026 + 6 preesistenti). Merge su `main` autorizzato dall'utente.
 - **Nota ambiente**: sviluppo su **Ubuntu in WSL** (Python 3.12.3, pip 24.0). Venv ricreato in questa macchina. Dipendenze: fastapi 0.141.1, uvicorn 0.52.0, sqlalchemy 2.0.51, pydantic 2.13.4, jinja2 3.1.6, python-multipart 0.0.32.
@@ -103,13 +103,31 @@
 - `GET /` → 200, 106 righe; dropdown con 7 opzioni mese; `?month=2026-01` → 11 righe. Test 6 OK.
 - **Verifica utente (browser)**: filtro mese/anno funzionante.
 
-## Prossima fase (Fase 7)
-- **Selezione record e update**: click su riga → form precompilato → update. Sostituirà l'inserimento con l'aggiornamento del record selezionato. Il pulsante "Salva" gestirà sia insert che update (come da productContext).
+## Modifiche di Fase 7 (selezione record e update/delete)
+- **`app/routers/web.py`**:
+  - Campi del form (`user`, `date`, `client_id`, `group_id`, `activity_id`, `hours`, `notes`, `description`) resi **opzionali** nella firma della route; validazione completa demandata a `EffortEntryCreate` (Pydantic) dentro il try. Necessario perché `action=delete` richiede solo `record_id` (prima FastAPI dava 422 sui campi obbligatori).
+  - `POST /` accetta `record_id` (hidden field nel form). Con `record_id` valorizzato e `action=single`, `_save_single` **aggiorna** il record esistente → redirect `/?success=2`. Con `action=delete`, `_delete_entry(record_id, db)` elimina il record → `/?success=3`; se id assente/inesistente → `/?error=validazione`.
+  - `action=week` è bloccato in modalità modifica (`?error=validazione`) — la copia bulk vale solo in inserimento.
+  - Banner `success=1` (inserito), `success=2` (aggiornato), `success=3` (eliminato). Label "Fase 7 — Selezione record e update".
+- **`app/templates/index.html`**: input hidden `#record-id` (dentro il `<form>`, fixato dopo bug iniziale in cui era fuori e non veniva inviato); righe tabella cliccabili con `role="button" tabindex="0"` e `data-*` per popolare il form; titolo dinamico (Nuova/Modifica registrazione); pulsanti "Annulla modifica" (#edit-cancel) e "Elimina registrazione" (#edit-delete, `is-hidden` di default) + hide di #week-action in modifica.
+- **`app/static/row-select.js`** (NUOVO): click riga/tastiera (Enter/Spazio) → popola form + modalità modifica; "Annulla modifica" resetta; `window.confirm` prima della cancellazione; espone `EffortTrack.clearEdit`/`isEditMode`.
+- **`app/static/form.js`**: espone `EffortTrack.syncDescriptionVisibility`; salta la validazione client-side quando il submit viene da `#edit-delete`.
+- **`app/static/style.css`**: `.is-selected` (riga evidenziata), `:focus-visible`, `.btn-tertiary` (annulla), `.btn-danger` (elimina rosso), `.card-title__edit`.
+- **`tests/test_models.py`**: nuovo test `test_update_entry` (7 test totali OK).
+- **Bug fix**: input hidden `record_id` era fuori dal `<form>` → spostato dentro (i POST senza di esso creavano sempre nuovi record).
 
-## Fasi successive (dopo 4b)
-- **Fase 5 — Salvataggio record**: POST di salvataggio con validazione server-side (Pydantic), requisito Descrizione attività vincolato a `requires_description`, messaggi di esito. Persistenza su `effort_entries`.
-- **Fase 5b — Inserimento bulk "copia su settimana"**: pulsante che crea record per lunedì→venerdì della settimana corrente con i valori del form corrente.
-- **Fasi 6–9**: invariati (elenco, update, export, refactoring).
+## Verifiche Fase 7 (test + curl end-to-end)
+- **Test**: 7/7 OK.
+- Update: POST `record_id=106` → 303 `/?success=2`, record aggiornato (nessun duplicato).
+- Delete: POST `action=delete` → 303 `/?success=3`; record eliminato dal DB (verificato: i record del 31/07/2026 eliminati dall'utente non risultano più in `effort_entries`).
+- Retrocompatibilità: insert senza `record_id` → `/?success=1`; banner success=2 e success=3 renderizzati.
+- Static: row-select.js/form.js/style.css 200.
+
+## Prossima fase (Fase 8)
+- **Export CSV/XLSX**: esportazione con filtri base (mese/anno, eventualmente range di date). Da definire formato (CSV nativo Python + XLSX via openpyxl, da proporre).
+
+## Fasi successive (dopo 7)
+- **Fasi 8–9**: export, refactoring (logging, .env, systemd, toggle dark/light).
 - **Fasi 10–11**: auth locale, multiutente/segregazione.
 - **Fase 12 — Admin**: tabella `roles`, CRUD utenti + assegnazione ruoli, CRUD lookup, sezione `/admin`.
 - **Fase 13 — Manager**: vista/export dei record del proprio gruppo, senza gestione lookup/utenti.

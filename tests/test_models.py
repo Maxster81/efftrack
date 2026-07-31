@@ -100,6 +100,34 @@ class TestEffortEntry(DatabaseTestCase):
         self.assertEqual(saved.hours_spent, 7.5)
         self.assertEqual(saved.client.name, client.name)
         self.assertEqual(saved.user_text, "Test User")
+        self.entry_id = saved.id
+
+    def test_update_entry(self) -> None:
+        """Aggiorna un record esistente e verifica i nuovi valori (Fase 7)."""
+        # Prepara un record da aggiornare.
+        self.test_insert_entry()
+        from datetime import date
+
+        entry = self.db.get(EffortEntry, self.entry_id)
+        self.assertIsNotNone(entry)
+
+        second_client = self.db.execute(select(Client).order_by(Client.id.desc())).scalars().first()
+        entry.user_text = "Nuovo User"
+        entry.client_id = second_client.id
+        entry.work_date = date(2026, 8, 1)
+        entry.hours_spent = 8.0
+        entry.notes = "Note aggiornate"
+        entry.description = "Descrizione aggiornata"
+        self.db.commit()
+
+        updated = self.db.get(EffortEntry, self.entry_id)
+        self.assertEqual(updated.user_text, "Nuovo User")
+        self.assertEqual(updated.client_id, second_client.id)
+        self.assertEqual(updated.work_date.isoformat(), "2026-08-01")
+        self.assertEqual(updated.hours_spent, 8.0)
+        self.assertEqual(updated.notes, "Note aggiornate")
+        self.assertEqual(updated.description, "Descrizione aggiornata")
+        self.assertIsNotNone(updated.updated_at)
 
 
 if __name__ == "__main__":

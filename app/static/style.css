@@ -356,6 +356,41 @@ a:hover { text-decoration: underline; }
   background: var(--color-accent);
   border-color: var(--color-primary-hover);
 }
+.btn-tertiary {
+  min-width: 160px;
+  padding: var(--space-sm) var(--space-xl);
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  background: transparent;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.btn-tertiary:hover {
+  background: var(--color-surface-alt);
+  border-color: var(--color-text-muted);
+  color: var(--color-text);
+}
+.btn-danger {
+  min-width: 180px;
+  padding: var(--space-sm) var(--space-xl);
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  font-weight: 600;
+  color: #ffffff;
+  background: #c0392b;
+  border: 1px solid #c0392b;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+.btn-danger:hover {
+  background: #a93226;
+  border-color: #a93226;
+}
 
 /* ---------- Tabella registrazioni ---------- */
 .records-card__header {
@@ -371,6 +406,9 @@ a:hover { text-decoration: underline; }
 .records-count {
   font-size: 0.9rem;
   color: var(--color-text-muted);
+}
+.card-title__edit {
+  color: var(--color-accent-strong);
 }
 .filter-bar {
   display: flex;
@@ -418,6 +456,18 @@ a:hover { text-decoration: underline; }
 }
 .records-table tbody tr:hover {
   background: var(--color-accent);
+}
+.records-table tbody tr.is-selected {
+  background: var(--color-accent);
+  outline: 2px solid var(--color-accent-strong);
+  outline-offset: -2px;
+}
+.records-table tbody tr.is-selected:hover {
+  background: var(--color-accent-strong);
+}
+.records-table tbody tr:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: -2px;
 }
 .col-hours {
   text-align: right;

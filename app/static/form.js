@@ -161,6 +161,12 @@
   // --- Event listeners ---
   if (form) {
     form.addEventListener("submit", function (event) {
+      // La cancellazione non richiede la validazione dei campi del form:
+      // serve solo `record_id` (già valorizzato da row-select.js).
+      var submitter = event.submitter;
+      if (submitter && submitter.id === "edit-delete") {
+        return;
+      }
       if (!validateForm()) {
         event.preventDefault();
       }
@@ -180,6 +186,10 @@
       setInvalid(event.target, false);
     });
   }
+
+  // Espone helper riusabili da row-select.js (Fase 7).
+  window.EffortTrack = window.EffortTrack || {};
+  window.EffortTrack.syncDescriptionVisibility = syncDescriptionVisibility;
 
   // --- Inizializzazione ---
   syncDescriptionVisibility();

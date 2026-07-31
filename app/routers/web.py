@@ -47,12 +47,13 @@ async def index(
 ) -> HTMLResponse:
     """Pagina principale: form di inserimento + tabella elenco.
 
-    Fase 6: la tabella inferiore è popolata dai record di `effort_entries`
+    Fase 7: la tabella inferiore è popolata dai record di `effort_entries`
     (ordinati per data decrescente) e mostra un dropdown filtro mese/anno
     basato sui mesi distinti presenti nei record. Il parametro `month`
     (es. `?month=2026-07`) filtra i record di quel mese; il mese resta
     derivato da `work_date`, mai persistito. `success`/`error` (set dal
-    POST) mostrano i banner.
+    POST) mostrano i banner. `success=1` = record inserito, `success=2` =
+    record aggiornato (Fase 7).
     """
     clients = db.execute(select(Client).order_by(Client.name)).scalars().all()
     groups = db.execute(select(Group).order_by(Group.name)).scalars().all()
@@ -87,6 +88,10 @@ async def index(
     success_message: str | None = None
     if success == 1:
         success_message = "Record salvato correttamente."
+    elif success == 2:
+        success_message = "Registrazione aggiornata correttamente."
+    elif success == 3:
+        success_message = "Registrazione eliminata correttamente."
 
     return templates.TemplateResponse(
         request=request,
@@ -94,7 +99,7 @@ async def index(
         context={
             "app_name": APP_NAME,
             "app_version": APP_VERSION,
-            "phase": "Fase 6 — Elenco record con filtro mese/anno",
+            "phase": "Fase 7 — Selezione record e update",
             "clients": clients,
             "groups": groups,
             "activities": activities,
@@ -110,25 +115,37 @@ async def index(
 
 @router.post("/", response_class=HTMLResponse, name="save_entry")
 async def save_entry(
-    user: Annotated[str, Form()],
-    date: Annotated[date, Form()],
-    client_id: Annotated[int, Form(gt=0)],
-    group_id: Annotated[int, Form(gt=0)],
-    activity_id: Annotated[int, Form(gt=0)],
-    hours: Annotated[float, Form()],
+    user: Annotated[str | None, Form()] = None,
+    date: Annotated[date | None, Form()] = None,
+    client_id: Annotated[int | None, Form()] = None,
+    group_id: Annotated[int | None, Form()] = None,
+    activity_id: Annotated[int | None, Form()] = None,
+    hours: Annotated[float | None, Form()] = None,
     notes: Annotated[str | None, Form()] = None,
     description: Annotated[str | None, Form()] = None,
     action: Annotated[str, Form()] = "single",
+    record_id: Annotated[int | None, Form()] = None,
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
-    """Salva un nuovo record di effort nel database.
+    """Salva o aggiorna un record di effort nel database.
 
     Fase 5: persistenza reale su `effort_entries`. `action` può essere
     "single" (salvataggio di un singolo record) oppure "week" (copia su
     settimana: crea un record per ogni giorno feriale lun→ven della
-    settimana che contiene la data del form). Verifica che l'attività
-    richieda una descrizione prima di creare i record.
+    settimana che contiene la data del form).
+
+    Fase 7: se `record_id` è presente, `action=single` aggiorna il record
+    esistente invece di crearne uno nuovo (modalità "modifica"). La copia
+    su settimana è pensata solo per l'inserimento (i valori non sono
+    validi in modalità modifica). Verifica che l'attività richieda una
+    descrizione prima di creare/aggiornare i record. `action=delete`
+    elimina definitivamente il record indicato da `record_id` (richiede
+    solo l'id, non i campi del form).
     """
+    # Eliminazione definitiva: richiede solo `record_id`, non i campi del form.
+    if action == "delete":
+        return _delete_entry(record_id, db)
+
     # Costruisce il modello Pydantic per la validazione server-side completa.
     try:
         payload = EffortEntryCreate(
@@ -152,14 +169,63 @@ async def save_entry(
     if activity is not None and activity.requires_description and not payload.description:
         return RedirectResponse("/?error=descrizione", status_code=303)
 
+    # La copia su settimana non è supportata in modalità modifica:
+    # se il record è in fase di update, il pulsante "Copia su settimana"
+    # viene nascosto lato UI; qui si blocca comunque per sicurezza.
+    if action == "week" and record_id is not None:
+        return RedirectResponse("/?error=validazione", status_code=303)
+
     if action == "week":
         return _save_week(payload, db)
 
-    return _save_single(payload, db)
+    return _save_single(payload, db, record_id=record_id)
 
 
-def _save_single(payload: EffortEntryCreate, db: Session) -> RedirectResponse:
-    """Crea e salva un singolo record di effort."""
+def _delete_entry(record_id: int | None, db: Session) -> RedirectResponse:
+    """Elimina definitivamente un record di effort dal database.
+
+    Fase 7: con `record_id` valorizzato recupera e cancella il record.
+    Se l'id non è presente o il record non esiste, redirect con errore
+    di validazione; altrimenti redirect con `?success=3`.
+    """
+    if record_id is None:
+        return RedirectResponse("/?error=validazione", status_code=303)
+
+    entry = db.get(EffortEntry, record_id)
+    if entry is None:
+        return RedirectResponse("/?error=validazione", status_code=303)
+
+    db.delete(entry)
+    db.commit()
+    return RedirectResponse("/?success=3", status_code=303)
+
+
+def _save_single(
+    payload: EffortEntryCreate,
+    db: Session,
+    record_id: int | None = None,
+) -> RedirectResponse:
+    """Crea un nuovo record oppure aggiorna quello indicato da `record_id`.
+
+    Fase 7: con `record_id` valorizzato, recupera il record esistente e ne
+    aggiorna i campi modificabili dal form, poi fa redirect con
+    `?success=2`. Se il record non esiste, redirect con errore validazione.
+    """
+    if record_id is not None:
+        entry = db.get(EffortEntry, record_id)
+        if entry is None:
+            return RedirectResponse("/?error=validazione", status_code=303)
+        entry.user_text = payload.user
+        entry.client_id = payload.client_id
+        entry.group_id = payload.group_id
+        entry.activity_id = payload.activity_id
+        entry.work_date = payload.date
+        entry.hours_spent = payload.hours
+        entry.notes = payload.notes
+        entry.description = payload.description
+        db.commit()
+        return RedirectResponse("/?success=2", status_code=303)
+
     entry = EffortEntry(
         user_id=None,
         user_text=payload.user,

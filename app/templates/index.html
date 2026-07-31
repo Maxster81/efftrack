@@ -4,14 +4,19 @@
 
 {% block content %}
   {# ------------------------------------------------------------
-     Fase 6 — Elenco record con filtro mese/anno.
+     Fase 7 — Selezione record e update.
      Form in alto, tabella elenco in basso. La tabella mostra i
-     record dal DB con filtro per mese; la selezione record (Fase 7)
-     arriverà nelle fasi successive.
+     record dal DB con filtro per mese. Click su una riga popola il
+     form con i dati del record (modalità modifica); il pulsante
+     "Salva" aggiorna il record selezionato invece di inserirne uno
+     nuovo. Il pulsante "Copia su settimana" è nascosto in modifica.
      ------------------------------------------------------------ #}
 
   <section class="form-card" aria-labelledby="form-title">
-    <h2 id="form-title" class="card-title">Nuova registrazione</h2>
+    <h2 id="form-title" class="card-title">
+      <span id="form-title-text">Nuova registrazione</span>
+      <span id="form-title-edit" class="card-title__edit" hidden>Modifica registrazione</span>
+    </h2>
 
     <div class="form-error" id="form-error" role="alert" hidden></div>
 
@@ -25,6 +30,11 @@
 
     <form class="effort-form" method="post" action="/"
           aria-label="Form di inserimento effort" novalidate>
+      {# Elemento nascosto che traccia il record in modalità modifica (Fase 7).
+         Valorizzato da row-select.js al click su una riga della tabella.
+         Deve stare dentro il <form> per essere incluso nella POST. #}
+      <input type="hidden" id="record-id" name="record_id" value="" />
+
       <div class="form-row">
         <div class="form-group">
           <label for="effort-user">User</label>
@@ -93,7 +103,9 @@
 
       <div class="form-actions">
         <button type="submit" class="btn-primary" name="action" value="single">Salva</button>
-        <button type="submit" class="btn-secondary" name="action" value="week">Copia su settimana</button>
+        <button type="submit" class="btn-secondary" name="action" value="week" id="week-action">Copia su settimana</button>
+        <button type="button" class="btn-tertiary is-hidden" id="edit-cancel">Annulla modifica</button>
+        <button type="submit" class="btn-danger is-hidden" name="action" value="delete" id="edit-delete">Elimina registrazione</button>
       </div>
     </form>
   </section>
@@ -136,7 +148,18 @@
         <tbody>
           {% if records %}
             {% for record in records %}
-              <tr class="records-table__row">
+              <tr class="records-table__row"
+                  role="button" tabindex="0"
+                  data-record-id="{{ record.id }}"
+                  data-user="{{ record.user_text or '' }}"
+                  data-date="{{ record.work_date.isoformat() }}"
+                  data-client-id="{{ record.client_id }}"
+                  data-group-id="{{ record.group_id }}"
+                  data-activity-id="{{ record.activity_id }}"
+                  data-hours="{{ record.hours_spent }}"
+                  data-notes="{{ record.notes or '' }}"
+                  data-description="{{ record.description or '' }}"
+                  aria-label="Seleziona registrazione del {{ record.work_date.strftime('%d/%m/%Y') }}">
                 <td>{{ record.work_date.strftime('%d/%m/%Y') }}</td>
                 <td>{{ record.client.name }}</td>
                 <td>{{ record.group.name }}</td>
@@ -160,4 +183,5 @@
 
 {% block scripts %}
   <script src="{{ url_for('static', path='form.js') }}" defer></script>
+  <script src="{{ url_for('static', path='row-select.js') }}" defer></script>
 {% endblock %}
