@@ -94,6 +94,32 @@ a:hover { text-decoration: underline; }
   justify-content: space-between;
   gap: var(--space-md);
 }
+.app-header__left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+.app-header__menu {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-on-primary);
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+.app-header__menu:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.6);
+}
+.app-header__menu-icon {
+  display: block;
+}
 .app-header__title {
   font-size: 1.25rem;
   margin: 0;
@@ -129,6 +155,76 @@ a:hover { text-decoration: underline; }
 }
 .app-header__user-icon {
   display: block;
+}
+
+/* ---------- Sidebar (menu hamburger, Fase 4b) ---------- */
+.sidebar-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 40;
+}
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 260px;
+  max-width: 85vw;
+  background: var(--color-surface);
+  border-right: 1px solid var(--color-border);
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.12);
+  transform: translateX(-105%);
+  transition: transform 0.25s ease;
+  z-index: 50;
+  overflow-y: auto;
+}
+.sidebar.is-open {
+  transform: translateX(0);
+}
+.sidebar__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-md) var(--space-lg);
+  background: var(--color-primary);
+  color: var(--color-text-on-primary);
+}
+.sidebar__title {
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.sidebar__close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-on-primary);
+  font-size: 1rem;
+  cursor: pointer;
+}
+.sidebar__close:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+.sidebar__menu {
+  list-style: none;
+  margin: 0;
+  padding: var(--space-md) 0;
+}
+.sidebar__menu li a {
+  display: block;
+  padding: var(--space-sm) var(--space-lg);
+  color: var(--color-text);
+}
+.sidebar__menu li a:hover {
+  background: var(--color-surface-alt);
+  text-decoration: none;
 }
 
 /* ---------- Main ---------- */

@@ -45,7 +45,7 @@ PORT: int = int(os.environ.get("EFFORT_TRACKING_PORT", "8000"))
 # --- Costanti applicative -----------------------------------------------------
 
 APP_NAME: str = "Effort Tracking"
-APP_VERSION: str = "0.4.0"
+APP_VERSION: str = "0.5.0"
 
 
 # --- Path applicativi (templates, static) ------------------------------------

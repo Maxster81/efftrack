@@ -1,10 +1,10 @@
 # Progress — Effort Tracking
 
 ## Stato globale
-- **Ultima fase completata**: Fase 4 ✅ completata il 2026-07-31.
-- **Fase in corso**: nessuna. In attesa di task per la Fase 4b.
-- **Stato**: idle, pronto per nuovo task. Roadmap estesa il 2026-07-31.
-- **Versione corrente**: `0.4.0` (tag `v0.4.0` annotato su `develop`).
+- **Ultima fase completata**: Fase 4b ✅ completata il 2026-07-31.
+- **Fase in corso**: nessuna. In attesa di task per la Fase 5.
+- **Stato**: idle, pronto per nuovo task.
+- **Versione corrente**: `0.5.0` (tag `v0.5.0` annotato su `develop`).
 - **Roadmap estesa**: aggiunte Fase 4b (sidebar hamburger), Fase 5b (copia su settimana), Fase 12 (Admin), Fase 13 (Manager); l'hardening passa da 12 a 14.
 
 ## Roadmap
@@ -87,8 +87,17 @@
 - **Commit**: `feat(db): phase 4 database schema and lookup seed`.
 
 ### Fase 4b — Sidebar navigazione con hamburger menu
-- **Stato**: non iniziata.
+- **Stato**: ✅ completata il 2026-07-31.
 - **Obiettivo**: barra laterale (drawer) con pulsante hamburger nell'header, visibile in tutto il web server e per tutti gli utenti. Contenitore vuoto per ora; le voci di menu verranno popolate in base al ruolo utente a partire dalle Fasi 12–13 (Admin/Manager/User).
+- **Cosa è stato fatto**:
+  - **`base.html`**: pulsante hamburger (SVG) nell'header a sinistra; sidebar `<nav id="app-sidebar">` con header "Menu" + ✕; overlay `#sidebar-overlay`; `nav.js` incluso globalmente con `defer`.
+  - **`app/static/nav.js`** (nuovo): toggle sidebar via hamburger, ✕, click overlay e tasto ESC; aggiorna `aria-expanded`/`aria-label`. Vanilla JS.
+  - **`app/static/style.css`**: stili hamburger, overlay (z-index 40), sidebar fissa da sinistra (260px, max 85vw, z-index 50, transizione slide), header navy, voci menu hover. Responsive.
+  - Verifiche curl: hamburger + `aria-controls`, sidebar + overlay presenti, `nav.js` e `style.css` serviti (200), `form.js` e `nav.js` prima di `</body>`, health ok.
+  - Verifica utente (browser): apertura/chiusura sidebar funzionante.
+- **Versioning**: bump `VERSION` `0.4.0` → `0.5.0` (MINOR).
+- **Branch**: commit su `develop`, tag annotato `v0.5.0`. Niente `main`.
+- **Commit**: `feat(ui): phase 4b sidebar navigation with hamburger menu`.
 
 ### Fase 5 — Salvataggio record
 - **Stato**: non iniziata.

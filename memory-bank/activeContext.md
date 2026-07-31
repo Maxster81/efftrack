@@ -1,10 +1,10 @@
 # Active Context — Effort Tracking
 
 ## Stato corrente
-- **Ultima fase completata**: Fase 4 ✅ (2026-07-31).
-- **Fase in corso**: nessuna. In attesa di task per la Fase 4b.
+- **Ultima fase completata**: Fase 4b ✅ (2026-07-31).
+- **Fase in corso**: nessuna. In attesa di task per la Fase 5.
 - **Stato**: idle, pronto per nuovo task. Roadmap estesa il 2026-07-31.
-- **Versione corrente**: `0.4.0` (tag `v0.4.0` annotato su `develop`).
+- **Versione corrente**: `0.5.0` (tag `v0.5.0` annotato su `develop`).
 - **Roadmap estesa**: aggiunte Fase 4b (sidebar hamburger), Fase 5b (copia su settimana), Fase 12 (Admin), Fase 13 (Manager); hardening slitta a Fase 14. Vedi `progress.md`/`projectbrief.md`.
 - **Nota ambiente**: sviluppo su **Ubuntu in WSL** (Python 3.12.3, pip 24.0). Venv ricreato in questa macchina. Dipendenze: fastapi 0.141.1, uvicorn 0.52.0, sqlalchemy 2.0.51, pydantic 2.13.4, jinja2 3.1.6, python-multipart 0.0.32.
 
@@ -60,8 +60,17 @@
 ## Decisione speciale di Fase 0 (eccezione una tantum)
 - Committ iniziale su `main` autorizzato; poi branch `develop`. `main` non si tocca senza autorizzazione esplicita nel messaggio corrente.
 
-## Prossima fase (Fase 4b)
-- **Sidebar navigazione con hamburger menu**: drawer laterale con pulsante hamburger nell'header, visibile a tutti gli utenti in tutto il web server. Contenitore vuoto per ora; le voci verranno popolate in base al ruolo nelle Fasi 12–13. Comprende `base.html`, `style.css`, `app/static/nav.js` (nuovo).
+## Modifiche di Fase 4b (sidebar navigazione con hamburger menu)
+- **`app/templates/base.html`**: pulsante hamburger (SVG) nell'header a sinistra del titolo (`#nav-toggle`, `aria-controls="app-sidebar"`); sidebar `<nav id="app-sidebar">` con header "Menu" + pulsante ✕ (`#sidebar-close`) e `<ul class="sidebar__menu">` vuoto (commento Jinja2 per voci in base al ruolo nelle Fasi 12-13); overlay `#sidebar-overlay`; `nav.js` incluso globalmente con `defer` prima di `</body>`.
+- **`app/static/nav.js`** (NUOVO): toggle sidebar via hamburger (toggle), ✕ (close), click overlay (close) e tasto ESC (close); aggiorna `aria-expanded`/`aria-label`. Vanilla JS, nessuna dipendenza.
+- **`app/static/style.css`**: regole per hamburger, overlay (z-index 40), sidebar fissa da sinistra (260px, max 85vw, z-index 50, transizione slide, `is-open`), header navy, close button, voci menu hover. Responsive (mobile incluso), basate sulle variabili CSS esistenti.
+
+## Verifiche Fase 4b (curl su 0.0.0.0:8000 + browser)
+- Struttura: hamburger + `aria-controls`, sidebar (`#app-sidebar`, `sidebar__header`, `sidebar__close`, `sidebar__menu`), overlay presenti. `form.js` e `nav.js` entrambi prima di `</body>`. `/static/nav.js` 200 text/javascript, `/static/style.css` 200, `/health` 200 `db:ok`.
+- **Verifica utente (browser)**: apertura/chiusura sidebar funzionante (hamburger, ✕, overlay, ESC).
+
+## Prossima fase (Fase 5)
+- **Salvataggio record**: POST di salvataggio con validazione server-side (Pydantic), requisito Descrizione attività vincolato a `requires_description`, messaggi di esito, persistenza su `effort_entries`. Sostituirà l'attuale 405 "method not allowed" al submit del form.
 
 ## Fasi successive (dopo 4b)
 - **Fase 5 — Salvataggio record**: POST di salvataggio con validazione server-side (Pydantic), requisito Descrizione attività vincolato a `requires_description`, messaggi di esito. Persistenza su `effort_entries`.
