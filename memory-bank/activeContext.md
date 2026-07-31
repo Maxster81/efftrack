@@ -1,56 +1,50 @@
 # Active Context — Effort Tracking
 
 ## Stato corrente
-- **Ultima fase completata**: Fase 1 ✅ (2026-07-31).
-- **Fase in corso**: nessuna. In attesa di task per la Fase 2.
+- **Ultima fase completata**: Fase 2 ✅ (2026-07-31).
+- **Fase in corso**: nessuna. In attesa di task per la Fase 3.
 - **Stato**: idle, pronto per nuovo task.
-- **Versione corrente**: `0.1.1` (tag `v0.1.1` annotato su `develop`).
-- **Riepilogo chiusura Fase 1**: refactor routing completato e verificato su `127.0.0.1:8000`. Bump `VERSION` `0.1.0` → `0.1.1`, commit `refactor(routing): phase 1 web router extraction` su `develop`, tag `v0.1.1`. Convenzione di porta operativa (verifiche su 8000, kill di chi occupa) annotata qui sotto e rispettata da qui in avanti.
+- **Versione corrente**: `0.2.0` (tag `v0.2.0` annotato su `develop`).
+- **Nota ambiente**: in questa sessione è stato ricreato il `.venv` su un nuovo OS (Python 3.12.3, pip 24.0). Dipendenze installate: fastapi 0.141.1, uvicorn 0.52.0, sqlalchemy 2.0.51, pydantic 2.13.4, jinja2 3.1.6, python-multipart 0.0.32.
 
 ## Decisioni recenti
 - **Stack**: FastAPI + Jinja2 + SQLAlchemy 2.x + SQLite.
 - **Palette UI**: blu navy + grigi neutri (variabili CSS in `:root`, predisposte per dark/light futuri).
-- **Tema**: struttura CSS variabili presente da Fase 2; toggle dark/light rimandato a Fase 9.
+- **Tema**: struttura CSS variabili presente; toggle dark/light rimandato a Fase 9.
 - **Struttura**: repo unico con layout modulare (`app/{routers,services,repositories,schemas,models,core}`).
 - **Systemd**: template `efftrack.service` creato in Fase 0 ma non attivato.
-- **Branching**: `main` intoccato salvo autorizzazione esplicita. Tutto il lavoro futuro va su `develop`.
-- **Versioning**: SemVer, file `VERSION` (unico). Niente replica in `__init__.py` (regola rimossa a fine Fase 0 su decisione utente). Bump confermato a `0.1.1` per la Fase 1.
-- **Memory bank**: aggiornato a ogni cambio di stato di fase.
+- **Branching**: `main` intoccato salvo autorizzazione esplicita. Tutto il lavoro su `develop`.
+- **Versioning**: SemVer, file `VERSION` (unico). Bump confermato a `0.2.0` per la Fase 2 (MINOR: nuova funzionalità UI).
+- **Import di `Engine`**: notato `from sqlalchemy.engine import Engine` in `app/routers/web.py` non usato (potrebbe essere legacy). Da verificare/ripulire in un refactor futuro.
 
-## Modifiche di Fase 1 (refactor)
-- **Refactor routing**: le route `GET /` e `GET /health` sono state spostate da `app/main.py` a `app/routers/web.py` come `APIRouter(tags=["web"])`. Le route mantengono `name="index"` e `name="health"` per non rompere reverse proxy e link futuri.
-- **Nuovo router API**: `app/routers/api.py` creato come `APIRouter(prefix="/api", tags=["api"])` (vuoto, predisposizione per future API JSON).
-- **`app/main.py` snellito**: contiene solo creazione app, lifespan, mount static, `include_router` per i due router. Niente più route inline.
-- **`app/config.py` esteso**: aggiunti `TEMPLATES_DIR` e `STATIC_DIR` calcolati da `BASE_DIR`, eliminando i path "magic" sparsi in `main.py`.
-- **Comportamento osservabile invariato**: stessi URL, stesse risposte, stessi content-type. Il refactor è puramente strutturale.
+## Modifiche di Fase 2 (layout statico stile effort tracking)
+- **`app/templates/base.html`**: aggiunta icona utente decorativa (SVG sagoma persona) nell'header in alto a destra, come placeholder per il futuro login (Fase 10). Wrapper `.app-header__actions` con fase + icona.
+- **`app/templates/index.html`**: sostituita la welcome card con il layout reale a due sezioni:
+  - Form di inserimento (card `.form-card`) con campi User, Data, Cliente, Gruppo, Attività, Ore Spese, Note, Descrizione + pulsante Salva centrale.
+  - Tabella elenco (card `.records-card`) con header a 7 colonne (Data, Cliente, Gruppo, Attività, Ore, Note, Descrizione), contatore `({{ records|length }} record)` e stato vuoto "Nessuna registrazione presente."
+  - Il campo **Descrizione** è sempre visibile in Fase 2; lo show/hide condizionale per "Supporto Specialistico" arriva in Fase 3.
+- **`app/static/style.css`**: rimosse le regole della welcome card (Fasi 0/1), aggiunte regole per form card, form grid a 2 colonne responsive (breakpoint 720px), input/select/textarea con focus ring blu navy, pulsante Salva primario (.btn-primary), tabella con header blu navy, righe alternate e hover, messaggio vuoto. Tutto basato sulle variabili CSS esistenti.
+- **`app/routers/web.py`**: aggiornata label di fase a "Fase 2 — Layout statico stile effort tracking", aggiunto `records: []` nel context (predisposizione Fase 6).
+- **`app/config.py`**: `APP_VERSION` aggiornata da `0.1.0` a `0.2.0` — corretta una discrepanza rimasta dalla Fase 1 (il file VERSION era già a `0.1.1` mentre config restava `0.1.0`).
 
-## Verifiche tecniche di Fase 1 (curl)
-Eseguito Uvicorn locale su `127.0.0.1:8001` e curl sui 4 endpoint chiave:
-- `GET /` → **HTTP 200**, `text/html; charset=utf-8`, 1424 byte. Pagina renderizzata correttamente con titolo `Effort Tracking — Fase 1 — Pagina HTML statica raggiungibile`, link a `/health` e `/docs` presenti.
-- `GET /health` → **HTTP 200**, JSON `{"app":"Effort Tracking","version":"0.1.0","status":"ok","db":"ok"}`.
-- `GET /docs` → **HTTP 200**, `text/html; charset=utf-8` (OpenAPI UI).
+## Verifiche tecniche di Fase 2 (curl su 127.0.0.1:8000)
+- `GET /` → **HTTP 200**, `text/html; charset=utf-8`, 4949 byte. Struttura verificata: titolo "Fase 2 — Layout statico stile effort tracking", 7 `<th scope="col">` corretti, messaggio "Nessuna registrazione presente", conteggio `(0 record)`, icona utente `.app-header__user-icon`, placeholder Descrizione "Obbligatoria per l'attività Supporto Specialistico".
+- `GET /health` → **HTTP 200**, `{"app":"Effort Tracking","version":"0.2.0","status":"ok","db":"ok"}`.
 - `GET /static/style.css` → **HTTP 200**, `text/css; charset=utf-8`.
-
-Tutti i codici e i content-type sono quelli attesi. Niente regressioni rispetto alla Fase 0.
-
-## Separazione backend / frontend (Fase 1)
-- **Area applicativa**: refactor di `app/main.py`, nuovi `app/routers/web.py` e `app/routers/api.py`, estensione di `app/config.py`.
-- **Area UI**: nessuna modifica (nessun file template/CSS/JS toccato, la pagina di benvenuto resta invariata).
-- **Area documentale**: aggiornamento `activeContext.md` e `progress.md`.
-
-## Verifiche Fase 1 (rivalidazione su porta canonica 8000)
-Su richiesta dell'utente, la verifica è stata rifatta sulla porta canonica `127.0.0.1:8000` invece della `8001` usata per la prima tornata. Esito:
-- `GET /` → **HTTP 200**, `text/html; charset=utf-8`, content-length 1424.
-- `GET /health` → **HTTP 200**, `{"app":"Effort Tracking","version":"0.1.0","status":"ok","db":"ok"}`.
 - `GET /docs` → **HTTP 200**, `text/html; charset=utf-8`.
-- `GET /static/style.css` → **HTTP 200**, `text/css`.
-- `pgrep -af uvicorn` mostra il processo `24737` in ascolto su `127.0.0.1:8000`.
+
+Tutti i codici e i content-type sono quelli attesi. Niente regressioni.
+
+## Separazione backend / frontend (Fase 2)
+- **Area UI**: `base.html` (icona utente), `index.html` (form + tabella), `style.css` (nuove regole).
+- **Area applicativa**: `web.py` (label fase + context records), `config.py` (APP_VERSION).
+- **Area documentale**: aggiornamento `activeContext.md` e `progress.md`.
 
 ## Convenzione operativa: porta di sviluppo (decisa in Fase 1)
 - **Porta canonica del progetto**: `8000` (default in `app/config.py`).
-- **Verifiche automatiche di Cline**: sempre su `127.0.0.1:8000` (o `0.0.0.0:8000` se serve accesso da rete). Niente porte alte usa-e-getta.
-- **Se la 8000 è occupata** (anche da un mio processo precedente rimasto appeso, da un browser ancora aperto, o da un'istanza di test), Cline **uccide il processo** e riavvia. In sviluppo non si tengono in piedi istanze fantasma.
-- **La regola vale da qui in avanti** per tutte le fasi successive. Decisione utente 2026-07-31.
+- **Verifiche automatiche di Cline**: sempre su `127.0.0.1:8000` (o `0.0.0.0:8000` se serve accesso da rete).
+- **Se la 8000 è occupata**, Cline uccide il processo e riavvia.
+- Regola valida per tutte le fasi successive. Decisione utente 2026-07-31.
 
 ## Regola operativa attiva (workflow)
 1. Implemento la fase corrente.
@@ -60,14 +54,18 @@ Su richiesta dell'utente, la verifica è stata rifatta sulla porta canonica `127
 5. **Solo dopo conferma esplicita** dell'utente: aggiorno `progress.md` e `activeContext.md`, eseguo bump `VERSION` + commit su `develop` + tag annotato.
 
 ## Decisione speciale di Fase 0 (eccezione una tantum)
-- L'utente ha autorizzato esplicitamente un commit iniziale su `main` per depositare la base funzionante del progetto. Subito dopo è stato creato il branch `develop`. Da qui in avanti `main` non viene più toccato senza autorizzazione esplicita nel messaggio corrente.
+- L'utente ha autorizzato esplicitamente un commit iniziale su `main` per depositare la base funzionante. Subito dopo è stato creato il branch `develop`. Da qui in avanti `main` non viene più toccato senza autorizzazione esplicita nel messaggio corrente.
 
-## Prossima fase (Fase 1)
-- In pratica la pagina HTML di benvenuto è già in piedi dalla Fase 0 (`/` → 200 OK, `/health` → JSON con status/db ok, `/docs` → OpenAPI).
-- In Fase 1 consolidiamo la raggiungibilità e documentiamo nel memory bank i risultati. Non si introducono nuove funzionalità: serve da "spartitraffico" prima della Fase 2 (layout statico stile effort tracking).
+## Prossima fase (Fase 3)
+- **Form interattivo con lookup hardcoded**:
+  - Dropdown reali (già presenti come hardcoded in Fase 2).
+  - Show/hide condizionale del campo **Descrizione** quando l'attività selezionata è "SOC-Supporto Specialistico".
+  - Validazioni base client-side.
+  - Primo JavaScript vanilla (`static/*.js`).
 
 ## Rischi / punti aperti
 - Tema dark/light rimandato a Fase 9 (accettato come debito temporaneo).
-- Migrazioni schema: `ALTER TABLE` a startup invece di Alembic fino a Fase 9 (se la complessità cresce, si introduce Alembic).
-- Nessun test automatico in Fase 0.
-- `user_id` presente come colonna nullable dal momento dell'introduzione della tabella `effort_entries` (Fase 4), ma non valorizzato fino a Fase 11.
+- Migrazioni schema: `ALTER TABLE` a startup invece di Alembic fino a Fase 9.
+- Nessun test automatico fino a Fase 4.
+- `user_id` presente come colonna nullable dal momento dell'introduzione della tabella `effort_entries` (Fase 4), non valorizzato fino a Fase 11.
+- Import `Engine` non usato in `app/routers/web.py` (da ripulire in refactor futuro).

@@ -3,20 +3,126 @@
 {% block title %}{{ app_name }} &mdash; {{ phase }}{% endblock %}
 
 {% block content %}
-  <section class="welcome-card" aria-labelledby="welcome-title">
-    <h2 id="welcome-title">Server attivo</h2>
-    <p>
-      Il web server <strong>{{ app_name }}</strong> è in esecuzione.
-      Questa è la pagina di benvenuto della <strong>{{ phase }}</strong>.
-    </p>
-    <p>
-      Nei prossimi step troverai qui il form di inserimento e la tabella
-      con l'elenco dei record.
-    </p>
+  {# ------------------------------------------------------------
+     Fase 2 — Layout statico stile effort tracking.
+     Form in alto, tabella elenco in basso. Niente logica reale:
+     il salvataggio (Fase 5), l'elenco dal DB (Fase 6) e la
+     selezione record (Fase 7) arriveranno in fasi successive.
+     ------------------------------------------------------------ #}
 
-    <ul class="welcome-list">
-      <li><a href="/health">/health</a> &mdash; stato applicazione e database</li>
-      <li><a href="/docs">/docs</a> &mdash; documentazione OpenAPI (FastAPI)</li>
-    </ul>
+  <section class="form-card" aria-labelledby="form-title">
+    <h2 id="form-title" class="card-title">Nuova registrazione</h2>
+
+    <form class="effort-form" method="post" action="#"
+          aria-label="Form di inserimento effort">
+      <div class="form-row">
+        <div class="form-group">
+          <label for="effort-user">User</label>
+          <input type="text" id="effort-user" name="user" placeholder="Inserisci utente"
+                 autocomplete="off" />
+        </div>
+
+        <div class="form-group">
+          <label for="effort-date">Data</label>
+          <input type="date" id="effort-date" name="date" />
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="effort-client">Cliente</label>
+          <select id="effort-client" name="client">
+            <option value="">-- Seleziona --</option>
+            <option value="INAIL">INAIL</option>
+            <option value="MDS">MDS</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="effort-group">Gruppo</label>
+          <select id="effort-group" name="group">
+            <option value="">-- Seleziona --</option>
+            <option value="GRUPPO SOC">GRUPPO SOC</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="effort-activity">Attività</label>
+          <select id="effort-activity" name="activity">
+            <option value="">-- Seleziona --</option>
+            <option value="SOC-Conduzione">SOC-Conduzione</option>
+            <option value="SOC-Supporto Specialistico">SOC-Supporto Specialistico</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="effort-hours">Ore Spese</label>
+          <input type="number" id="effort-hours" name="hours"
+                 min="0.25" max="24" step="0.25" placeholder="es. 7,50" />
+        </div>
+      </div>
+
+      <div class="form-group form-group--full">
+        <label for="effort-notes">Note</label>
+        <textarea id="effort-notes" name="notes" rows="3"
+                  placeholder="Note opzionali"></textarea>
+      </div>
+
+      <div class="form-group form-group--full">
+        <label for="effort-description">Descrizione</label>
+        <textarea id="effort-description" name="description" rows="3"
+                  placeholder="Obbligatoria per l'attività Supporto Specialistico"></textarea>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="btn-primary">Salva</button>
+      </div>
+    </form>
+  </section>
+
+  <section class="records-card" aria-labelledby="records-title">
+    <div class="records-card__header">
+      <h2 id="records-title" class="card-title">Registrazioni</h2>
+      <span class="records-count" aria-label="Numero registrazioni">
+        ({{ records|length }} record)
+      </span>
+    </div>
+
+    <div class="table-scroll">
+      <table class="records-table">
+        <thead>
+          <tr>
+            <th scope="col">Data</th>
+            <th scope="col">Cliente</th>
+            <th scope="col">Gruppo</th>
+            <th scope="col">Attività</th>
+            <th scope="col" class="col-hours">Ore</th>
+            <th scope="col">Note</th>
+            <th scope="col">Descrizione</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if records %}
+            {% for record in records %}
+              <tr class="records-table__row">
+                <td>{{ record.date }}</td>
+                <td>{{ record.client }}</td>
+                <td>{{ record.group }}</td>
+                <td>{{ record.activity }}</td>
+                <td class="col-hours">{{ record.hours }}</td>
+                <td>{{ record.notes }}</td>
+                <td>{{ record.description }}</td>
+              </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td colspan="7" class="empty-state">Nessuna registrazione presente.</td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
   </section>
 {% endblock %}

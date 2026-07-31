@@ -26,10 +26,12 @@ router: APIRouter = APIRouter(tags=["web"])
 
 @router.get("/", response_class=HTMLResponse, name="index")
 async def index(request: Request) -> HTMLResponse:
-    """Pagina di benvenuto della Fase 0/1.
+    """Pagina principale: form di inserimento + tabella elenco.
 
-    Nelle fasi successive questa pagina ospiterà il form di inserimento
-    e l'elenco dei record.
+    Fase 2: layout statico stile effort tracking. Il form e la tabella
+    sono renderizzati lato server ma senza logica reale: il salvataggio
+    (Fase 5), l'elenco dal DB (Fase 6) e la selezione record (Fase 7)
+    arriveranno nelle fasi successive.
     """
     return templates.TemplateResponse(
         request=request,
@@ -37,7 +39,8 @@ async def index(request: Request) -> HTMLResponse:
         context={
             "app_name": APP_NAME,
             "app_version": APP_VERSION,
-            "phase": "Fase 1 — Pagina HTML statica raggiungibile",
+            "phase": "Fase 2 — Layout statico stile effort tracking",
+            "records": [],  # elenco vuoto per ora; popolato in Fase 6
         },
     )
 
