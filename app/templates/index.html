@@ -4,10 +4,10 @@
 
 {% block content %}
   {# ------------------------------------------------------------
-     Fase 2 — Layout statico stile effort tracking.
-     Form in alto, tabella elenco in basso. Niente logica reale:
-     il salvataggio (Fase 5), l'elenco dal DB (Fase 6) e la
-     selezione record (Fase 7) arriveranno in fasi successive.
+     Fase 6 — Elenco record con filtro mese/anno.
+     Form in alto, tabella elenco in basso. La tabella mostra i
+     record dal DB con filtro per mese; la selezione record (Fase 7)
+     arriverà nelle fasi successive.
      ------------------------------------------------------------ #}
 
   <section class="form-card" aria-labelledby="form-title">
@@ -106,6 +106,19 @@
       </span>
     </div>
 
+    {% if month_options %}
+      <form class="filter-bar" method="get" action="/" aria-label="Filtra registrazioni per mese">
+        <label class="filter-bar__label" for="month-filter">Filtra per mese</label>
+        <select id="month-filter" name="month" class="filter-bar__select"
+                onchange="this.form.submit()">
+          <option value="">Tutti i mesi</option>
+          {% for value, label in month_options %}
+            <option value="{{ value }}" {% if value == selected_month %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </form>
+    {% endif %}
+
     <div class="table-scroll">
       <table class="records-table">
         <thead>
@@ -114,6 +127,7 @@
             <th scope="col">Cliente</th>
             <th scope="col">Gruppo</th>
             <th scope="col">Attività</th>
+            <th scope="col">Utente</th>
             <th scope="col" class="col-hours">Ore</th>
             <th scope="col">Note</th>
             <th scope="col">Descrizione attività</th>
@@ -123,18 +137,19 @@
           {% if records %}
             {% for record in records %}
               <tr class="records-table__row">
-                <td>{{ record.date }}</td>
-                <td>{{ record.client }}</td>
-                <td>{{ record.group }}</td>
-                <td>{{ record.activity }}</td>
-                <td class="col-hours">{{ record.hours }}</td>
-                <td>{{ record.notes }}</td>
-                <td>{{ record.description }}</td>
+                <td>{{ record.work_date.strftime('%d/%m/%Y') }}</td>
+                <td>{{ record.client.name }}</td>
+                <td>{{ record.group.name }}</td>
+                <td>{{ record.activity.name }}</td>
+                <td>{{ record.user_text or '' }}</td>
+                <td class="col-hours">{{ record.hours_spent }}</td>
+                <td>{{ record.notes or '' }}</td>
+                <td>{{ record.description or '' }}</td>
               </tr>
             {% endfor %}
           {% else %}
             <tr>
-              <td colspan="7" class="empty-state">Nessuna registrazione presente.</td>
+              <td colspan="8" class="empty-state">Nessuna registrazione presente.</td>
             </tr>
           {% endif %}
         </tbody>

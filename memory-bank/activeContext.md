@@ -1,12 +1,12 @@
 # Active Context — Effort Tracking
 
 ## Stato corrente
-- **Ultima fase completata**: Fase 5b ✅ (2026-07-31).
-- **Fase in corso**: nessuna. In attesa di task per la Fase 6.
-- **Stato**: idle, pronto per nuovo task. Roadmap estesa il 2026-07-31.
-- **Versione corrente**: `0.7.0` (tag `v0.7.0` annotato su `develop`).
+- **Ultima fase completata**: Fase 6 ✅ (2026-07-31).
+- **Fase in corso**: nessuna. In attesa di task per la Fase 7.
+- **Stato**: idle, pronto per nuovo task. Merge autorizzato su `main` (2026-07-31).
+- **Versione corrente**: `0.8.0` (tag `v0.8.0` annotato su `develop`).
 - **Roadmap estesa**: aggiunte Fase 4b (sidebar hamburger), Fase 5b (copia su settimana), Fase 12 (Admin), Fase 13 (Manager); hardening slitta a Fase 14. Vedi `progress.md`/`projectbrief.md`.
-- **Nota**: la tabella `effort_entries` ha la colonna `user_text` (String 128 nullable) e ora contiene dati reali (6 record: 5 settimana user Metro + 1 user Massimo).
+- **Nota**: la tabella `effort_entries` ha la colonna `user_text` (String 128 nullable). Contiene dati reali (106 record: 100 fixture gen-lug 2026 + 6 preesistenti). Merge su `main` autorizzato dall'utente.
 - **Nota ambiente**: sviluppo su **Ubuntu in WSL** (Python 3.12.3, pip 24.0). Venv ricreato in questa macchina. Dipendenze: fastapi 0.141.1, uvicorn 0.52.0, sqlalchemy 2.0.51, pydantic 2.13.4, jinja2 3.1.6, python-multipart 0.0.32.
 
 ## Decisioni recenti
@@ -93,9 +93,18 @@
 - POST `action=week` con attività Supporto Specialistico senza descrizione → 303 `/?error=descrizione`, 0 record.
 - **Verifica utente (browser)**: "Copia su settimana" → banner verde; confermato nel DB 5 record settimana (user Metro, 8h, lun 06→ven 10/07/2026).
 
-## Prossima fase (Fase 6)
-- **Elenco record**: tabella inferiore caricata dal DB, ordinata per data decrescente.
-- **Estensione concordata**: dropdown filtro mese/anno sopra la tabella, popolato con i mesi distinti presenti nei record (`SELECT DISTINCT strftime('%Y-%m', work_date)`). Selezione → `GET /?month=YYYY-MM`, mostra solo i record del mese. Il mese non viene persistito (derivato da work_date).
+## Modifiche di Fase 6 (elenco record con filtro mese/anno)
+- **Fixture**: generati 100 record di test (gen→lug 2026), user fittizi variati (Giulio/Anna/Luca/Sara/Marco/Elena), clienti/attività alternati, ore step 0.25, descrizione per Supporto. Totale DB 106.
+- **`app/routers/web.py`**: `GET /` calcola mesi distinti (`SELECT DISTINCT strftime('%Y-%m', work_date)`), carica record con eager-load, filtra con `?month=YYYY-MM`, formatta nomi mesi in italiano (lista `_MESI_ITALIANI`). Label "Fase 6 — Elenco record con filtro mese/anno".
+- **`app/templates/index.html`**: dropdown filtro (form GET, auto-submit `onchange`), tabella popolata (colonna Utente), contatore reale.
+- **`app/static/style.css`**: stile `.filter-bar`.
+
+## Verifiche Fase 6 (curl + browser + test)
+- `GET /` → 200, 106 righe; dropdown con 7 opzioni mese; `?month=2026-01` → 11 righe. Test 6 OK.
+- **Verifica utente (browser)**: filtro mese/anno funzionante.
+
+## Prossima fase (Fase 7)
+- **Selezione record e update**: click su riga → form precompilato → update. Sostituirà l'inserimento con l'aggiornamento del record selezionato. Il pulsante "Salva" gestirà sia insert che update (come da productContext).
 
 ## Fasi successive (dopo 4b)
 - **Fase 5 — Salvataggio record**: POST di salvataggio con validazione server-side (Pydantic), requisito Descrizione attività vincolato a `requires_description`, messaggi di esito. Persistenza su `effort_entries`.

@@ -13,9 +13,9 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from pydantic import ValidationError
-from sqlalchemy import select, text
+from sqlalchemy import func, select, text
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.config import APP_NAME, APP_VERSION, TEMPLATES_DIR
 from app.db import get_db
@@ -30,6 +30,12 @@ templates: Jinja2Templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
 router: APIRouter = APIRouter(tags=["web"])
 
+# Nomi dei mesi in italiano (indice 0 vuoto, 1..12).
+_MESI_ITALIANI = [
+    "", "Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno",
+    "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre",
+]
+
 
 @router.get("/", response_class=HTMLResponse, name="index")
 async def index(
@@ -37,18 +43,46 @@ async def index(
     db: Session = Depends(get_db),
     success: int | None = None,
     error: str | None = None,
+    month: str | None = None,
 ) -> HTMLResponse:
     """Pagina principale: form di inserimento + tabella elenco.
 
-    Fase 4: i dropdown del form sono popolati dalle tabelle lookup del DB
-    (clients, groups, activities). Il salvataggio (Fase 5), l'elenco dal
-    DB (Fase 6) e la selezione record (Fase 7) arrivano in fasi successive.
-    `success=1` e `error=descrizione` (query string, set dal POST) mostrano
-    rispettivamente il banner di conferma o di errore.
+    Fase 6: la tabella inferiore è popolata dai record di `effort_entries`
+    (ordinati per data decrescente) e mostra un dropdown filtro mese/anno
+    basato sui mesi distinti presenti nei record. Il parametro `month`
+    (es. `?month=2026-07`) filtra i record di quel mese; il mese resta
+    derivato da `work_date`, mai persistito. `success`/`error` (set dal
+    POST) mostrano i banner.
     """
     clients = db.execute(select(Client).order_by(Client.name)).scalars().all()
     groups = db.execute(select(Group).order_by(Group.name)).scalars().all()
     activities = db.execute(select(Activity).order_by(Activity.name)).scalars().all()
+
+    # Mesi distinti presenti nei record, ordinati dal più recente.
+    month_rows = db.execute(
+        select(func.strftime("%Y-%m", EffortEntry.work_date).label("month"))
+        .distinct()
+        .order_by(func.strftime("%Y-%m", EffortEntry.work_date).desc())
+    ).scalars().all()
+
+    month_options: list[tuple[str, str]] = []
+    for m in month_rows:
+        anno, num = m.split("-")
+        month_options.append((m, f"{_MESI_ITALIANI[int(num)]} {anno}"))
+
+    # Record con filtro mese opzionale, eager load delle relazioni.
+    stmt = (
+        select(EffortEntry)
+        .options(
+            selectinload(EffortEntry.client),
+            selectinload(EffortEntry.group),
+            selectinload(EffortEntry.activity),
+        )
+        .order_by(EffortEntry.work_date.desc())
+    )
+    if month:
+        stmt = stmt.where(func.strftime("%Y-%m", EffortEntry.work_date) == month)
+    records = db.execute(stmt).scalars().all()
 
     success_message: str | None = None
     if success == 1:
@@ -60,11 +94,13 @@ async def index(
         context={
             "app_name": APP_NAME,
             "app_version": APP_VERSION,
-            "phase": "Fase 5 — Salvataggio record",
+            "phase": "Fase 6 — Elenco record con filtro mese/anno",
             "clients": clients,
             "groups": groups,
             "activities": activities,
-            "records": [],  # elenco vuoto per ora; popolato in Fase 6
+            "records": records,
+            "month_options": month_options,
+            "selected_month": month,
             "today": date.today().isoformat(),
             "success_message": success_message,
             "error": error,

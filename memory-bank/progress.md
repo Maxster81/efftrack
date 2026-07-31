@@ -1,10 +1,10 @@
 # Progress — Effort Tracking
 
 ## Stato globale
-- **Ultima fase completata**: Fase 5b ✅ completata il 2026-07-31.
-- **Fase in corso**: nessuna. In attesa di task per la Fase 6.
-- **Stato**: idle, pronto per nuovo task.
-- **Versione corrente**: `0.7.0` (tag `v0.7.0` annotato su `develop`).
+- **Ultima fase completata**: Fase 6 ✅ completata il 2026-07-31.
+- **Fase in corso**: nessuna. In attesa di task per la Fase 7.
+- **Stato**: idle, pronto per nuovo task. Merge autorizzato su `main` (2026-07-31).
+- **Versione corrente**: `0.8.0` (tag `v0.8.0` annotato su `develop`).
 - **Roadmap estesa**: aggiunte Fase 4b (sidebar hamburger), Fase 5b (copia su settimana), Fase 12 (Admin), Fase 13 (Manager); l'hardening passa da 12 a 14.
 
 ## Roadmap
@@ -127,8 +127,18 @@
 - **Commit**: `feat(db): phase 5b bulk copy effort on week`.
 
 ### Fase 6 — Elenco record
-- **Stato**: non iniziata.
-- **Obiettivo**: tabella inferiore caricata dal DB, ordinata per data decrescente. (Estensione concordata: filtro mese/anno tramite dropdown sopra la tabella, basato sui mesi distinti presenti nei record.)
+- **Stato**: ✅ completata il 2026-07-31.
+- **Obiettivo**: tabella inferiore caricata dal DB, ordinata per data decrescente + filtro mese/anno tramite dropdown basato sui mesi distinti presenti nei record.
+- **Cosa è stato fatto**:
+  - **Fixture**: generati 100 record di test (gennaio→luglio 2026), user fittizi variati (Giulio/Anna/Luca/Sara/Marco/Elena), clienti/attività alternati, ore step 0.25, descrizione per Supporto Specialistico. Totale DB 106 record.
+  - **`web.py`**: `GET /` calcola i mesi distinti (`SELECT DISTINCT strftime('%Y-%m', work_date)` desc), carica i record con eager-load delle relazioni, filtra con `?month=YYYY-MM`; nomi mesi formattati in italiano lato server. Label "Fase 6 — Elenco record con filtro mese/anno".
+  - **`index.html`**: dropdown filtro (form GET auto-submit via `onchange`), tabella popolata con colonna "Utente", contatore record reale.
+  - **`style.css`**: stile `.filter-bar`. Rimosso vecchio commento "Fase 2".
+  - Verifiche: `GET /` 200 con 106 righe; dropdown con 7 opzioni mese; `?month=2026-01` → 11 righe; test 6 OK.
+  - **Verifica utente (browser)**: filtro mese/anno funzionante.
+- **Versioning**: bump `VERSION` `0.7.0` → `0.8.0` (MINOR).
+- **Branch**: commit su `develop`, tag annotato `v0.8.0`. Merge autorizzato su `main` dall'utente.
+- **Commit**: `feat(ui): phase 6 records list with month filter`.
 
 ### Fase 7 — Selezione record e update
 - **Stato**: non iniziata.
