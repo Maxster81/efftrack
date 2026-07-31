@@ -9,10 +9,45 @@
 <body>
   <header class="app-header" role="banner">
     <div class="app-header__inner">
-      <h1 class="app-header__title">{{ app_name }}</h1>
-      <span class="app-header__phase" aria-label="Fase corrente">{{ phase }}</span>
+      <div class="app-header__left">
+        <!-- Hamburger menu: apre la sidebar (Fase 4b). -->
+        <button type="button" class="app-header__menu" id="nav-toggle"
+                aria-label="Apri menu di navigazione" aria-expanded="false" aria-controls="app-sidebar">
+          <svg class="app-header__menu-icon" width="22" height="22" viewBox="0 0 24 24"
+               fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+            <path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" />
+          </svg>
+        </button>
+        <h1 class="app-header__title">{{ app_name }}</h1>
+      </div>
+      <div class="app-header__actions">
+        <span class="app-header__phase" aria-label="Fase corrente">{{ phase }}</span>
+        <button type="button" class="app-header__user" aria-label="Utente (futuro login)" title="Utente">
+          <svg class="app-header__user-icon" width="22" height="22" viewBox="0 0 24 24" fill="none"
+               xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+            <circle cx="12" cy="8" r="4" fill="currentColor" />
+            <path d="M4 20c0-3.3 3.6-6 8-6s8 2.7 8 6" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" fill="none" />
+          </svg>
+        </button>
+      </div>
     </div>
   </header>
+
+  <!-- Sidebar laterale (menu navigazione). Contenitore predisposto in Fase 4b:
+       le voci verranno popolate in base al ruolo nelle Fasi 12-13. -->
+  <div class="sidebar-overlay" id="sidebar-overlay" hidden></div>
+  <nav class="sidebar" id="app-sidebar" aria-label="Menu di navigazione">
+    <div class="sidebar__header">
+      <span class="sidebar__title">Menu</span>
+      <button type="button" class="sidebar__close" id="sidebar-close"
+              aria-label="Chiudi menu di navigazione">✕</button>
+    </div>
+    <ul class="sidebar__menu" id="sidebar-menu">
+      {# voci popolate in Fase 12-13 in base al ruolo #}
+    </ul>
+  </nav>
 
   <main class="app-main" role="main">
     {% block content %}{% endblock %}
@@ -21,5 +56,8 @@
   <footer class="app-footer" role="contentinfo">
     <small>{{ app_name }} &middot; v{{ app_version }}</small>
   </footer>
+
+  {% block scripts %}{% endblock %}
+  <script src="{{ url_for('static', path='nav.js') }}" defer></script>
 </body>
 </html>

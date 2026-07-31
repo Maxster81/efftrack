@@ -41,5 +41,27 @@ Web server per la registrazione di **effort** (ore lavorate, attività giornalie
 - Accento: per riga selezionata in tabella.
 - Variabili CSS definite in `:root` per consentire un futuro tema dark/light senza refactoring.
 
-## Roadmap
+## Roadmap (estesa il 2026-07-31)
+```text
+Fase 0   — Bootstrap progetto
+Fase 1   — Pagina HTML statica raggiungibile
+Fase 2   — Layout statico stile effort tracking
+Fase 3   — Form interattivo con lookup hardcoded
+Fase 4   — Database e seed lookup
+Fase 4b  — Sidebar navigazione con hamburger menu        🆕
+Fase 5   — Salvataggio record (singolo)
+Fase 5b  — Inserimento bulk "copia su settimana"         🆕
+Fase 6   — Elenco record
+Fase 7   — Selezione record e update
+Fase 8   — Export CSV/XLSX
+Fase 9   — Refactoring, logging, env, systemd
+Fase 10  — Autenticazione locale
+Fase 11  — Multiutente e segregazione dati
+Fase 12  — Gestione ruoli e amministrazione (Admin)      🆕
+Fase 13  — Export manager e gestione gruppo (Manager)    🆕
+Fase 14  — Hardening e produzione
+```
+
+Le **Fasi 4b e 5b** sono sotto-fasi della 4 e 5: dipendono rispettivamente dal DB e dal salvataggio singolo, ma hanno scope UI/produttività propri. La **sidebar** è un contenitore vuoto in 4b e verrà popolata in base al ruolo nelle fasi 12–13.
+
 Vedi `progress.md` per lo stato corrente e `techContext.md` per i dettagli tecnici di ciascuna fase.

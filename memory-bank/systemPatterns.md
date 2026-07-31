@@ -71,15 +71,17 @@ efftrack/
 - `PRAGMA foreign_keys=ON` su ogni connessione.
 - DB file in `data/efftrack.db`, fuori dal versionamento.
 
-### Modello dati (previsto, completo in Fase 4)
-- `clients(id, code, name)` — seed: INAIL, MDS.
-- `groups(id, code, name)` — seed: GRUPPO SOC.
-- `activities(id, code, name, requires_description BOOL)` — seed: SOC-Conduzione (no), SOC-Supporto Specialistico (sì).
-- `effort_entries(id, user_id NULL FK, client_id FK, group_id FK, activity_id FK, work_date DATE, hours_spent NUMERIC(4,2) CHECK 1..24, notes TEXT NULL, description TEXT NULL, created_at, updated_at)`.
+### Modello dati (completo dalla Fase 4)
+- `clients(id, name UNIQUE)` — seed: INAIL, MDS. (Solo `name`: la colonna `code` è stata rimossa in Fase 4 su decisione utente.)
+- `groups(id, name UNIQUE)` — seed: GRUPPO SOC.
+- `activities(id, name UNIQUE, requires_description BOOL)` — seed: SOC-Conduzione (no), SOC-Supporto Specialistico (sì).
+- `effort_entries(id, user_id NULL senza FK, client_id FK, group_id FK, activity_id FK, work_date DATE, hours_spent NUMERIC(4,2) CHECK >0 AND <=24, notes TEXT NULL, description TEXT NULL, created_at, updated_at)`.
 - `Mese` **mai** persistito, derivato da `work_date` via service helper.
+- **Seed**: `app/core/seed_lookup_tables(db)` idempotente, eseguito nel lifespan di `main.py` dopo `create_all`.
+- **Test**: `tests/test_models.py` (unittest + SQLite in-memory isolato).
 
 ### Migrazioni
-- Fase 0–8: `CREATE TABLE IF NOT EXISTS` + `ALTER TABLE` controllato a startup, documentato in `progress.md`.
+- Fase 0–8: `CREATE TABLE IF NOT EXISTS` + seed idempotente + (se serve) `ALTER TABLE` controllato a startup, documentato in `progress.md`. NB: la rimozione di una colonna (come `code` in Fase 4) non è gestita automaticamente — va rigenerato il DB.
 - Se la complessità cresce: introduzione Alembic (proposta con analisi pro/contro, decisione documentata).
 
 ## Tema e CSS

@@ -1,9 +1,11 @@
 # Progress — Effort Tracking
 
 ## Stato globale
-- **Ultima fase completata**: Fase 0 ✅ completata il 2026-07-31.
-- **Fase in corso**: **Fase 1** — Pagina HTML statica raggiungibile.
-- **Stato**: in attesa di nuovo task.
+- **Ultima fase completata**: Fase 6 ✅ completata il 2026-07-31.
+- **Fase in corso**: nessuna. In attesa di task per la Fase 7.
+- **Stato**: idle, pronto per nuovo task. Merge autorizzato su `main` (2026-07-31).
+- **Versione corrente**: `0.8.0` (tag `v0.8.0` annotato su `develop`).
+- **Roadmap estesa**: aggiunte Fase 4b (sidebar hamburger), Fase 5b (copia su settimana), Fase 12 (Admin), Fase 13 (Manager); l'hardening passa da 12 a 14.
 
 ## Roadmap
 
@@ -20,28 +22,123 @@
   - Tag annotato `v0.1.0`.
 
 ### Fase 1 — Pagina HTML statica raggiungibile
-- **Stato**: in corso.
-- **Obiettivo**: `GET /` restituisce una pagina HTML statica "server raggiungibile" via browser (in pratica già in piedi dalla Fase 0, da consolidare).
+- **Stato**: ✅ completata il 2026-07-31.
+- **Obiettivo**: `GET /` restituisce una pagina HTML statica "server raggiungibile" via browser.
+- **Cosa è stato fatto**:
+  - Refactor routing: `GET /` e `GET /health` spostate in `app/routers/web.py` come `APIRouter(tags=["web"])`.
+  - Nuovo `app/routers/api.py` con `APIRouter(prefix="/api", tags=["api"])` come placeholder.
+  - `app/main.py` snellito: solo app, lifespan, mount static, include router.
+  - `app/config.py` esteso con `TEMPLATES_DIR` e `STATIC_DIR`.
+  - Verifiche curl su `127.0.0.1:8000`: `/` (200), `/health` (200), `/docs` (200), `/static/style.css` (200).
+  - Convenzione di porta operativa: verifiche su `127.0.0.1:8000`.
+- **Versioning**: bump `VERSION` `0.1.0` → `0.1.1` (PATCH).
+- **Branch**: commit su `develop`, tag annotato `v0.1.1`. Niente `main`.
+- **Commit**: `refactor(routing): phase 1 web router extraction`.
 
 ### Fase 2 — Layout statico stile effort tracking
-- **Stato**: non iniziata.
+- **Stato**: ✅ completata il 2026-07-31.
 - **Obiettivo**: replicare la struttura del mock (form in alto, tabella sotto) con CSS variabili, niente logica reale, niente salvataggio.
+- **Cosa è stato fatto**:
+  - **`base.html`**: aggiunta icona utente decorativa (SVG) nell'header, placeholder per il futuro login (Fase 10).
+  - **`index.html`**: layout reale a due sezioni:
+    - Form di inserimento (card) con campi User, Data, Cliente, Gruppo, Attività, Ore Spese, Note, Descrizione + pulsante Salva centrale.
+    - Tabella elenco (card) con header a 7 colonne (Data, Cliente, Gruppo, Attività, Ore, Note, Descrizione), contatore `({{ records|length }} record)` e stato vuoto "Nessuna registrazione presente."
+    - Campo **Descrizione** sempre visibile in Fase 2 (show/hide condizionale in Fase 3).
+  - **`style.css`**: rimosse regole welcome card, aggiunte regole form grid 2 colonne responsive (breakpoint 720px), focus ring, pulsante Salva, tabella con header blu navy, righe alternate/hover, messaggio vuoto.
+  - **`web.py`**: label fase aggiornata a "Fase 2 — Layout statico stile effort tracking", context `records: []` (predisposizione Fase 6).
+  - **`config.py`**: `APP_VERSION` allineata da `0.1.0` a `0.2.0` (corretta discrepanza residua dalla Fase 1).
+  - **Venv**: ricreato `.venv` su nuovo OS (Python 3.12.3), dipendenze installate da `requirements.txt`.
+  - Verifiche curl su `127.0.0.1:8000`: `/` (200, 4949 byte, struttura HTML verificata), `/health` (200, `version:0.2.0`), `/docs` (200), `/static/style.css` (200).
+- **Versioning**: bump `VERSION` `0.1.1` → `0.2.0` (MINOR: nuovo layout UI).
+- **Branch**: commit su `develop`, tag annotato `v0.2.0`. Niente `main`.
+- **Commit**: `feat(ui): phase 2 static effort tracking layout`.
 
 ### Fase 3 — Form interattivo con lookup hardcoded
-- **Stato**: non iniziata.
-- **Obiettivo**: form reale con dropdown hardcoded, validazione base, show/hide campo Descrizione.
+- **Stato**: ✅ completata il 2026-07-31.
+- **Obiettivo**: form reale con dropdown hardcoded, validazione base, show/hide campo Descrizione. Primo JS vanilla (`static/*.js`).
+- **Cosa è stato fatto**:
+  - **`app/static/form.js`** (nuovo): show/hide "Descrizione attività" se attivita = "SOC-Supporto Specialistico"; validazione client-side (User, Data, Cliente, Gruppo, Attività, Ore obbligatori; Ore 0.25..24 step 0.25 con virgola; Descrizione attività obbligatoria solo se visibile; Note opzionale); errori `.is-invalid` + banner `#form-error role="alert"` + focus primo campo non valido.
+  - **`app/static/style.css`**: aggiunte `.is-hidden`, `.form-group.is-invalid *`, `.form-error`.
+  - **`app/templates/index.html`**: area errore, label e header tabella rinominati "Descrizione attività", gruppo descrizione inizialmente `is-hidden`, `novalidate`, script `form.js` con `defer`.
+  - **`app/templates/base.html`**: aggiunto blocco `{% block scripts %}`.
+  - **Binding corretto**: server riavviato su `0.0.0.0:8000` (prima era erroneamente su 127.0.0.1, non raggiungibile dal browser Windows). Verificato accesso da IP host WSL (172.20.144.1).
+  - Verifiche curl: `/` (200, 5155 byte), `/health` (200), `/static/form.js` (200 text/javascript), `/static/style.css` (200).
+  - **Verifica utente (browser)**: warning su submit vuoto; show/hide Descrizione attività con Supporto Specialistico; submit completo → method not allowed (atteso fino a Fase 5).
+- **Versioning**: bump `VERSION` `0.2.0` → `0.3.0` (MINOR: nuova funzionalità).
+- **Branch**: commit su `develop`, tag annotato `v0.3.0`. Niente `main`.
+- **Commit**: `feat(ui): phase 3 interactive form with validation`.
 
 ### Fase 4 — Database e seed lookup
-- **Stato**: non iniziata.
-- **Obiettivo**: SQLAlchemy + SQLite + tabelle lookup + tabella `effort_entries` + seed iniziale.
+- **Stato**: ✅ completata il 2026-07-31.
+- **Obiettivo**: SQLAlchemy + SQLite + tabelle lookup (`clients`, `groups`, `activities`) + tabella `effort_entries` + seed iniziale. Sostituire dropdown hardcoded con contenuto DB. Predisposizione test automatici.
+- **Cosa è stato fatto**:
+  - **Modelli ORM** (nuovi in `app/models/`): `Client`, `Group`, `Activity` (con `requires_description`) e `EffortEntry` (FK su clients/groups/activities, `work_date`, `hours_spent` CHECK `>0 AND <=24`, `notes`/`description` nullable, `created_at`/`updated_at` UTC naive, `user_id` nullable senza FK).
+  - **`app/core/seed.py`** (nuovo): `seed_lookup_tables` idempotente — clients INAIL/MDS, groups GRUPPO SOC, activities SOC-Conduzione(false)/SOC-Supporto Specialistico(true).
+  - **`app/main.py`**: nel lifespan, dopo `create_all`, chiama il seed; `import app.models` per registrare lo schema.
+  - **`app/routers/web.py`**: `index` carica i lookup dal DB (order_by name) e passa `today` per il default data.
+  - **`app/templates/index.html`**: dropdown dinamici (solo `name`, valori = FK id), campo Data con `value=today`.
+  - **`app/static/form.js`**: show/hide Descrizione attività basato su `data-requires-description` (non più su stringa).
+  - **`tests/test_models.py`** (nuovo): 6 test unittest (schema, seed, seed idempotente, inserimento EffortEntry) su SQLite in-memory isolato. Tutti OK.
+  - **Decisione utente**: rimossa colonna `code` dai lookup (basta `name` UNIQUE) — eliminata duplicazione nei dropdown. DB di sviluppo rigenerato.
+  - **Data odierna**: campo Data prepopolato con `date.today()` lato server.
+  - Verifica utente: dropdown puliti, data odierna, "Salva" → 405 atteso (persistenza Fase 5).
+- **Versioning**: bump `VERSION` `0.3.0` → `0.4.0` (MINOR).
+- **Branch**: commit su `develop`, tag annotato `v0.4.0`. Niente `main`.
+- **Commit**: `feat(db): phase 4 database schema and lookup seed`.
+
+### Fase 4b — Sidebar navigazione con hamburger menu
+- **Stato**: ✅ completata il 2026-07-31.
+- **Obiettivo**: barra laterale (drawer) con pulsante hamburger nell'header, visibile in tutto il web server e per tutti gli utenti. Contenitore vuoto per ora; le voci di menu verranno popolate in base al ruolo utente a partire dalle Fasi 12–13 (Admin/Manager/User).
+- **Cosa è stato fatto**:
+  - **`base.html`**: pulsante hamburger (SVG) nell'header a sinistra; sidebar `<nav id="app-sidebar">` con header "Menu" + ✕; overlay `#sidebar-overlay`; `nav.js` incluso globalmente con `defer`.
+  - **`app/static/nav.js`** (nuovo): toggle sidebar via hamburger, ✕, click overlay e tasto ESC; aggiorna `aria-expanded`/`aria-label`. Vanilla JS.
+  - **`app/static/style.css`**: stili hamburger, overlay (z-index 40), sidebar fissa da sinistra (260px, max 85vw, z-index 50, transizione slide), header navy, voci menu hover. Responsive.
+  - Verifiche curl: hamburger + `aria-controls`, sidebar + overlay presenti, `nav.js` e `style.css` serviti (200), `form.js` e `nav.js` prima di `</body>`, health ok.
+  - Verifica utente (browser): apertura/chiusura sidebar funzionante.
+- **Versioning**: bump `VERSION` `0.4.0` → `0.5.0` (MINOR).
+- **Branch**: commit su `develop`, tag annotato `v0.5.0`. Niente `main`.
+- **Commit**: `feat(ui): phase 4b sidebar navigation with hamburger menu`.
 
 ### Fase 5 — Salvataggio record
-- **Stato**: non iniziata.
-- **Obiettivo**: POST di salvataggio con validazione server-side e messaggi di esito.
+- **Stato**: ✅ completata il 2026-07-31.
+- **Obiettivo**: POST di salvataggio con validazione server-side (Pydantic) e messaggi di esito; requisito Descrizione attività vincolato a `requires_description`.
+- **Cosa è stato fatto**:
+  - **`app/schemas/effort.py`** (nuovo): `EffortEntryCreate` Pydantic con validazione server-side (user non vuoto, date, FK > 0, hours 0.25-24 multipli di 0.25, notes/description normalizzati da vuoto a None).
+  - **`app/routers/web.py`**: nuova `POST /` (`save_entry`) che valida il form (Form), verifica `requires_description` dell'attività, crea e salva `EffortEntry` e fa redirect 303 a `/?success=1` (o `/?error=descrizione`). `GET /` gestisce `success`/`error` per i banner. Label fase "Fase 5 — Salvataggio record".
+  - **`app/models/effort_entry.py`**: aggiunta colonna `user_text` (String 128, nullable) per persistere il campo User del form pre-auth.
+  - **`app/templates/index.html`**: `action="/"` sul form (POST reale), banner successo (`.form-success`) e banner errore descrizione.
+  - **`app/static/style.css`**: aggiunta classe `.form-success` (banner verde).
+  - Verifiche curl: POST valido → 303 `/?success=1` + record salvato (user_text persistito); POST attività con descrizione obbligatoria senza descrizione → 303 `/?error=descrizione` senza salvare; banner renderizzati correttamente.
+- **Versioning**: bump `VERSION` `0.5.0` → `0.6.0` (MINOR).
+- **Branch**: commit su `develop`, tag annotato `v0.6.0`. Niente `main`.
+- **Commit**: `feat(db): phase 5 save effort entry with server validation`.
+
+### Fase 5b — Inserimento bulk "copia su settimana"
+- **Stato**: ✅ completata il 2026-07-31.
+- **Obiettivo**: pulsante "Copia su settimana" accanto a Salva: prende i valori del form corrente (cliente, gruppo, attività, ore) e crea un record per ogni giorno feriale (lunedì→venerdì) della settimana corrente, con data corrispondente. Stessi valori, date diverse. Validazione server-side per ciascun record.
+- **Cosa è stato fatto**:
+  - **`app/routers/web.py`**: parametro `action` nel form (`single`/`week`); funzione `_save_week` che calcola il lunedì della settimana della data e crea 5 record lun→ven; fattorizzata `_save_single`. **Fix**: `Annotated[EffortEntryCreate, Form()]` con altri `Form()` causava 422 → dichiarati i campi form singolarmente e costruito il modello Pydantic dentro la funzione. Banner per `error=validazione`.
+  - **`app/templates/index.html`**: pulsante "Copia su settimana" (`name="action" value="week"`) accanto a "Salva" (`value="single"`); banner errore validazione.
+  - **`app/static/style.css`**: classe `.btn-secondary` (outline navy) + gap nelle `.form-actions`.
+  - Verifiche curl: POST `action=week` con data 31/07/2026 → 303 `/?success=1`; creati 5 record lun 27→ven 31 ('Bulk', 8h, notes batch). POST `action=week` con attività Supporto Specialistico senza descrizione → 303 `/?error=descrizione`, 0 record.
+  - **Verifica utente (browser)**: "Copia su settimana" → banner verde, 5 record settimana (user Metro, 8h) salvati nel DB.
+- **Versioning**: bump `VERSION` `0.6.0` → `0.7.0` (MINOR).
+- **Branch**: commit su `develop`, tag annotato `v0.7.0`. Niente `main`.
+- **Commit**: `feat(db): phase 5b bulk copy effort on week`.
 
 ### Fase 6 — Elenco record
-- **Stato**: non iniziata.
-- **Obiettivo**: tabella inferiore caricata dal DB, ordinata per data decrescente.
+- **Stato**: ✅ completata il 2026-07-31.
+- **Obiettivo**: tabella inferiore caricata dal DB, ordinata per data decrescente + filtro mese/anno tramite dropdown basato sui mesi distinti presenti nei record.
+- **Cosa è stato fatto**:
+  - **Fixture**: generati 100 record di test (gennaio→luglio 2026), user fittizi variati (Giulio/Anna/Luca/Sara/Marco/Elena), clienti/attività alternati, ore step 0.25, descrizione per Supporto Specialistico. Totale DB 106 record.
+  - **`web.py`**: `GET /` calcola i mesi distinti (`SELECT DISTINCT strftime('%Y-%m', work_date)` desc), carica i record con eager-load delle relazioni, filtra con `?month=YYYY-MM`; nomi mesi formattati in italiano lato server. Label "Fase 6 — Elenco record con filtro mese/anno".
+  - **`index.html`**: dropdown filtro (form GET auto-submit via `onchange`), tabella popolata con colonna "Utente", contatore record reale.
+  - **`style.css`**: stile `.filter-bar`. Rimosso vecchio commento "Fase 2".
+  - Verifiche: `GET /` 200 con 106 righe; dropdown con 7 opzioni mese; `?month=2026-01` → 11 righe; test 6 OK.
+  - **Verifica utente (browser)**: filtro mese/anno funzionante.
+- **Versioning**: bump `VERSION` `0.7.0` → `0.8.0` (MINOR).
+- **Branch**: commit su `develop`, tag annotato `v0.8.0`. Merge autorizzato su `main` dall'utente.
+- **Commit**: `feat(ui): phase 6 records list with month filter`.
 
 ### Fase 7 — Selezione record e update
 - **Stato**: non iniziata.
@@ -63,7 +160,15 @@
 - **Stato**: non iniziata.
 - **Obiettivo**: `user_id` valorizzato, segregazione dei dati, predisposizione ruoli.
 
-### Fase 12 — Hardening produzione
+### Fase 12 — Gestione ruoli e amministrazione (Admin)
+- **Stato**: non iniziata.
+- **Obiettivo**: tabella `roles` (admin/manager/user) e FK su `users`. L'Admin può: CRUD utenti e assegnazione ruoli; CRUD lookup (clienti, gruppi, attività). Sezione `/admin` visibile solo al ruolo admin. I dropdown non saranno più statici dopo il seed.
+
+### Fase 13 — Export manager e gestione gruppo (Manager)
+- **Stato**: non iniziata.
+- **Obiettivo**: il Manager vede i record di tutti gli utenti del proprio gruppo e può esportarne i dati (CSV/XLSX), ma NON modifica lookup né gestisce utenti (quello è admin). Serve associazione utente→gruppo.
+
+### Fase 14 — Hardening produzione
 - **Stato**: non iniziata.
 - **Obiettivo**: controllo validazioni, gestione errori, backup SQLite, note migrazione PostgreSQL.
 
@@ -77,5 +182,6 @@
 ## Cose note / limitazioni accettate
 - Tema dark/light solo come struttura CSS variabili fino a Fase 9.
 - Migrazioni schema con `CREATE TABLE IF NOT EXISTS` / `ALTER TABLE` controllato fino a Fase 9; Alembic proposto se la complessità cresce.
-- Nessun test automatico in Fase 0 (previsti da Fase 4).
+- Nessun test automatico fino a Fase 4.
 - `user_id` nullable in `effort_entries` dal suo inserimento, valorizzato in Fase 11.
+- Import `Engine` non usato in `app/routers/web.py` (da ripulire in refactor futuro).

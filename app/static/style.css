@@ -1,9 +1,8 @@
 /* ------------------------------------------------------------
  * Effort Tracking — fogli di stile condivisi.
  *
- * Fase 0: stile molto minimale, solo per la pagina di benvenuto.
- * Le regole specifiche del form e della tabella verranno aggiunte
- * nelle fasi successive (Fase 2 in poi).
+ * Fase 2: layout statico stile effort tracking (form + tabella).
+ * Le regole della welcome card delle Fasi 0/1 sono state rimosse.
  *
  * Palette: blu navy + grigi neutri (vedi memory-bank/projectbrief.md).
  * Variabili CSS in :root per consentire un futuro tema dark/light
@@ -95,15 +94,137 @@ a:hover { text-decoration: underline; }
   justify-content: space-between;
   gap: var(--space-md);
 }
+.app-header__left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+.app-header__menu {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-on-primary);
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+.app-header__menu:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.6);
+}
+.app-header__menu-icon {
+  display: block;
+}
 .app-header__title {
   font-size: 1.25rem;
   margin: 0;
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
+.app-header__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
 .app-header__phase {
   font-size: 0.9rem;
   opacity: 0.85;
+}
+.app-header__user {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--color-text-on-primary);
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+.app-header__user:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.6);
+}
+.app-header__user-icon {
+  display: block;
+}
+
+/* ---------- Sidebar (menu hamburger, Fase 4b) ---------- */
+.sidebar-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 40;
+}
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 260px;
+  max-width: 85vw;
+  background: var(--color-surface);
+  border-right: 1px solid var(--color-border);
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.12);
+  transform: translateX(-105%);
+  transition: transform 0.25s ease;
+  z-index: 50;
+  overflow-y: auto;
+}
+.sidebar.is-open {
+  transform: translateX(0);
+}
+.sidebar__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-md) var(--space-lg);
+  background: var(--color-primary);
+  color: var(--color-text-on-primary);
+}
+.sidebar__title {
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.sidebar__close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-on-primary);
+  font-size: 1rem;
+  cursor: pointer;
+}
+.sidebar__close:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+.sidebar__menu {
+  list-style: none;
+  margin: 0;
+  padding: var(--space-md) 0;
+}
+.sidebar__menu li a {
+  display: block;
+  padding: var(--space-sm) var(--space-lg);
+  color: var(--color-text);
+}
+.sidebar__menu li a:hover {
+  background: var(--color-surface-alt);
+  text-decoration: none;
 }
 
 /* ---------- Main ---------- */
@@ -121,20 +242,222 @@ a:hover { text-decoration: underline; }
   font-size: 0.85rem;
 }
 
-/* ---------- Welcome card (Fase 0) ---------- */
-.welcome-card {
+/* ---------- Card generiche (form + tabella) ---------- */
+.form-card,
+.records-card {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
-  padding: var(--space-xl);
+  padding: var(--space-lg);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  margin-bottom: var(--space-xl);
 }
-.welcome-card h2 {
-  margin-top: 0;
+.card-title {
+  margin: 0 0 var(--space-lg);
+  font-size: 1.1rem;
   color: var(--color-primary);
 }
-.welcome-list {
-  margin-top: var(--space-lg);
-  padding-left: var(--space-lg);
+
+/* ---------- Form ---------- */
+.effort-form {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-md);
 }
-.welcome-list li { margin-bottom: var(--space-sm); }
+@media (min-width: 720px) {
+  .effort-form {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-md);
+}
+@media (min-width: 720px) {
+  .form-row {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+.form-group--full {
+  grid-column: 1 / -1;
+}
+.form-group label {
+  display: block;
+  margin-bottom: var(--space-xs);
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--color-text);
+}
+.form-group input,
+.form-group select,
+.form-group textarea {
+  width: 100%;
+  padding: var(--space-sm) var(--space-md);
+  font-family: var(--font-sans);
+  font-size: 0.95rem;
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(30, 58, 95, 0.15);
+}
+.form-group textarea {
+  resize: vertical;
+  min-height: 72px;
+}
+
+/* ---------- Azioni form ---------- */
+.form-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: center;
+  gap: var(--space-md);
+  margin-top: var(--space-sm);
+}
+.btn-primary {
+  min-width: 180px;
+  padding: var(--space-sm) var(--space-xl);
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-primary-contrast);
+  background: var(--color-primary);
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+.btn-primary:hover {
+  background: var(--color-primary-hover);
+  border-color: var(--color-primary-hover);
+}
+.btn-secondary {
+  min-width: 200px;
+  padding: var(--space-sm) var(--space-xl);
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-primary);
+  background: var(--color-surface);
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+.btn-secondary:hover {
+  background: var(--color-accent);
+  border-color: var(--color-primary-hover);
+}
+
+/* ---------- Tabella registrazioni ---------- */
+.records-card__header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-md);
+  margin-bottom: var(--space-md);
+}
+.records-card__header .card-title {
+  margin: 0;
+}
+.records-count {
+  font-size: 0.9rem;
+  color: var(--color-text-muted);
+}
+.filter-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-md);
+}
+.filter-bar__label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+.filter-bar__select {
+  padding: var(--space-xs) var(--space-sm);
+  font-family: var(--font-sans);
+  font-size: 0.95rem;
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+}
+.table-scroll {
+  overflow-x: auto;
+}
+.records-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+}
+.records-table thead th {
+  background: var(--color-primary);
+  color: var(--color-text-on-primary);
+  text-align: left;
+  padding: var(--space-sm) var(--space-md);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.records-table tbody td {
+  padding: var(--space-sm) var(--space-md);
+  border-bottom: 1px solid var(--color-border);
+  vertical-align: top;
+}
+.records-table tbody tr:nth-child(even) {
+  background: var(--color-surface-alt);
+}
+.records-table tbody tr:hover {
+  background: var(--color-accent);
+}
+.col-hours {
+  text-align: right;
+  white-space: nowrap;
+}
+.empty-state {
+  text-align: center;
+  color: var(--color-text-muted);
+  padding: var(--space-xl) var(--space-md) !important;
+  font-style: italic;
+}
+
+/* ---------- Form: stato nascosto, errori (Fase 3) ---------- */
+.is-hidden {
+  display: none !important;
+}
+.form-group.is-invalid input,
+.form-group.is-invalid select,
+.form-group.is-invalid textarea {
+  border-color: #c0392b;
+  box-shadow: 0 0 0 3px rgba(192, 57, 43, 0.12);
+  background: #fdf0ef;
+}
+.form-error {
+  margin-bottom: var(--space-md);
+  padding: var(--space-sm) var(--space-md);
+  background: #fdecea;
+  border: 1px solid #e74c3c;
+  border-left: 4px solid #c0392b;
+  border-radius: var(--radius-sm);
+  color: #a93226;
+  font-size: 0.92rem;
+}
+.form-success {
+  margin-bottom: var(--space-md);
+  padding: var(--space-sm) var(--space-md);
+  background: #eaf7ec;
+  border: 1px solid #27ae60;
+  border-left: 4px solid #1e8449;
+  border-radius: var(--radius-sm);
+  color: #1e8449;
+  font-size: 0.92rem;
+}
