@@ -64,6 +64,14 @@ def _require_auth(user: User | None) -> RedirectResponse | None:
     return None
 
 
+def _with_month(base_url: str, month: str | None) -> str:
+    """Aggiunge il parametro month a un URL se presente (Issue 1: filtri)."""
+    if month:
+        separator: str = "&" if "?" in base_url else "?"
+        return f"{base_url}{separator}month={month}"
+    return base_url
+
+
 @router.get("/", response_class=HTMLResponse, name="index")
 async def index(
     request: Request,
@@ -152,6 +160,7 @@ async def save_entry(
     description: Annotated[str | None, Form()] = None,
     action: Annotated[str, Form()] = "single",
     record_id: Annotated[int | None, Form()] = None,
+    month: Annotated[str | None, Form()] = None,
     current_user: User | None = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
@@ -159,6 +168,7 @@ async def save_entry(
 
     Con auth attiva, il campo User viene forzato lato server allo username
     della sessione, indipendentemente da quanto inviato dal browser.
+    `month` preserva il filtro mese nel redirect (Issue-Suggestion.md Issue 1).
     """
     redirect = _require_auth(current_user)
     if redirect is not None:
@@ -171,7 +181,7 @@ async def save_entry(
 
     # Eliminazione definitiva: richiede solo `record_id`.
     if action == "delete":
-        return _delete_entry(record_id, db)
+        return _delete_entry(record_id, db, month)
 
     try:
         payload = EffortEntryCreate(
@@ -186,7 +196,7 @@ async def save_entry(
         )
     except ValidationError as exc:
         logger.warning("Validazione fallita nel form: %s", exc.errors())
-        return RedirectResponse("/?error=validazione", status_code=303)
+        return RedirectResponse(_with_month("/?error=validazione", month), status_code=303)
 
     activity = db.execute(
         select(Activity).where(Activity.id == payload.activity_id)
@@ -194,45 +204,46 @@ async def save_entry(
 
     if activity is not None and activity.requires_description and not payload.description:
         logger.warning("Descrizione mancante per attività che la richiede")
-        return RedirectResponse("/?error=descrizione", status_code=303)
+        return RedirectResponse(_with_month("/?error=descrizione", month), status_code=303)
 
     if action == "week" and record_id is not None:
-        return RedirectResponse("/?error=validazione", status_code=303)
+        return RedirectResponse(_with_month("/?error=validazione", month), status_code=303)
 
     if action == "week":
-        return _save_week(payload, db)
+        return _save_week(payload, db, month)
 
-    return _save_single(payload, db, record_id=record_id)
+    return _save_single(payload, db, record_id=record_id, month=month)
 
 
-def _delete_entry(record_id: int | None, db: Session) -> RedirectResponse:
+def _delete_entry(record_id: int | None, db: Session, month: str | None = None) -> RedirectResponse:
     """Elimina definitivamente un record di effort dal database."""
     if record_id is None:
         logger.warning("Eliminazione senza record_id")
-        return RedirectResponse("/?error=validazione", status_code=303)
+        return RedirectResponse(_with_month("/?error=validazione", month), status_code=303)
 
     entry = db.get(EffortEntry, record_id)
     if entry is None:
         logger.warning("Tentativo di eliminazione record inesistente id=%s", record_id)
-        return RedirectResponse("/?error=validazione", status_code=303)
+        return RedirectResponse(_with_month("/?error=validazione", month), status_code=303)
 
     db.delete(entry)
     db.commit()
     logger.info("Record eliminato id=%s", record_id)
-    return RedirectResponse("/?success=3", status_code=303)
+    return RedirectResponse(_with_month("/?success=3", month), status_code=303)
 
 
 def _save_single(
     payload: EffortEntryCreate,
     db: Session,
     record_id: int | None = None,
+    month: str | None = None,
 ) -> RedirectResponse:
     """Crea un nuovo record oppure aggiorna quello indicato da `record_id`."""
     if record_id is not None:
         entry = db.get(EffortEntry, record_id)
         if entry is None:
             logger.warning("Update di record inesistente id=%s", record_id)
-            return RedirectResponse("/?error=validazione", status_code=303)
+            return RedirectResponse(_with_month("/?error=validazione", month), status_code=303)
         entry.user_text = payload.user
         entry.client_id = payload.client_id
         entry.group_id = payload.group_id
@@ -243,7 +254,7 @@ def _save_single(
         entry.description = payload.description
         db.commit()
         logger.info("Record aggiornato id=%s data=%s ore=%s", record_id, payload.date, payload.hours)
-        return RedirectResponse("/?success=2", status_code=303)
+        return RedirectResponse(_with_month("/?success=2", month), status_code=303)
 
     entry = EffortEntry(
         user_id=None,
@@ -259,10 +270,10 @@ def _save_single(
     db.add(entry)
     db.commit()
     logger.info("Record creato id=%s data=%s ore=%s", entry.id, payload.date, payload.hours)
-    return RedirectResponse("/?success=1", status_code=303)
+    return RedirectResponse(_with_month("/?success=1", month), status_code=303)
 
 
-def _save_week(payload: EffortEntryCreate, db: Session) -> RedirectResponse:
+def _save_week(payload: EffortEntryCreate, db: Session, month: str | None = None) -> RedirectResponse:
     """Copia il form su tutti i giorni feriali della settimana della data."""
     monday = payload.date - timedelta(days=payload.date.weekday())
     for offset in range(5):  # lun, mar, mer, gio, ven
@@ -281,7 +292,7 @@ def _save_week(payload: EffortEntryCreate, db: Session) -> RedirectResponse:
         )
     db.commit()
     logger.info("Copia settimanale creata (settimana di %s)", payload.date.isoformat())
-    return RedirectResponse("/?success=1", status_code=303)
+    return RedirectResponse(_with_month("/?success=1", month), status_code=303)
 
 
 @router.get("/export", response_class=StreamingResponse, name="export_csv")

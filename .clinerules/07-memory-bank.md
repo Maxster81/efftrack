@@ -53,6 +53,7 @@ Create files/folders within `memory-bank/` when they help organize:
 - Complex feature documentation
 - Integration specifications
 - Known issues and bug tracking
+- Issue e suggerimenti dei test utente (file `Issue-Suggestion.md` — da leggere a inizio task, come gli altri file del memory bank)
 - Testing strategies
 - Export format notes
 - Deployment checklists

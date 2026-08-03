@@ -209,6 +209,7 @@
 - **Fase 14 — Hardening**: ex Fase 12.
 
 ## Rischi / punti aperti
+- **`memory-bank/Issue-Suggestion.md`** traccia issue minori e suggerimenti raccolti dai test utente (priorità molto bassa). Attualmente: **Issue 1** (persistenza filtro mese — RISOLTA in 0.13.1) e **Suggestion 1** (nascondere hamburger menu nella login — da valutare).
 - Password admin di default `admin/admin`: va cambiata subito in produzione via env var (Sicurezza Fase 14).
 - La sessione HTTP firmata richiede `SECRET_KEY` robusta in produzione (placeholder in sviluppo).
 - `pydantic-core` pinnato a 2.46.4 per compatibilità con pydantic 2.13.4; quando pydantic sarà aggiornato, andrà aggiornato insieme.

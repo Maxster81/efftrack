@@ -36,6 +36,9 @@
          Valorizzato da row-select.js al click su una riga della tabella.
          Deve stare dentro il <form> per essere incluso nella POST. #}
       <input type="hidden" id="record-id" name="record_id" value="" />
+      {# Persistenza filtro mese (Issue-Suggestion.md Issue 1): il valore del
+         mese selezionato viene inviato con la POST e preservato nel redirect. #}
+      <input type="hidden" id="effort-month" name="month" value="{{ selected_month }}" />
 
       <div class="form-row">
         <div class="form-group">
