@@ -8,6 +8,8 @@
 - **ORM**: SQLAlchemy 2.x.
 - **DB**: SQLite3, modalità WAL + foreign keys ON su ogni connessione.
 - **Static**: CSS vanilla + JS vanilla, in `app/static/`.
+- **Configurazione**: `python-dotenv` per caricare `.env` (sviluppo). In produzione systemd `EnvironmentFile`.
+- **Logging**: modulo `logging` standard, configurato centralmente in `app/core/logging_config.py`.
 
 ### Struttura directory
 ```
@@ -18,7 +20,7 @@ efftrack/
 │   ├── config.py               # env vars, path DB, SECRET_KEY placeholder
 │   ├── db.py                   # engine, SessionLocal, Base, get_db, PRAGMA WAL/FK
 │   ├── dependencies.py         # get_db, futuri get_current_user
-│   ├── core/                   # costanti e validazioni condivise
+│   ├── core/                   # costanti, validazioni condivise, logging_config, seed
 │   ├── models/                 # ORM SQLAlchemy
 │   ├── repositories/           # accesso dati
 │   ├── services/               # logica business (es. derivazione mese)
@@ -52,6 +54,14 @@ efftrack/
 - `APIRouter(prefix=...)` per ogni modulo.
 - `Depends(get_db)` per la sessione DB.
 - Distinzione netta tra router web (HTML) e router api (JSON).
+- In `lifespan`: `setup_logging()` (da `app/core/logging_config.py`) prima di qualsiasi log applicativo.
+
+## Logging (Fase 9)
+- Configurazione centralizzata in `app/core/logging_config.py` (`setup_logging()` idempotente).
+- Livello da env `EFFORT_TRACKING_LOG_LEVEL` (default INFO).
+- Formato `%(asctime)s %(levelname)s [%(name)s] %(message)s` (leggibile console/journald).
+- I logger prendono il nome del modulo via `logging.getLogger(__name__)`.
+- I log applicativi escono su stdout → catturati da journald in systemd.
 
 ## Ciclo di completamento fasi
 
@@ -86,7 +96,7 @@ efftrack/
 
 ## Tema e CSS
 - Variabili CSS in `:root` con palette blu navy + grigi neutri.
-- Struttura predisposta per `data-theme="dark"` (variabili alternative), toggle UI rimandato a Fase 9.
+- Struttura predisposta per `data-theme="dark"` (variabili alternative), toggle UI rimandato a Fase 9b.
 
 ## Sicurezza
 - `SECRET_KEY` letto da env var, default di sviluppo con placeholder esplicito.

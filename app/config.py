@@ -1,18 +1,29 @@
 """Configurazione centralizzata dell'applicazione.
 
-Legge le variabili d'ambiente e fornisce default sicuri per lo sviluppo.
-In produzione tutti i secrets devono essere sovrascritti via env vars.
+Legge le variabili dal file `.env` (se presente) e dall'ambiente,
+fornendo default sicuri per lo sviluppo. In produzione tutti i secrets
+devono essere sovrascritti via env vars (o EnvironmentFile systemd).
 """
 from __future__ import annotations
 
 import os
 from pathlib import Path
 
+from dotenv import load_dotenv
+
+# --- Caricamento variabili d'ambiente dal file .env (se esiste) -------------
+# Il file .env non va committato (è in .gitignore). Il template di
+# riferimento è .env.example. In produzione systemd usa EnvironmentFile.
+load_dotenv()
+
 
 # --- Path di base -------------------------------------------------------------
 
 # Radice del progetto (cartella che contiene app/).
 BASE_DIR: Path = Path(__file__).resolve().parent.parent
+
+# Cartella dati (SQLite, export temporanei). Creata a runtime se assente.
+DATA_DIR: Path = BASE_DIR / "data"
 
 
 # --- Database -----------------------------------------------------------------
@@ -21,7 +32,7 @@ BASE_DIR: Path = Path(__file__).resolve().parent.parent
 # Esempio per Postgres futuro: postgresql://user:pwd@host:5432/efftrack
 DATABASE_URL: str = os.environ.get(
     "EFFORT_TRACKING_DB_URL",
-    f"sqlite:///{BASE_DIR / 'data' / 'efftrack.db'}",
+    f"sqlite:///{DATA_DIR / 'efftrack.db'}",
 )
 
 
@@ -42,10 +53,20 @@ HOST: str = os.environ.get("EFFORT_TRACKING_HOST", "0.0.0.0")
 PORT: int = int(os.environ.get("EFFORT_TRACKING_PORT", "8000"))
 
 
+# --- Logging ------------------------------------------------------------------
+
+# Livello di log applicativo. Valori tipici: DEBUG, INFO, WARNING, ERROR.
+# In produzione consigliato INFO; DEBUG solo per troubleshooting.
+LOG_LEVEL: str = os.environ.get("EFFORT_TRACKING_LOG_LEVEL", "INFO").upper()
+
+# Formato del log per un output leggibile in console/journald.
+LOG_FORMAT: str = "%(asctime)s %(levelname)s [%(name)s] %(message)s"
+
+
 # --- Costanti applicative -----------------------------------------------------
 
 APP_NAME: str = "Effort Tracking"
-APP_VERSION: str = "0.9.0"
+APP_VERSION: str = "0.11.0"
 
 
 # --- Path applicativi (templates, static) ------------------------------------

@@ -1,11 +1,11 @@
 # Progress — Effort Tracking
 
 ## Stato globale
-- **Ultima fase completata**: Fase 8 ✅ completata il 2026-07-31 (export CSV con filtro mese).
-- **Fase in corso**: nessuna. In attesa di task per la Fase 9 (Refactoring, logging, env, systemd).
-- **Stato**: idle, pronto per nuovo task.
-- **Versione corrente**: `0.10.0` (tag `v0.10.0` annotato su `develop`).
-- **Roadmap estesa**: aggiunte Fase 4b (sidebar hamburger), Fase 5b (copia su settimana), Fase 12 (Admin), Fase 13 (Manager); l'hardening passa da 12 a 14.
+- **Ultima fase completata**: Fase 9 ✅ completata il 2026-08-03 (refactoring, logging, .env, systemd).
+- **Fase in corso**: Fase 9b (toggle dark/light + aggiornamento dipendenze) — non avviata.
+- **Stato**: in pausa tra la Fase 9 e la 9b.
+- **Versione corrente**: `0.11.0` (tag `v0.11.0` annotato su `develop`).
+- **Roadmap estesa**: aggiunte Fase 4b (sidebar hamburger), Fase 5b (copia su settimana), Fase 12 (Admin), Fase 13 (Manager); l'hardening passa da 12 a 14. La Fase 9 è stata **sdoppiata** su richiesta utente in **Fase 9** (backend) e **Fase 9b** (frontend toggle dark/light + dipendenze).
 
 ## Roadmap
 
@@ -171,8 +171,29 @@
 - **Commit**: `feat(db): phase 8 csv export with month filter`.
 
 ### Fase 9 — Refactoring, logging, env, systemd
+- **Stato**: ✅ completata il 2026-08-03.
+- **Obiettivo**: refactoring, logging strutturato, `.env` operativo, validazione systemd. (Il toggle dark/light è slittato alla nuova **Fase 9b**.)
+- **Cosa è stato fatto**:
+  - **`app/config.py`**: `load_dotenv()` (carica `.env`); nuova `DATA_DIR`; costanti logging `LOG_LEVEL`/`LOG_FORMAT`; `APP_VERSION` → `0.11.0`.
+  - **`app/core/logging_config.py`** (nuovo): `setup_logging()` idempotente (StreamHandler, formato asctime/livello/logger/messaggio, livello da env).
+  - **`app/main.py`**: `setup_logging()` nel lifespan; log di avvio/arresto, schema verificato; usa `DATA_DIR`.
+  - **`app/core/seed.py`**: log `info` su seed eseguito, `debug` se già popolato.
+  - **`app/routers/web.py`**: `logger`; warning su validazione/descrizione/id mancanti; info su create/update/delete/week/export; error su health degradato. Label "Fase 9 — Refactoring, logging, env".
+  - **`requirements.txt`**: `python-dotenv>=1.0.0`.
+  - **`requirements-dev.txt`** (nuovo): `pytest>=8.0.0` (solo dev).
+  - **`.env.example`**: aggiunto `EFFORT_TRACKING_LOG_LEVEL=INFO`.
+  - **`.env`** (reale, non committato): creato da template + log level.
+  - **`systemd/efftrack.service`**: doc estesa (variabili env, niente `.env` in produzione, log su journald).
+  - **`VERSION`**: `0.10.0` → `0.11.0` (MINOR).
+  - **Merge su `main` autorizzato dall'utente** prima di iniziare la fase: `main` include fasi 7–9 (v0.11.0).
+- **Verifiche**: 8/8 test OK (pytest); avvio uvicorn con log startup/shutdown corretti; `/health` 200 v0.11.0 `db:ok`; `/` 200; `/export` 200 (log 110 record).
+- **Versioning**: bump `VERSION` `0.10.0` → `0.11.0` (MINOR).
+- **Branch**: commit su `develop`, tag annotato `v0.11.0`. Niente `main` (merge già fatto prima).
+- **Commit**: previsto `feat(core): phase 9 logging, dotenv, systemd`.
+
+### Fase 9b — Toggle dark/light + aggiornamento dipendenze
 - **Stato**: non iniziata.
-- **Obiettivo**: pulizia, logging strutturato, `.env.example`, systemd, toggle dark/light.
+- **Obiettivo**: toggle dark/light funzionante nell'header; aggiornamento dipendenze (`pip list --outdated`).
 
 ### Fase 10 — Autenticazione locale
 - **Stato**: non iniziata.
@@ -202,9 +223,10 @@
 - **PATCH** = bug fix, refactoring interno, miglioramenti UI.
 
 ## Cose note / limitazioni accettate
-- Tema dark/light solo come struttura CSS variabili fino a Fase 9.
-- Migrazioni schema con `CREATE TABLE IF NOT EXISTS` / `ALTER TABLE` controllato fino a Fase 9; Alembic proposto se la complessità cresce.
+- Tema dark/light solo come struttura CSS variabili fino a Fase 9b (toggle non ancora implementato).
+- Migrazioni schema con `CREATE TABLE IF NOT EXISTS` / `ALTER TABLE` controllato; Alembic proposto se la complessità cresce.
 - `user_id` nullable in `effort_entries` dal suo inserimento, valorizzato in Fase 11.
-- La cancellazione è **permanente** e senza soft-delete/audit (da valutare in Fase 9/hardening).
+- La cancellazione è **permanente** e senza soft-delete/audit (da valutare in Fase 14/hardening).
 - I campi del form sono opzionali nella firma della route `POST /`: la validazione obbligatoria avviene comunque server-side via `EffortEntryCreate` per le azioni che creano/aggiornano record.
-- DB di sviluppo: per le prove la fixture è variata (ora 105 record dopo eliminazioni manuali di test).
+- DB di sviluppo: per le prove la fixture è variata (ora 110 record).
+- Configurazione: il `.env` locale è per lo sviluppo; in produzione systemd legge `/etc/efftrack.env` (EnvironmentFile). Livello log controllato da `EFFORT_TRACKING_LOG_LEVEL`.

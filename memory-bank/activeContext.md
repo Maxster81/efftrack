@@ -1,18 +1,18 @@
 # Active Context — Effort Tracking
 
 ## Stato corrente
-- **Ultima fase completata**: Fase 8 ✅ (2026-07-31) — export CSV con filtro mese.
-- **Fase in corso**: nessuna. In attesa di task per la Fase 9 (Refactoring, logging, env, systemd).
-- **Stato**: idle, pronto per nuovo task.
-- **Versione corrente**: `0.10.0` (tag `v0.10.0` annotato su `develop`).
-- **Roadmap estesa**: aggiunte Fase 4b (sidebar hamburger), Fase 5b (copia su settimana), Fase 12 (Admin), Fase 13 (Manager); hardening slitta a Fase 14. Vedi `progress.md`/`projectbrief.md`.
-- **Nota**: la tabella `effort_entries` ha la colonna `user_text` (String 128 nullable). Contiene dati reali (105+ record: fixture gen-lug 2026 + preesistenti). Merge su `main` autorizzato dall'utente in Fase 6.
-- **Nota ambiente**: sviluppo su **Ubuntu in WSL** (Python 3.12.3, pip 24.0). Venv ricreato in questa macchina. Dipendenze: fastapi 0.141.1, uvicorn 0.52.0, sqlalchemy 2.0.51, pydantic 2.13.4, jinja2 3.1.6, python-multipart 0.0.32.
+- **Ultima fase completata**: Fase 9 ✅ (2026-08-03) — refactoring, logging, `.env`, systemd.
+- **Fase in corso**: Fase 9b (toggle dark/light + aggiornamento dipendenze) — non avviata, in attesa di task.
+- **Stato**: in pausa tra la Fase 9 e la 9b.
+- **Versione corrente**: `0.11.0` (tag `v0.11.0` annotato su `develop`).
+- **Roadmap estesa**: aggiunte Fase 4b (sidebar hamburger), Fase 5b (copia su settimana), Fase 12 (Admin), Fase 13 (Manager); hardening slitta a Fase 14. La Fase 9 è stata **sdoppiata** su richiesta utente: **Fase 9** (refactoring, logging, .env, systemd — solo backend) e **Fase 9b** (toggle dark/light, aggiornamento dipendenze — solo frontend). Vedi `progress.md`/`projectbrief.md`.
+- **Nota**: la tabella `effort_entries` ha la colonna `user_text` (String 128 nullable). Contiene dati reali (110 record: fixture gen-lug 2026 + preesistenti). **Merge su `main` autorizzato dall'utente in Fase 9 (2026-08-03)** prima di iniziare la fase: `main` ora include le fasi 7–9 (v0.11.0).
+- **Nota ambiente**: sviluppo su **Ubuntu in WSL** (Python 3.12.3, pip 24.0). Venv ricreato in questa macchina. Dipendenze: fastapi 0.141.1, uvicorn 0.52.0, sqlalchemy 2.0.51, pydantic 2.13.4, jinja2 3.1.6, python-multipart 0.0.32, python-dotenv 1.2.2, pytest 9.1.1 (in dev, non in produzione).
 
 ## Decisioni recenti
 - **Stack**: FastAPI + Jinja2 + SQLAlchemy 2.x + SQLite.
 - **Palette UI**: blu navy + grigi neutri (variabili CSS in `:root`, predisposte per dark/light futuri).
-- **Tema**: struttura CSS variabili presente; toggle dark/light rimandato a Fase 9.
+- **Tema**: struttura CSS variabili presente; toggle dark/light rimandato a Fase 9b.
 - **Struttura**: repo unico con layout modulare (`app/{routers,services,repositories,schemas,models,core}`).
 - **Systemd**: template `efftrack.service` creato in Fase 0 ma non attivato.
 - **Branching**: `main` intoccato salvo autorizzazione esplicita. Tutto il lavoro su `develop`.
@@ -22,7 +22,9 @@
 - **Modello dati lookup**: non servono `code` e `name`, basta il `name` (con UNIQUE). Rimossa la colonna `code` in Fase 4 su decisione utente. I dropdown mostrano solo `name`.
 - **Data default**: il campo Data del form è pre-popolato con `date.today()` lato server (`today` nel context).
 - **Bind server**: in sviluppo bind su `0.0.0.0` (accessibile da browser Windows via WSL).
-- **Test automatici**: da Fase 4 in poi, `unittest` (stdlib) con SQLite in-memory isolato. Nessuna dipendenza di test extra.
+- **Test automatici**: pytest da Fase 9 in poi, con SQLite in-memory isolato. Dipendenza di sviluppo separata in `requirements-dev.txt`.
+- **Logging**: `app/core/logging_config.py` con `setup_logging()` chiamato nel lifespan; livello da `EFFORT_TRACKING_LOG_LEVEL` (default INFO); formato leggibile console/journald.
+- **Configurazione**: `app/config.py` carica `.env` via `python-dotenv` (`load_dotenv`); `DATA_DIR` centralizzato. Il `.env` reale NON è committato (in `.gitignore`); template in `.env.example`.
 
 ## Modifiche di Fase 4 (database e seed lookup)
 - **Nuovi modelli ORM** in `app/models/`:
@@ -141,15 +143,35 @@
 - `GET /` → contiene label "Fase 8 — Export CSV" e link "Esporta CSV".
 - **Verifica utente (browser)**: pulsante "Esporta CSV" a destra del dropdown mese; download del CSV; il download rispetta il filtro mese selezionato.
 
-## Fasi successive (dopo 8)
-- **Fase 9**: refactoring, logging, .env, systemd, toggle dark/light.
+## Modifiche di Fase 9 (refactoring, logging, env, systemd)
+- **`app/config.py`**: aggiunto `load_dotenv()` (carica `.env` se presente); nuova costante `DATA_DIR` (centralizza `BASE_DIR / "data"`); nuove costanti logging `LOG_LEVEL` (da env `EFFORT_TRACKING_LOG_LEVEL`, default INFO) e `LOG_FORMAT`; `APP_VERSION` → `0.11.0`.
+- **`app/core/logging_config.py`** (NUOVO): `setup_logging()` idempotente — configura handler StreamHandler con formato `%(asctime)s %(levelname)s [%(name)s] %(message)s` e livello da config.
+- **`app/main.py`**: nel `lifespan` chiama `setup_logging()` e aggiunge log di avvio/arresto dell'app, verifica schema e lookup; usa `DATA_DIR` centralizzato.
+- **`app/core/seed.py`**: nuovo log `info` quando il seed popola le lookup, `debug` quando sono già popolate.
+- **`app/routers/web.py`**: introdotto `logger`; log `warning` su validazione fallita/descrizione mancante/id inesistente, `info` su creazione/aggiornamento/eliminazione record, copia settimanale ed export CSV; log `error` su health check degradato. Label fase "Fase 9 — Refactoring, logging, env".
+- **`requirements.txt`**: aggiunto `python-dotenv>=1.0.0`.
+- **`requirements-dev.txt`** (NUOVO): include `requirements.txt` + `pytest>=8.0.0` (dipendenza solo di sviluppo).
+- **`.env.example`**: aggiunto `EFFORT_TRACKING_LOG_LEVEL=INFO`.
+- **`.env`** (REALE, NON committato): creato da `.env.example` + `EFFORT_TRACKING_LOG_LEVEL=INFO`.
+- **`systemd/efftrack.service`**: documentazione estesa — elenco esplicito delle variabili in `/etc/efftrack.env`, nota che in produzione NON si usa il `.env` locale (variabili solo da EnvironmentFile), nota log su journald (`journalctl -u efftrack -f`).
+- **`VERSION`**: `0.10.0` → `0.11.0` (MINOR: funzionalità di configurazione/logging retrocompatibili).
+
+## Verifiche Fase 9 (test + curl + avvio)
+- **Test**: 8/8 OK (pytest installato come dev dep; ripulita nota precedente su `unittest`).
+- Avvio uvicorn: log di startup/shutdown corretti (`Avvio Effort Tracking v0.11.0`, `Schema database verificato`, `Avvio completato`, `Arresto`).
+- `GET /health` → 200 `{"app":"Effort Tracking","version":"0.11.0","status":"ok","db":"ok"}`.
+- `GET /` → 200; `GET /export` → 200 con log `Export CSV generato (record=110, mese=tutti)`.
+
+## Fasi successive (dopo 9)
+- **Fase 9b**: toggle dark/light + aggiornamento dipendenze (frontend).
 - **Fasi 10–11**: auth locale, multiutente/segregazione.
 - **Fase 12 — Admin**: tabella `roles`, CRUD utenti + assegnazione ruoli, CRUD lookup, sezione `/admin`.
 - **Fase 13 — Manager**: vista/export dei record del proprio gruppo, senza gestione lookup/utenti.
 - **Fase 14 — Hardening**: ex Fase 12.
 
 ## Rischi / punti aperti
-- Tema dark/light rimandato a Fase 9.
-- Migrazioni schema: `CREATE TABLE IF NOT EXISTS` / seed idempotente fino a Fase 9; poiché `code` è stato rimosso dopo la prima creazione, il DB va rigenerato se cambia schema (nessun ALTER automatico gestisce la rimozione colonna). Da valutare `ALTER TABLE` controllato o Alembic se cresce la complessità.
+- Tema dark/light rimandato a Fase 9b (non avviata).
+- Migrazioni schema: `CREATE TABLE IF NOT EXISTS` / seed idempotente; poiché `code` è stato rimosso dopo la prima creazione, il DB va rigenerato se cambia schema (nessun ALTER automatico gestisce la rimozione colonna). Da valutare `ALTER TABLE` controllato o Alembic se cresce la complessità.
 - `user_id` nullable senza FK in `effort_entries`, valorizzato in Fase 11.
-- POST "method not allowed" al submit del form: atteso, sarà implementato in Fase 5.
+- La cancellazione è **permanente** e senza soft-delete/audit (da valutare in Fase 14/hardening).
+- Il `.env` reale in produzione è sostituito dal `/etc/efftrack.env` di systemd (documentato nel template).
