@@ -185,11 +185,11 @@
   - **`.env`** (reale, non committato): creato da template + log level.
   - **`systemd/efftrack.service`**: doc estesa (variabili env, niente `.env` in produzione, log su journald).
   - **`VERSION`**: `0.10.0` → `0.11.0` (MINOR).
-  - **Merge su `main` autorizzato dall'utente** prima di iniziare la fase: `main` include fasi 7–9 (v0.11.0).
+  - **Merge su `main` autorizzato dall'utente due volte**: prima di iniziare la fase (baseline stabile Fase 8) e a fine fase dopo conferma esplicita.
 - **Verifiche**: 8/8 test OK (pytest); avvio uvicorn con log startup/shutdown corretti; `/health` 200 v0.11.0 `db:ok`; `/` 200; `/export` 200 (log 110 record).
 - **Versioning**: bump `VERSION` `0.10.0` → `0.11.0` (MINOR).
-- **Branch**: commit su `develop`, tag annotato `v0.11.0`. Niente `main` (merge già fatto prima).
-- **Commit**: previsto `feat(core): phase 9 logging, dotenv, systemd`.
+- **Branch**: commit su `develop`, tag annotato `v0.11.0`. **Merge finale su `main` eseguito** (`29e61cd Merge branch 'develop'`), poi rientro su `develop`.
+- **Commit**: `feat(core): phase 9 logging, dotenv, systemd`.
 
 ### Fase 9b — Toggle dark/light + aggiornamento dipendenze
 - **Stato**: non iniziata.
