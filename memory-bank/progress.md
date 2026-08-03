@@ -1,10 +1,10 @@
 # Progress — Effort Tracking
 
 ## Stato globale
-- **Ultima fase completata**: Fase 9 ✅ completata il 2026-08-03 (refactoring, logging, .env, systemd).
-- **Fase in corso**: Fase 9b (toggle dark/light + aggiornamento dipendenze) — non avviata.
-- **Stato**: in pausa tra la Fase 9 e la 9b.
-- **Versione corrente**: `0.11.0` (tag `v0.11.0` annotato su `develop`).
+- **Ultima fase completata**: Fase 9b ✅ completata il 2026-08-03 (toggle dark/light + aggiornamento dipendenze).
+- **Fase in corso**: nessuna. Prossima: Fase 10 (autenticazione locale).
+- **Stato**: idle, pronto per nuovo task.
+- **Versione corrente**: `0.12.0` (tag `v0.12.0` annotato su `develop`).
 - **Roadmap estesa**: aggiunte Fase 4b (sidebar hamburger), Fase 5b (copia su settimana), Fase 12 (Admin), Fase 13 (Manager); l'hardening passa da 12 a 14. La Fase 9 è stata **sdoppiata** su richiesta utente in **Fase 9** (backend) e **Fase 9b** (frontend toggle dark/light + dipendenze).
 
 ## Roadmap
@@ -192,8 +192,19 @@
 - **Commit**: `feat(core): phase 9 logging, dotenv, systemd`.
 
 ### Fase 9b — Toggle dark/light + aggiornamento dipendenze
-- **Stato**: non iniziata.
-- **Obiettivo**: toggle dark/light funzionante nell'header; aggiornamento dipendenze (`pip list --outdated`).
+- **Stato**: ✅ completata il 2026-08-03.
+- **Obiettivo**: toggle dark/light funzionante nell'header (due sole modalità dark/light, nessun rilevamento sistema); aggiornamento dipendenze (`pip list --outdated`).
+- **Cosa è stato fatto**:
+  - **`app/static/theme.js`** (nuovo): toggle bistabile dark/light, salva in `localStorage["theme-preference"]` (default light), applica `data-theme="dark"` su `<html>`, aggiorna icona/label. Nessun matchMedia.
+  - **`app/templates/base.html`**: pulsante `.app-header__theme-toggle` (#theme-toggle) con icona ☀️/🌙 dentro `.app-header__actions`; script inline anti-FOUC nel `<head>` che applica il tema salvato prima del rendering; `theme.js` incluso con `defer`.
+  - **`app/static/style.css`**: blocco `[data-theme="light"]` esplicito; stile `.app-header__theme-toggle`/`.app-header__theme-icon` coerenti con `.app-header__user`; commento dark aggiornato.
+  - **`app/routers/web.py`**: label fase "Fase 9b — Toggle dark/light".
+  - **Dipendenze**: `uvicorn` 0.52.0 → 0.52.1 (PATCH). Tentativo `pydantic-core` 2.47.0 **scartato** (incompatibile con pydantic 2.13.4) → ripristinato 2.46.4, `pip check` OK.
+  - **`VERSION`**: `0.11.0` → `0.12.0` (MINOR).
+- **Verifiche**: 8/8 test OK; `GET /` label Fase 9b + `#theme-toggle` presente + script anti-FOUC; `/static/theme.js` e `/static/style.css` 200. Verifica utente (browser) raccomandata per il toggle.
+- **Versioning**: bump `VERSION` `0.11.0` → `0.12.0` (MINOR).
+- **Branch**: commit su `develop`, tag annotato `v0.12.0`. Niente `main`.
+- **Commit**: previsto `feat(ui): phase 9b theme toggle and deps update`.
 
 ### Fase 10 — Autenticazione locale
 - **Stato**: non iniziata.
@@ -223,7 +234,8 @@
 - **PATCH** = bug fix, refactoring interno, miglioramenti UI.
 
 ## Cose note / limitazioni accettate
-- Tema dark/light solo come struttura CSS variabili fino a Fase 9b (toggle non ancora implementato).
+- Toggle dark/light funzionante dalla Fase 9b (due modalità, preferenza localStorage).
+- `pydantic-core` pinnato a 2.46.4 per compatibilità con pydantic 2.13.4.
 - Migrazioni schema con `CREATE TABLE IF NOT EXISTS` / `ALTER TABLE` controllato; Alembic proposto se la complessità cresce.
 - `user_id` nullable in `effort_entries` dal suo inserimento, valorizzato in Fase 11.
 - La cancellazione è **permanente** e senza soft-delete/audit (da valutare in Fase 14/hardening).

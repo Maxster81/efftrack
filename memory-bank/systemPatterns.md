@@ -95,8 +95,10 @@ efftrack/
 - Se la complessità cresce: introduzione Alembic (proposta con analisi pro/contro, decisione documentata).
 
 ## Tema e CSS
-- Variabili CSS in `:root` con palette blu navy + grigi neutri.
-- Struttura predisposta per `data-theme="dark"` (variabili alternative), toggle UI rimandato a Fase 9b.
+- Variabili CSS in `:root` + blocchi `[data-theme="light"]` e `[data-theme="dark"]` (palette blu navy + grigi neutri).
+- Toggle dark/light funzionante (Fase 9b): due modalità, preferenza salvata in `localStorage["theme-preference"]`, default light. Nessun rilevamento automatico di sistema.
+- Script inline anti-FOUC nel `<head>` di `base.html` applica il tema salvato prima del rendering.
+- `app/static/theme.js` gestisce il toggle e aggiorna `data-theme="dark"` su `<html>`.
 
 ## Sicurezza
 - `SECRET_KEY` letto da env var, default di sviluppo con placeholder esplicito.
