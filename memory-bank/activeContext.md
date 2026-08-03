@@ -6,7 +6,7 @@
 - **Stato**: idle, pronto per nuovo task.
 - **Versione corrente**: `0.12.0` (tag `v0.12.0` annotato su `develop`).
 - **Roadmap estesa**: aggiunte Fase 4b (sidebar hamburger), Fase 5b (copia su settimana), Fase 12 (Admin), Fase 13 (Manager); hardening slitta a Fase 14. La Fase 9 è stata **sdoppiata** su richiesta utente: **Fase 9** (refactoring, logging, .env, systemd — solo backend) e **Fase 9b** (toggle dark/light, aggiornamento dipendenze — solo frontend). Vedi `progress.md`/`projectbrief.md`.
-- **Nota**: la tabella `effort_entries` ha la colonna `user_text` (String 128 nullable). Contiene dati reali (110 record: fixture gen-lug 2026 + preesistenti). **Merge su `main` autorizzato dall'utente due volte in Fase 9 (2026-08-03)**: una prima di iniziare (baseline stabile, `main` = Fase 8 v0.10.0) e una a fine fase dopo conferma esplicita (`main` ora include le fasi 7–9, v0.11.0).
+- **Nota**: la tabella `effort_entries` ha la colonna `user_text` (String 128 nullable). Contiene dati reali (110 record: fixture gen-lug 2026 + preesistenti). **Merge su `main` autorizzato dall'utente in Fase 9 (due volte) e in Fase 9b (2026-08-03)**: a fine Fase 9b `main` ora include **tutte le fasi 1–9b, v0.12.0** (base completa e pulita prima delle modifiche invasive delle Fasi 10+).
 - **Nota ambiente**: sviluppo su **Ubuntu in WSL** (Python 3.12.3, pip 24.0). Venv ricreato in questa macchina. Dipendenze: fastapi 0.141.1, uvicorn 0.52.1, sqlalchemy 2.0.51, pydantic 2.13.4 (pydantic-core 2.46.4, pin compatibile), jinja2 3.1.6, python-multipart 0.0.32, python-dotenv 1.2.2, pytest 9.1.1 (in dev, non in produzione). `pydantic-core` 2.47.0 NON è adottato: incompatibile con pydantic 2.13.4.
 
 ## Decisioni recenti

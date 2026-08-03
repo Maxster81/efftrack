@@ -203,8 +203,8 @@
   - **`VERSION`**: `0.11.0` → `0.12.0` (MINOR).
 - **Verifiche**: 8/8 test OK; `GET /` label Fase 9b + `#theme-toggle` presente + script anti-FOUC; `/static/theme.js` e `/static/style.css` 200. Verifica utente (browser) raccomandata per il toggle.
 - **Versioning**: bump `VERSION` `0.11.0` → `0.12.0` (MINOR).
-- **Branch**: commit su `develop`, tag annotato `v0.12.0`. Niente `main`.
-- **Commit**: previsto `feat(ui): phase 9b theme toggle and deps update`.
+- **Branch**: commit su `develop`, tag annotato `v0.12.0`. **Merge su `main` autorizzato dall'utente** a fine fase (`7831283 Merge branch 'develop'`), poi rientro su `develop`.
+- **Commit**: `feat(ui): phase 9b theme toggle and deps update`.
 
 ### Fase 10 — Autenticazione locale
 - **Stato**: non iniziata.
