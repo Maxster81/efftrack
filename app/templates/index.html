@@ -3,16 +3,19 @@
 {% block title %}{{ app_name }} &mdash; {{ phase }}{% endblock %}
 
 {% block content %}
-  {# ------------------------------------------------------------
-     Fase 8 — Export CSV.
-     Form in alto, tabella elenco in basso. La tabella mostra i
-     record dal DB con filtro per mese. Click su una riga popola il
-     form con i dati del record (modalità modifica); il pulsante
-     "Salva" aggiorna il record selezionato invece di inserirne uno
-     nuovo. Il pulsante "Copia su settimana" è nascosto in modifica.
-     Pulsante "Esporta CSV" a destra del filtro mese: rispetta il
-     filtro selezionato e scarica il CSV corrispondente.
-     ------------------------------------------------------------ #}
+      {# ------------------------------------------------------------
+         Fase 11 — Multiutente e segregazione.
+         Form in alto, tabella elenco in basso. La tabella mostra i
+         record dal DB con filtro per mese. Click su una riga popola il
+         form con i dati del record (modalità modifica); il pulsante
+         "Salva" aggiorna il record selezionato invece di inserirne uno
+         nuovo. Il pulsante "Copia su settimana" è nascosto in modifica.
+         Pulsante "Esporta CSV" a destra del filtro mese: rispetta il
+         filtro selezionato e scarica il CSV corrispondente.
+         Dalla Fase 11 la colonna Utente è visibile solo all'admin
+         (supervisore); gli utenti normali vedono solo i propri record,
+         quindi la colonna è ridondante e viene nascosta.
+         ------------------------------------------------------------ #}
 
   <section class="form-card" aria-labelledby="form-title">
     <h2 id="form-title" class="card-title">
@@ -38,7 +41,7 @@
       <input type="hidden" id="record-id" name="record_id" value="" />
       {# Persistenza filtro mese (Issue-Suggestion.md Issue 1): il valore del
          mese selezionato viene inviato con la POST e preservato nel redirect. #}
-      <input type="hidden" id="effort-month" name="month" value="{{ selected_month }}" />
+      <input type="hidden" id="effort-month" name="month" value="{{ selected_month or '' }}" />
 
       <div class="form-row">
         <div class="form-group">
@@ -150,7 +153,9 @@
             <th scope="col">Cliente</th>
             <th scope="col">Gruppo</th>
             <th scope="col">Attività</th>
-            <th scope="col">Utente</th>
+            {% if is_admin %}
+              <th scope="col">Utente</th>
+            {% endif %}
             <th scope="col" class="col-hours">Ore</th>
             <th scope="col">Note</th>
             <th scope="col">Descrizione attività</th>
@@ -162,7 +167,7 @@
               <tr class="records-table__row"
                   role="button" tabindex="0"
                   data-record-id="{{ record.id }}"
-                  data-user="{{ record.user_text or '' }}"
+                  data-user="{{ record.user.username if record.user else '' }}"
                   data-date="{{ record.work_date.isoformat() }}"
                   data-client-id="{{ record.client_id }}"
                   data-group-id="{{ record.group_id }}"
@@ -175,7 +180,9 @@
                 <td>{{ record.client.name }}</td>
                 <td>{{ record.group.name }}</td>
                 <td>{{ record.activity.name }}</td>
-                <td>{{ record.user_text or '' }}</td>
+                {% if is_admin %}
+                  <td>{{ record.user.username if record.user else '' }}</td>
+                {% endif %}
                 <td class="col-hours">{{ record.hours_spent }}</td>
                 <td>{{ record.notes or '' }}</td>
                 <td>{{ record.description or '' }}</td>
@@ -183,7 +190,7 @@
             {% endfor %}
           {% else %}
             <tr>
-              <td colspan="8" class="empty-state">Nessuna registrazione presente.</td>
+              <td colspan="{{ 8 if is_admin else 7 }}" class="empty-state">Nessuna registrazione presente.</td>
             </tr>
           {% endif %}
         </tbody>

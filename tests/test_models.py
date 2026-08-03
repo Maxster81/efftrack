@@ -6,11 +6,17 @@ database di sviluppo `data/efftrack.db`.
 from __future__ import annotations
 
 import unittest
+from datetime import date
 
 from sqlalchemy import create_engine, inspect, select
 from sqlalchemy.orm import Session
 
-from app.core.seed import seed_admin_user, seed_lookup_tables
+from app.core.seed import (
+    seed_admin_user,
+    seed_lookup_tables,
+    seed_test_records,
+    seed_test_users,
+)
 from app.db import Base
 from app.models import Activity, Client, EffortEntry, Group, User
 
@@ -30,6 +36,7 @@ class DatabaseTestCase(unittest.TestCase):
         Base.metadata.create_all(bind=cls.engine)
         with Session(cls.engine) as db:
             seed_lookup_tables(db)
+            seed_admin_user(db)
 
     def setUp(self) -> None:
         self.db = Session(self.engine)
@@ -48,6 +55,18 @@ class TestSchema(DatabaseTestCase):
         table_names = set(inspect(self.engine).get_table_names())
         for table in {"clients", "groups", "activities", "effort_entries", "users"}:
             self.assertIn(table, table_names)
+
+    def test_effort_entries_has_no_user_text(self) -> None:
+        """Fase 11: la colonna legacy user_text è stata rimossa."""
+        columns = {col["name"] for col in inspect(self.engine).get_columns("effort_entries")}
+        self.assertNotIn("user_text", columns)
+
+    def test_effort_entries_has_user_foreign_key(self) -> None:
+        """Fase 11: user_id è una FK verso users.id."""
+        fks = inspect(self.engine).get_foreign_keys("effort_entries")
+        user_fks = [fk for fk in fks if "user_id" in fk["constrained_columns"]]
+        self.assertEqual(len(user_fks), 1)
+        self.assertEqual(user_fks[0]["referred_table"], "users")
 
 
 class TestSeed(DatabaseTestCase):
@@ -101,21 +120,16 @@ class TestAdminUser(DatabaseTestCase):
 
 
 class TestExportCsv(DatabaseTestCase):
-    """Test della generazione del CSV di export (Fase 8)."""
+    """Test della generazione del CSV di export (Fase 8/11)."""
 
-    def test_build_csv_header_and_row(self) -> None:
-        """Il CSV contiene il BOM, l'header e una riga formattata."""
-        from app.routers.web import _build_csv
-
-        client = self.db.execute(select(Client)).scalars().first()
-        group = self.db.execute(select(Group)).scalars().first()
-        activity = self.db.execute(select(Activity)).scalars().first()
-
-        from datetime import date
+    def _create_entry(self, db: Session, user: User | None = None) -> EffortEntry:
+        """Crea un record di effort, opzionalmente associato a un utente."""
+        client = db.execute(select(Client)).scalars().first()
+        group = db.execute(select(Group)).scalars().first()
+        activity = db.execute(select(Activity)).scalars().first()
 
         entry = EffortEntry(
-            user_id=None,
-            user_text="Mario",
+            user_id=user.id if user is not None else None,
             client_id=client.id,
             group_id=group.id,
             activity_id=activity.id,
@@ -125,12 +139,23 @@ class TestExportCsv(DatabaseTestCase):
             description=None,
         )
         # Assegna le relazioni direttamente sull'oggetto: `_build_csv`
-        # accede a `client.name`, `group.name` e `activity.name`.
+        # accede a `client.name`, `group.name`, `activity.name` e `user.username`.
         entry.client = client
         entry.group = group
         entry.activity = activity
-        self.db.add(entry)
+        entry.user = user
+        db.add(entry)
+        db.commit()
+        return entry
+
+    def test_build_csv_header_and_row_with_user(self) -> None:
+        """Il CSV contiene il BOM, l'header e una riga con lo username reale."""
+        from app.routers.web import _build_csv
+
+        user = User(username="mario", password_hash="x", role="user")
+        self.db.add(user)
         self.db.commit()
+        entry = self._create_entry(self.db, user=user)
 
         csv_lines = _build_csv([entry]).splitlines()
         # La prima riga inizia con il BOM UTF-8.
@@ -138,24 +163,35 @@ class TestExportCsv(DatabaseTestCase):
         self.assertEqual(len(csv_lines), 2)
         row = csv_lines[1]
         self.assertIn("31/07/2026", row)
-        self.assertIn("Mario", row)
+        self.assertIn("mario", row)  # username dal JOIN su users (Fase 11)
         self.assertIn("INAIL", row)
         self.assertIn("GRUPPO SOC", row)
         self.assertIn("7.5", row)
         self.assertIn("Nota di test", row)
 
+    def test_build_csv_orphan_record_shows_empty_user(self) -> None:
+        """Un record senza proprietario mostra colonna Utente vuota."""
+        from app.routers.web import _build_csv
+
+        entry = self._create_entry(self.db, user=None)
+        csv_lines = _build_csv([entry]).splitlines()
+        row = csv_lines[1]
+        # La colonna Utente (quinta, indice 4) è vuota.
+        fields = row.split(",")
+        self.assertEqual(fields[4], "")
+
 
 class TestEffortEntry(DatabaseTestCase):
     def test_insert_entry(self) -> None:
+        """Fase 11: l'inserimento valorizza user_id (FK verso users)."""
         client = self.db.execute(select(Client)).scalars().first()
         group = self.db.execute(select(Group)).scalars().first()
         activity = self.db.execute(select(Activity)).scalars().first()
-
-        from datetime import date
+        user = self.db.execute(select(User)).scalars().first()
+        self.assertIsNotNone(user)
 
         entry = EffortEntry(
-            user_id=None,
-            user_text="Test User",
+            user_id=user.id,
             client_id=client.id,
             group_id=group.id,
             activity_id=activity.id,
@@ -171,20 +207,18 @@ class TestEffortEntry(DatabaseTestCase):
         self.assertIsNotNone(saved)
         self.assertEqual(saved.hours_spent, 7.5)
         self.assertEqual(saved.client.name, client.name)
-        self.assertEqual(saved.user_text, "Test User")
+        self.assertEqual(saved.user_id, user.id)
         self.entry_id = saved.id
+        self.entry_user_id = user.id
 
     def test_update_entry(self) -> None:
-        """Aggiorna un record esistente e verifica i nuovi valori (Fase 7)."""
+        """Aggiorna un record esistente senza cambiare il proprietario (Fase 7/11)."""
         # Prepara un record da aggiornare.
         self.test_insert_entry()
-        from datetime import date
-
         entry = self.db.get(EffortEntry, self.entry_id)
         self.assertIsNotNone(entry)
 
         second_client = self.db.execute(select(Client).order_by(Client.id.desc())).scalars().first()
-        entry.user_text = "Nuovo User"
         entry.client_id = second_client.id
         entry.work_date = date(2026, 8, 1)
         entry.hours_spent = 8.0
@@ -193,13 +227,215 @@ class TestEffortEntry(DatabaseTestCase):
         self.db.commit()
 
         updated = self.db.get(EffortEntry, self.entry_id)
-        self.assertEqual(updated.user_text, "Nuovo User")
         self.assertEqual(updated.client_id, second_client.id)
         self.assertEqual(updated.work_date.isoformat(), "2026-08-01")
         self.assertEqual(updated.hours_spent, 8.0)
         self.assertEqual(updated.notes, "Note aggiornate")
         self.assertEqual(updated.description, "Descrizione aggiornata")
         self.assertIsNotNone(updated.updated_at)
+        # Il proprietario resta invariato su update (Fase 11).
+        self.assertEqual(updated.user_id, self.entry_user_id)
+
+
+class TestTestUsers(DatabaseTestCase):
+    """Test degli utenti di test (Fase 11)."""
+
+    def test_seed_creates_three_users(self) -> None:
+        """Crea gli utenti mario, giulia e luca."""
+        seed_test_users(self.db)
+        usernames = set(self.db.execute(select(User.username)).scalars().all())
+        self.assertIn("mario", usernames)
+        self.assertIn("giulia", usernames)
+        self.assertIn("luca", usernames)
+
+    def test_seed_users_is_idempotent(self) -> None:
+        """Un secondo seed non duplica gli utenti di test."""
+        seed_test_users(self.db)
+        seed_test_users(self.db)
+        count = len(self.db.execute(select(User)).scalars().all())
+        self.assertEqual(count, 4)  # admin + 3 di test
+
+
+class TestTestRecords(DatabaseTestCase):
+    """Test dei record di test per la segregazione (Fase 11)."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        super().setUpClass()
+        with Session(cls.engine) as db:
+            seed_test_users(db)
+            seed_test_records(db)
+        cls.records_per_user = _count_records_per_user(cls.engine)
+
+    def test_records_assigned_to_test_users(self) -> None:
+        """Ogni utente di test ha 20 record assegnati."""
+        for username, count in self.records_per_user.items():
+            self.assertEqual(
+                count, 20, f"{username} dovrebbe avere 20 record, ne ha {count}"
+            )
+
+    def test_records_seed_is_idempotent(self) -> None:
+        """Un secondo seed di record non deve duplicare."""
+        with Session(self.engine) as db:
+            seed_test_records(db)
+        total = _count_total_records(self.engine)
+        self.assertEqual(total, 60)  # 3 utenti × 20
+
+
+def _count_records_per_user(engine) -> dict[str, int]:
+    """Conteggia i record di effort per ciascun utente di test."""
+    with Session(engine) as db:
+        users = db.execute(
+            select(User).where(User.username.in_(["mario", "giulia", "luca"]))
+        ).scalars().all()
+        result: dict[str, int] = {}
+        for u in users:
+            n = db.execute(
+                select(EffortEntry).where(EffortEntry.user_id == u.id)
+            ).scalars().all()
+            result[u.username] = len(n)
+        return result
+
+
+def _count_total_records(engine) -> int:
+    """Conteggia tutti i record di effort."""
+    with Session(engine) as db:
+        return len(db.execute(select(EffortEntry)).scalars().all())
+
+
+class TestSegregation(DatabaseTestCase):
+    """Test della segregazione dati tra utenti (Fase 11)."""
+
+    def setUp(self) -> None:
+        """Pulisce gli effort e gli utenti non-admin prima di ogni test."""
+        super().setUp()
+        self.db.execute(EffortEntry.__table__.delete())
+        self.db.execute(User.__table__.delete().where(User.username != "admin"))
+        self.db.commit()
+
+    def _create_users_and_entries(self) -> tuple[User, User, User]:
+        """Crea due utenti normali + riusa l'admin della fixture, con record."""
+        mario = User(username="mario", password_hash="x", role="user")
+        giulia = User(username="giulia", password_hash="x", role="user")
+        self.db.add_all([mario, giulia])
+        self.db.commit()
+        admin = self.db.execute(
+            select(User).where(User.username == "admin")
+        ).scalars().first()
+        self.assertIsNotNone(admin)
+
+        client = self.db.execute(select(Client)).scalars().first()
+        group = self.db.execute(select(Group)).scalars().first()
+        activity = self.db.execute(select(Activity)).scalars().first()
+
+        self.db.add_all([
+            EffortEntry(
+                user_id=mario.id,
+                client_id=client.id,
+                group_id=group.id,
+                activity_id=activity.id,
+                work_date=date(2026, 1, 15),
+                hours_spent=8,
+            ),
+            EffortEntry(
+                user_id=giulia.id,
+                client_id=client.id,
+                group_id=group.id,
+                activity_id=activity.id,
+                work_date=date(2026, 2, 20),
+                hours_spent=6,
+            ),
+        ])
+        self.db.commit()
+        return mario, giulia, admin
+
+    def test_user_sees_only_own_records(self) -> None:
+        """Un utente normale vede solo i propri record."""
+        from app.routers.web import _filter_by_user
+
+        mario, giulia, admin = self._create_users_and_entries()
+
+        stmt = select(EffortEntry)
+        filtered = _filter_by_user(stmt, mario)
+        records = self.db.execute(filtered).scalars().all()
+        self.assertEqual(len(records), 1)
+        self.assertEqual(records[0].user_id, mario.id)
+
+    def test_admin_sees_all_records(self) -> None:
+        """L'admin vede tutti i record (nessun filtro)."""
+        from app.routers.web import _filter_by_user
+
+        mario, giulia, admin = self._create_users_and_entries()
+
+        stmt = select(EffortEntry)
+        filtered = _filter_by_user(stmt, admin)
+        records = self.db.execute(filtered).scalars().all()
+        self.assertEqual(len(records), 2)
+
+    def test_admin_cannot_update_or_delete_others(self) -> None:
+        """Regola aziendale: nemmeno l'admin modifica/elimina record altrui."""
+        from app.routers.web import _delete_entry, _save_single
+        from app.schemas.effort import EffortEntryCreate
+
+        mario, giulia, admin = self._create_users_and_entries()
+        giulia_entry = self.db.execute(
+            select(EffortEntry).where(EffortEntry.user_id == giulia.id)
+        ).scalars().first()
+        self.assertIsNotNone(giulia_entry)
+
+        payload = EffortEntryCreate(
+            user="admin",
+            date=date(2026, 8, 1),
+            client_id=giulia_entry.client_id,
+            group_id=giulia_entry.group_id,
+            activity_id=giulia_entry.activity_id,
+            hours=7.0,
+            notes="tentativo admin",
+            description=None,
+        )
+
+        # L'admin NON può aggiornare il record di giulia: redirect a errore.
+        resp_update = _save_single(payload, self.db, admin, record_id=giulia_entry.id)
+        self.assertIn("error=validazione", resp_update.headers["location"])
+
+        # Il record di giulia è intatto.
+        refreshed = self.db.get(EffortEntry, giulia_entry.id)
+        self.assertEqual(refreshed.hours_spent, giulia_entry.hours_spent)
+
+        # L'admin NON può eliminare il record di giulia: redirect a errore.
+        resp_delete = _delete_entry(giulia_entry.id, self.db, admin)
+        self.assertIn("error=validazione", resp_delete.headers["location"])
+
+        # Il record di giulia esiste ancora.
+        self.assertIsNotNone(self.db.get(EffortEntry, giulia_entry.id))
+
+    def test_orphan_records_invisible_to_normal_user(self) -> None:
+        """Un record orfano (user_id NULL) non è visibile agli utenti normali."""
+        from app.routers.web import _filter_by_user
+
+        mario, giulia, admin = self._create_users_and_entries()
+        client = self.db.execute(select(Client)).scalars().first()
+        group = self.db.execute(select(Group)).scalars().first()
+        activity = self.db.execute(select(Activity)).scalars().first()
+        self.db.add(
+            EffortEntry(
+                user_id=None,
+                client_id=client.id,
+                group_id=group.id,
+                activity_id=activity.id,
+                work_date=date(2026, 3, 10),
+                hours_spent=7,
+            )
+        )
+        self.db.commit()
+
+        stmt = select(EffortEntry)
+        records_mario = self.db.execute(_filter_by_user(stmt, mario)).scalars().all()
+        self.assertEqual(len(records_mario), 1)  # solo il suo
+
+        stmt_admin = select(EffortEntry)
+        records_admin = self.db.execute(_filter_by_user(stmt_admin, admin)).scalars().all()
+        self.assertEqual(len(records_admin), 3)  # 2 + 1 orfano
 
 
 if __name__ == "__main__":

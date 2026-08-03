@@ -23,8 +23,8 @@ class EffortEntry(Base):
 
     Il mese non viene persistito: è derivato da `work_date` via service
     helper (vedi memory-bank/systemPatterns.md).
-    `user_id` è una colonna nullable senza ForeignKey: la tabella `users`
-    arriverà in Fase 11 e solo allora verrà aggiunta la FK.
+    Dalla Fase 11 `user_id` è una colonna con ForeignKey verso `users.id`:
+    ogni record appartiene all'utente che lo ha creato.
     """
 
     __tablename__ = "effort_entries"
@@ -37,12 +37,14 @@ class EffortEntry(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
 
-    # Segregazione utente futura: colonna senza FK fino a Fase 11.
-    user_id: Mapped[int | None] = mapped_column(nullable=True)
-
-    # Testo libero del campo User del form (utile per i test pre-auth;
-    # in Fase 10 verrà derivato dall'utente autenticato).
-    user_text: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    # Segregazione utente (Fase 11): FK verso users.id.
+    # ON DELETE SET NULL: se un utente viene cancellato, i suoi record
+    # restano nel DB ma senza proprietario (visibili solo all'admin).
+    user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
 
     client_id: Mapped[int] = mapped_column(ForeignKey("clients.id"), nullable=False)
     group_id: Mapped[int] = mapped_column(ForeignKey("groups.id"), nullable=False)
@@ -61,10 +63,11 @@ class EffortEntry(Base):
         nullable=False,
     )
 
-    # Relazioni di lettura (utilizzate a partire da Fase 6 per l'elenco).
+    # Relazioni di lettura.
     client: Mapped["Client"] = relationship()  # noqa: F821
     group: Mapped["Group"] = relationship()  # noqa: F821
     activity: Mapped["Activity"] = relationship()  # noqa: F821
+    user: Mapped["User"] = relationship()  # noqa: F821
 
     def __repr__(self) -> str:
         return f"<EffortEntry {self.work_date} {self.hours_spent}h>"

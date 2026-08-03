@@ -82,7 +82,9 @@ Poi:
 
 ## Rigenerazione DB di sviluppo
 - Il DB `data/efftrack.db` è **gitignored** e viene creato/seeded automaticamente al primo avvio (lifespan di `app/main.py`).
-- Se cambia lo schema (es. rimozione colonna), il DB va **cancellato** (`rm -f data/efftrack.db data/efftrack.db-shm data/efftrack.db-wal`) e rigenerato riavviando il server.
+- Migrazioni controllate in `app/core/migrations.py` (`run_schema_migrations`): Fase 11 ricrea automaticamente `effort_entries` (DROP + create_all) se la colonna legacy `user_text` è presente, eliminando i dati di sviluppo.
+- Se lo schema cambia in modo non gestito dalle migrazioni (es. rimozione `code` in Fase 4), il DB va **cancellato** (`rm -f data/efftrack.db data/efftrack.db-shm data/efftrack.db-wal`) e rigenerato riavviando il server.
+- I seed di Fase 11 (`seed_test_users`, `seed_test_records`) popolano automaticamente utenti (mario/giulia/luca) e ~20 record/utente di test al primo avvio.
 
 ## Tool di sviluppo
 - `git` per versionamento, branching su `develop`.

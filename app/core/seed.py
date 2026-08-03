@@ -1,21 +1,25 @@
-"""Seed idempotente delle tabelle lookup e dell'utente admin.
+"""Seed idempotente delle tabelle lookup, utente admin, utenti e record di test.
 
-Popola clients, groups, activities e l'utente admin solo se le rispettive
-tabelle sono vuote. Eseguito a ogni startup (vedi `app/main.py` lifespan).
+Popola clients, groups, activities, l'utente admin e (in sviluppo) utenti di
+test con i relativi record di effort. Eseguito a ogni startup (vedi
+`app/main.py` lifespan).
 
 Fase 9: logging di quali lookup sono state populate all'avvio.
 Fase 10: seed dell'utente admin (primo utente master) con password da config.
+Fase 11: seed utenti + record di test per la segregazione dati.
 """
 from __future__ import annotations
 
 import logging
+from datetime import date, timedelta
+from random import Random
 
 from passlib.hash import bcrypt
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.config import ADMIN_PASSWORD, ADMIN_USERNAME
-from app.models import Activity, Client, Group, User
+from app.models import Activity, Client, EffortEntry, Group, User
 
 logger: logging.Logger = logging.getLogger(__name__)
 
@@ -40,6 +44,16 @@ _ACTIVITIES: list[dict[str, object]] = [
         "requires_description": True,
     },
 ]
+
+# Utenti di test (Fase 11): usati solo per verificare la segregazione dati.
+_TEST_USERS: list[dict[str, str]] = [
+    {"username": "mario", "password": "test", "role": "user"},
+    {"username": "giulia", "password": "test", "role": "user"},
+    {"username": "luca", "password": "test", "role": "user"},
+]
+
+# Record di test per ciascun utente di test (Fase 11).
+_TEST_RECORDS_PER_USER: int = 20
 
 
 def seed_lookup_tables(db: Session) -> None:
@@ -87,6 +101,107 @@ def seed_admin_user(db: Session) -> None:
     )
     db.commit()
     logger.info("Utente admin creato: username=%s", ADMIN_USERNAME)
+
+
+def seed_test_users(db: Session) -> None:
+    """Crea gli utenti di test (mario, giulia, luca) se non esistono (Fase 11).
+
+    Idempotente per username: non duplica ni utente che esiste già.
+    Password di default "test" (solo sviluppo).
+    """
+    existing = set(db.execute(select(User.username)).scalars().all())
+    created: list[str] = []
+    for data in _TEST_USERS:
+        if data["username"] in existing:
+            continue
+        db.add(
+            User(
+                username=data["username"],
+                password_hash=bcrypt.hash(data["password"]),
+                role=data["role"],
+            )
+        )
+        created.append(data["username"])
+    if created:
+        db.commit()
+        logger.info("Utenti di test creati: %s", ", ".join(created))
+    else:
+        logger.debug("Utenti di test già presenti, seed non necessario")
+
+
+def seed_test_records(db: Session) -> None:
+    """Crea ~20 record di effort per ciascun utente di test (Fase 11).
+
+    Idempotente: se esistono già record con `user_id` associati agli utenti
+    di test, non fa nulla. I record sono spalmati sui giorni feriali del 2026.
+    """
+    test_users = db.execute(
+        select(User).where(User.username.in_(["mario", "giulia", "luca"]))
+    ).scalars().all()
+    if not test_users:
+        logger.debug("Nessun utente di test: seed record non necessario")
+        return
+
+    # Se qualche utente di test ha già record, considera il seed già fatto.
+    already_seeded = db.execute(
+        select(EffortEntry.id)
+        .where(EffortEntry.user_id.in_([u.id for u in test_users]))
+        .limit(1)
+    ).first()
+    if already_seeded is not None:
+        logger.debug("Record di test già presenti, seed non necessario")
+        return
+
+    clients = db.execute(select(Client).order_by(Client.name)).scalars().all()
+    groups = db.execute(select(Group).order_by(Group.name)).scalars().all()
+    activities = db.execute(select(Activity).order_by(Activity.name)).scalars().all()
+    if not clients or not groups or not activities:
+        logger.debug("Lookup mancanti: seed record di test non possibile")
+        return
+
+    rng = Random(42)  # seed fisso → dati riproducibili
+    workdays = _workdays_in_year(2026)
+    if len(workdays) < _TEST_RECORDS_PER_USER * len(test_users):
+        raise ValueError("Numero di giorni lavorativi insufficiente per il seed di test")
+
+    rows = rng.sample(workdays, k=_TEST_RECORDS_PER_USER * len(test_users))
+    created_ids = 0
+    for i, username in enumerate(["mario", "giulia", "luca"]):
+        user = next(u for u in test_users if u.username == username)
+        for j, work_date in enumerate(
+            sorted(rows[i * _TEST_RECORDS_PER_USER : (i + 1) * _TEST_RECORDS_PER_USER])
+        ):
+            activity = rng.choice(activities)
+            requires_description = activity.requires_description
+            entry = EffortEntry(
+                user_id=user.id,
+                client_id=rng.choice(clients).id,
+                group_id=groups[0].id,
+                activity_id=activity.id,
+                work_date=work_date,
+                hours_spent=rng.choice([4.0, 5.0, 6.0, 7.0, 7.5, 8.0]),
+                notes=f"Record di test {j+1} per {username}" if j % 3 == 0 else None,
+                description=(
+                    "Supporto specialistico di test" if requires_description else None
+                ),
+            )
+            db.add(entry)
+            created_ids += 1
+    db.commit()
+    logger.info("Record di test creati: %d", created_ids)
+
+
+def _workdays_in_year(year: int) -> list[date]:
+    """Restituisce i giorni feriali (lun–ven) dell'anno indicato."""
+    start = date(year, 1, 1)
+    end = date(year + 1, 1, 1)
+    days: list[date] = []
+    current = start
+    while current < end:
+        if current.weekday() < 5:  # lun=0 ... ven=4
+            days.append(current)
+        current += timedelta(days=1)
+    return days
 
 
 def _is_empty(db: Session, model: type) -> bool:

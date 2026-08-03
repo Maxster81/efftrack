@@ -8,6 +8,8 @@ Fase 9: logging integrato nel ciclo di vita (startup/shutdown) e uso
 della configurazione centralizzata (config.py, .env).
 
 Fase 10: sessione HTTP (SessionMiddleware) e seed dell'utente admin.
+Fase 11: migrazione schema (FK user_id, rimozione user_text) e seed
+utenti/record di test per la segregazione.
 
 Architettura:
 - `app/routers/web.py` espone le pagine HTML (root) e l'health check.
@@ -27,7 +29,13 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from app.config import APP_NAME, APP_VERSION, DATA_DIR, SECRET_KEY, STATIC_DIR
 from app.core.logging_config import setup_logging
-from app.core.seed import seed_admin_user, seed_lookup_tables
+from app.core.migrations import run_schema_migrations
+from app.core.seed import (
+    seed_admin_user,
+    seed_lookup_tables,
+    seed_test_records,
+    seed_test_users,
+)
 from app.db import Base, SessionLocal, engine
 from app.routers.api import router as api_router
 from app.routers.auth import router as auth_router
@@ -56,14 +64,21 @@ async def lifespan(app: FastAPI):
     data_dir: Path = DATA_DIR
     data_dir.mkdir(parents=True, exist_ok=True)
 
+    # Migrazioni controllate (Fase 11): ricrea effort_entries senza user_text
+    # e con FK su users.id. Da eseguire PRIMA di create_all per gestire la
+    # versione legacy dello schema.
+    run_schema_migrations(engine)
+
     # Crea le tabelle se non esistono (idempotente).
     Base.metadata.create_all(bind=engine)
     logger.info("Schema database verificato (create_all idempotente)")
 
-    # Popola lookup e utente admin se le tabelle sono vuote.
+    # Popola lookup, utente admin e (in sviluppo) utenti/record di test.
     with SessionLocal() as db:
         seed_lookup_tables(db)
         seed_admin_user(db)
+        seed_test_users(db)
+        seed_test_records(db)
 
     logger.info("Avvio completato")
     yield

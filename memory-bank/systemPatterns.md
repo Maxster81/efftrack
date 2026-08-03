@@ -81,19 +81,27 @@ efftrack/
 - `PRAGMA foreign_keys=ON` su ogni connessione.
 - DB file in `data/efftrack.db`, fuori dal versionamento.
 
-### Modello dati (completo dalla Fase 4; auth in Fase 10)
+### Modello dati (completo dalla Fase 4; auth in Fase 10; segregazione in Fase 11)
 - `clients(id, name UNIQUE)` — seed: INAIL, MDS. (Solo `name`: la colonna `code` è stata rimossa in Fase 4 su decisione utente.)
 - `groups(id, name UNIQUE)` — seed: GRUPPO SOC.
 - `activities(id, name UNIQUE, requires_description BOOL)` — seed: SOC-Conduzione (no), SOC-Supporto Specialistico (sì).
-- `effort_entries(id, user_id NULL senza FK, client_id FK, group_id FK, activity_id FK, work_date DATE, hours_spent NUMERIC(4,2) CHECK >0 AND <=24, notes TEXT NULL, description TEXT NULL, created_at, updated_at)`.
+- `effort_entries(id, user_id FK->users.id ON DELETE SET NULL, client_id FK, group_id FK, activity_id FK, work_date DATE, hours_spent NUMERIC(4,2) CHECK >0 AND <=24, notes TEXT NULL, description TEXT NULL, created_at, updated_at)`. Nota: la colonna `user_text` (Fase 5) è stata **rimossa** in Fase 11.
 - `users(id, username UNIQUE, password_hash, role)` — Fase 10 (role: admin/manager/user, usato da Fase 12).
 - `Mese` **mai** persistito, derivato da `work_date` via service helper.
-- **Seed**: `app/core/seed_lookup_tables(db)` + `seed_admin_user(db)` idempotenti, eseguiti nel lifespan di `main.py` dopo `create_all`.
+- **Seed**: `app/core/seed.py` — `seed_lookup_tables`, `seed_admin_user`, `seed_test_users`, `seed_test_records` (tutti idempotenti), eseguiti nel lifespan di `main.py` dopo la migrazione schema e `create_all`.
 - **Test**: `tests/test_models.py` (pytest + SQLite in-memory isolato).
 
 ### Migrazioni
-- Fase 0–8: `CREATE TABLE IF NOT EXISTS` + seed idempotente + (se serve) `ALTER TABLE` controllato a startup, documentato in `progress.md`. NB: la rimozione di una colonna (come `code` in Fase 4) non è gestita automaticamente — va rigenerato il DB.
+- `app/core/migrations.py` → `run_schema_migrations(engine)`: migrazioni controllate all'avvio, idempotenti. Fase 11: ricrea `effort_entries` (DROP + create_all) se la colonna legacy `user_text` è presente, eliminando i dati di sviluppo. Eseguita **prima** di `create_all` nel lifespan.
+- Fase 0–8: `CREATE TABLE IF NOT EXISTS` + seed idempotente + (se serve) `ALTER TABLE` controllato a startup, documentato in `progress.md`. NB: la rimozione di una colonna che non è gestita da `run_schema_migrations` (es. `code` in Fase 4) richiede di rigenerare il DB.
 - Se la complessità cresce: introduzione Alembic (proposta con analisi pro/contro, decisione documentata).
+
+### Segregazione dati e regola aziendale (Fase 11)
+- `_filter_by_user(stmt, user)` in `app/routers/web.py`: applica `WHERE user_id == current_user.id` per gli utenti normali; l'admin vede tutti i record (nessun filtro) usando `_is_admin`.
+- **Regola aziendale**: su update/delete, `entry.user_id != current_user.id` → blocco con redirect `/?error=validazione`, **per tutti** (admin/manager inclusi). Nessuno modifica o elimina record altrui.
+- `_build_csv` usa lo **username reale via JOIN su `users`** per la colonna Utente.
+- Campo User del form forzato lato server allo username della sessione (già da Fase 10); `user_id` valorizzato su ogni insert con l'utente corrente.
+- Bug noto risolto: campo hidden `month` con `selected_month or ''` per evitare il valore stringa `"None"` nel redirect (che svuotava l'elenco).
 
 ## Tema e CSS
 - Variabili CSS in `:root` + blocchi `[data-theme="light"]` e `[data-theme="dark"]` (palette blu navy + grigi neutri).

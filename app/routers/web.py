@@ -5,8 +5,10 @@ di base (indice, health check). Dalla Fase 10 le route business sono
 protette: se l'autenticazione è attiva e non c'è una sessione valida,
 l'utente viene rediretto al login.
 
-Il campo User del form, quando autenticato, è precompilato e forzato
-lato server con lo username della sessione (readonly lato client).
+Fase 11: segregazione dati per utente. Ogni utente normale vede, crea,
+modifica ed esporta solo i propri record; l'admin (ruolo "admin") vede
+tutti i record come supervisore. `user_id` viene valorizzato su ogni
+nuovo record con l'utente della sessione.
 """
 from __future__ import annotations
 
@@ -19,7 +21,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, StreamingResponse
 from pydantic import ValidationError
-from sqlalchemy import func, select, text
+from sqlalchemy import Select, func, select, text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session, selectinload
 from fastapi.templating import Jinja2Templates
@@ -57,6 +59,11 @@ _CSV_HEADER = [
 ]
 
 
+def _is_admin(user: User | None) -> bool:
+    """True se l'utente ha ruolo admin (supervisore su tutti i record)."""
+    return user is not None and user.role == "admin"
+
+
 def _require_auth(user: User | None) -> RedirectResponse | None:
     """Se l'auth è attiva e manca l'utente, restituisce il redirect al login."""
     if AUTH_ENABLED and user is None:
@@ -64,9 +71,19 @@ def _require_auth(user: User | None) -> RedirectResponse | None:
     return None
 
 
+def _filter_by_user(stmt: Select, user: User) -> Select:
+    """Filtra una query sugli effort in base al ruolo.
+
+    L'admin vede tutti i record; un utente normale solo i propri.
+    """
+    if _is_admin(user):
+        return stmt
+    return stmt.where(EffortEntry.user_id == user.id)
+
+
 def _with_month(base_url: str, month: str | None) -> str:
     """Aggiunge il parametro month a un URL se presente (Issue 1: filtri)."""
-    if month:
+    if month and month != "None":  # "None" (stringa) = mese non valido
         separator: str = "&" if "?" in base_url else "?"
         return f"{base_url}{separator}month={month}"
     return base_url
@@ -85,16 +102,20 @@ async def index(
     redirect = _require_auth(user)
     if redirect is not None:
         return redirect
+    assert user is not None  # con auth attiva, dopo _require_auth l'utente c'è.
 
     clients = db.execute(select(Client).order_by(Client.name)).scalars().all()
     groups = db.execute(select(Group).order_by(Group.name)).scalars().all()
     activities = db.execute(select(Activity).order_by(Activity.name)).scalars().all()
 
-    month_rows = db.execute(
+    # Mesi distinti limitati ai record visibili all'utente (Fase 11).
+    month_stmt = (
         select(func.strftime("%Y-%m", EffortEntry.work_date).label("month"))
         .distinct()
         .order_by(func.strftime("%Y-%m", EffortEntry.work_date).desc())
-    ).scalars().all()
+    )
+    month_stmt = _filter_by_user(month_stmt, user)
+    month_rows = db.execute(month_stmt).scalars().all()
 
     month_options: list[tuple[str, str]] = []
     for m in month_rows:
@@ -107,9 +128,11 @@ async def index(
             selectinload(EffortEntry.client),
             selectinload(EffortEntry.group),
             selectinload(EffortEntry.activity),
+            selectinload(EffortEntry.user),
         )
         .order_by(EffortEntry.work_date.desc())
     )
+    stmt = _filter_by_user(stmt, user)
     if month:
         stmt = stmt.where(func.strftime("%Y-%m", EffortEntry.work_date) == month)
     records = db.execute(stmt).scalars().all()
@@ -122,8 +145,7 @@ async def index(
     elif success == 3:
         success_message = "Registrazione eliminata correttamente."
 
-    # In Fase 10, con auth attiva, l'utente corrente è sempre loggato qui.
-    current_username: str = user.username if user is not None else ""
+    current_username: str = user.username
 
     return templates.TemplateResponse(
         request=request,
@@ -131,7 +153,7 @@ async def index(
         context={
             "app_name": APP_NAME,
             "app_version": APP_VERSION,
-            "phase": "Fase 10 — Autenticazione",
+            "phase": "Fase 11 — Multiutente e segregazione",
             "clients": clients,
             "groups": groups,
             "activities": activities,
@@ -143,6 +165,7 @@ async def index(
             "error": error,
             "current_username": current_username,
             "auth_enabled": AUTH_ENABLED,
+            "is_admin": _is_admin(user),
         },
     )
 
@@ -169,19 +192,21 @@ async def save_entry(
     Con auth attiva, il campo User viene forzato lato server allo username
     della sessione, indipendentemente da quanto inviato dal browser.
     `month` preserva il filtro mese nel redirect (Issue-Suggestion.md Issue 1).
+    Fase 11: `user_id` viene valorizzato con l'utente della sessione.
     """
     redirect = _require_auth(current_user)
     if redirect is not None:
         return redirect
+    assert current_user is not None
 
     # Con auth attiva, rispetta sempre l'utente della sessione (il campo
     # User è readonly lato client, ma qui se ne garantisce l'integrità).
-    if AUTH_ENABLED and current_user is not None:
+    if AUTH_ENABLED:
         user = current_user.username
 
     # Eliminazione definitiva: richiede solo `record_id`.
     if action == "delete":
-        return _delete_entry(record_id, db, month)
+        return _delete_entry(record_id, db, current_user, month)
 
     try:
         payload = EffortEntryCreate(
@@ -210,13 +235,24 @@ async def save_entry(
         return RedirectResponse(_with_month("/?error=validazione", month), status_code=303)
 
     if action == "week":
-        return _save_week(payload, db, month)
+        return _save_week(payload, db, current_user, month)
 
-    return _save_single(payload, db, record_id=record_id, month=month)
+    return _save_single(payload, db, current_user, record_id=record_id, month=month)
 
 
-def _delete_entry(record_id: int | None, db: Session, month: str | None = None) -> RedirectResponse:
-    """Elimina definitivamente un record di effort dal database."""
+def _delete_entry(
+    record_id: int | None,
+    db: Session,
+    current_user: User,
+    month: str | None = None,
+) -> RedirectResponse:
+    """Elimina definitivamente un record di effort dal database.
+
+    Fase 11: ogni utente può eliminare SOLO i propri record. Nessuna
+    eccezione per admin/manager — la modifica o cancellazione di record
+    altrui non è mai consentita (regola aziendale: nessuno tocca i dati
+    degli altri, nemmeno con ruolo di supervisione).
+    """
     if record_id is None:
         logger.warning("Eliminazione senza record_id")
         return RedirectResponse(_with_month("/?error=validazione", month), status_code=303)
@@ -224,6 +260,14 @@ def _delete_entry(record_id: int | None, db: Session, month: str | None = None) 
     entry = db.get(EffortEntry, record_id)
     if entry is None:
         logger.warning("Tentativo di eliminazione record inesistente id=%s", record_id)
+        return RedirectResponse(_with_month("/?error=validazione", month), status_code=303)
+
+    if entry.user_id != current_user.id:
+        logger.warning(
+            "Utente %s tenta di eliminare record altrui id=%s",
+            current_user.username,
+            record_id,
+        )
         return RedirectResponse(_with_month("/?error=validazione", month), status_code=303)
 
     db.delete(entry)
@@ -235,16 +279,32 @@ def _delete_entry(record_id: int | None, db: Session, month: str | None = None) 
 def _save_single(
     payload: EffortEntryCreate,
     db: Session,
+    current_user: User,
     record_id: int | None = None,
     month: str | None = None,
 ) -> RedirectResponse:
-    """Crea un nuovo record oppure aggiorna quello indicato da `record_id`."""
+    """Crea un nuovo record oppure aggiorna quello indicato da `record_id`.
+
+    Fase 11: il nuovo record viene associato all'utente corrente; su update
+    ogni utente può modificare SOLO i propri record (nessuna eccezione per
+    admin/manager — regola aziendale).
+    """
     if record_id is not None:
         entry = db.get(EffortEntry, record_id)
         if entry is None:
             logger.warning("Update di record inesistente id=%s", record_id)
             return RedirectResponse(_with_month("/?error=validazione", month), status_code=303)
-        entry.user_text = payload.user
+        # Fase 11: ogni utente può aggiornare SOLO i propri record. Nessuna
+        # eccezione per admin/manager (regola aziendale).
+        if entry.user_id != current_user.id:
+            logger.warning(
+                "Utente %s tenta di aggiornare record altrui id=%s",
+                current_user.username,
+                record_id,
+            )
+            return RedirectResponse(_with_month("/?error=validazione", month), status_code=303)
+        # Su update il proprietario del record non cambia (è sempre l'utente
+        # corrente, già verificato sopra).
         entry.client_id = payload.client_id
         entry.group_id = payload.group_id
         entry.activity_id = payload.activity_id
@@ -257,8 +317,7 @@ def _save_single(
         return RedirectResponse(_with_month("/?success=2", month), status_code=303)
 
     entry = EffortEntry(
-        user_id=None,
-        user_text=payload.user,
+        user_id=current_user.id,
         client_id=payload.client_id,
         group_id=payload.group_id,
         activity_id=payload.activity_id,
@@ -273,14 +332,21 @@ def _save_single(
     return RedirectResponse(_with_month("/?success=1", month), status_code=303)
 
 
-def _save_week(payload: EffortEntryCreate, db: Session, month: str | None = None) -> RedirectResponse:
-    """Copia il form su tutti i giorni feriali della settimana della data."""
+def _save_week(
+    payload: EffortEntryCreate,
+    db: Session,
+    current_user: User,
+    month: str | None = None,
+) -> RedirectResponse:
+    """Copia il form su tutti i giorni feriali della settimana della data.
+
+    Fase 11: tutti i record creati vengono associati all'utente corrente.
+    """
     monday = payload.date - timedelta(days=payload.date.weekday())
     for offset in range(5):  # lun, mar, mer, gio, ven
         db.add(
             EffortEntry(
-                user_id=None,
-                user_text=payload.user,
+                user_id=current_user.id,
                 client_id=payload.client_id,
                 group_id=payload.group_id,
                 activity_id=payload.activity_id,
@@ -302,10 +368,11 @@ async def export_csv(
     user: User | None = Depends(get_current_user),
     month: str | None = None,
 ) -> StreamingResponse:
-    """Esporta i record di effort in formato CSV (protetta)."""
+    """Esporta i record di effort in formato CSV (protetta, segregata)."""
     redirect = _require_auth(user)
     if redirect is not None:
         return redirect
+    assert user is not None
 
     stmt = (
         select(EffortEntry)
@@ -313,9 +380,11 @@ async def export_csv(
             selectinload(EffortEntry.client),
             selectinload(EffortEntry.group),
             selectinload(EffortEntry.activity),
+            selectinload(EffortEntry.user),
         )
         .order_by(EffortEntry.work_date.asc())
     )
+    stmt = _filter_by_user(stmt, user)
     if month:
         stmt = stmt.where(func.strftime("%Y-%m", EffortEntry.work_date) == month)
     records = db.execute(stmt).scalars().all()
@@ -330,7 +399,11 @@ async def export_csv(
 
 
 def _build_csv(records: list[EffortEntry]) -> str:
-    """Costruisce il contenuto CSV (con BOM UTF-8) dai record di effort."""
+    """Costruisce il contenuto CSV (con BOM UTF-8) dai record di effort.
+
+    Fase 11: la colonna Utente mostra lo username reale dal JOIN su users;
+    per i record senza proprietario (legacy) mostra una stringa vuota.
+    """
     buffer = io.StringIO()
     buffer.write("\ufeff")  # BOM UTF-8 per compatibilità Excel/Windows.
     writer = csv.writer(buffer)
@@ -342,7 +415,7 @@ def _build_csv(records: list[EffortEntry]) -> str:
                 record.client.name,
                 record.group.name,
                 record.activity.name,
-                record.user_text or "",
+                record.user.username if record.user is not None else "",
                 record.hours_spent,
                 record.notes or "",
                 record.description or "",

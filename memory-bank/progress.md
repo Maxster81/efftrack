@@ -1,10 +1,10 @@
 # Progress — Effort Tracking
 
 ## Stato globale
-- **Ultima fase completata**: Fase 10 ✅ completata il 2026-08-03 (autenticazione locale).
-- **Fase in corso**: nessuna. Prossima: Fase 11 (multiutente e segregazione).
+- **Ultima fase completata**: Fase 11 ✅ completata il 2026-08-03 (multiutente e segregazione).
+- **Fase in corso**: nessuna. Prossima: Fase 12 (gestione ruoli e amministrazione).
 - **Stato**: idle, pronto per nuovo task.
-- **Versione corrente**: `0.13.0` (tag `v0.13.0` annotato su `develop`).
+- **Versione corrente**: `0.14.0` (tag `v0.14.0` annotato su `develop`).
 - **Roadmap estesa**: aggiunte Fase 4b (sidebar hamburger), Fase 5b (copia su settimana), Fase 12 (Admin), Fase 13 (Manager); l'hardening passa da 12 a 14. La Fase 9 è stata **sdoppiata** su richiesta utente in **Fase 9** (backend) e **Fase 9b** (frontend toggle dark/light + dipendenze).
 
 ## Roadmap
@@ -236,8 +236,29 @@
 - **Commit**: `feat(auth): phase 10 local authentication with session`.
 
 ### Fase 11 — Multiutente e segregazione
-- **Stato**: non iniziata.
-- **Obiettivo**: `user_id` valorizzato, segregazione dei dati, predisposizione ruoli.
+- **Stato**: ✅ completata il 2026-08-03.
+- **Obiettivo**: `user_id` valorizzato, segregazione dei dati, predisposizione ruoli. Nessuno (nemmeno admin/manager) modifica o elimina record altrui — regola aziendale.
+- **Cosa è stato fatto**:
+  - **`app/models/effort_entry.py`**: `user_id` ora è una **ForeignKey verso `users.id`** con `ON DELETE SET NULL` e indice; rimosse la colonna legacy `user_text` (dati di sviluppo eliminati su richiesta utente); aggiunta relazione `user`.
+  - **`app/core/migrations.py`** (NUOVO): `run_schema_migrations(engine)` idempotente — ricrea `effort_entries` (DROP + create_all) se la colonna `user_text` è ancora presente. Dati di sviluppo eliminati (nessun backfill ad admin, che resta utente di sola gestione).
+  - **`app/core/seed.py`**: `seed_test_users` (mario, giulia, luca, password `test`) e `seed_test_records` (~20 record/utente sui giorni feriali 2026, seed fisso riproducibile). Entrambe idempotenti.
+  - **`app/main.py`**: nel lifespan esegue `run_schema_migrations` prima di `create_all`, poi chiama i nuovi seed.
+  - **`app/routers/web.py`**:
+    - Helper `_is_admin` e `_filter_by_user`: l'admin vede tutti i record (lettura/export), gli utenti normali solo i propri.
+    - `_save_single`/`_save_week`: `user_id` valorizzato con l'utente della sessione su insert.
+    - **Regola aziendale**: su update/delete il controllo `entry.user_id != current_user.id` vale per TUTTI, nessuna eccezione admin/manager (nessuno tocca i record degli altri).
+    - `_build_csv`: colonna Utente con lo **username reale via JOIN**; vuota per record senza proprietario.
+    - Fix `_with_month`: ignora la stringa `"None"` (bug che causava elenco vuoto dopo blocco delete admin senza filtro).
+  - **`app/templates/index.html`**: colonna "Utente" visibile **solo all'admin**; `data-user` dalla relazione user; fix campo hidden `month` (`selected_month or ''`) — niente più `?month=None` nel redirect; label "Fase 11 — Multiutente e segregazione".
+  - **`tests/test_models.py`**: 22 test OK — nuovi test per schema senza `user_text`, FK presente, seed utenti/record idempotenti, `test_admin_cannot_update_or_delete_others` (regola aziendale), export con username dal JOIN.
+- **Decisioni**:
+  - Eliminati i record di sviluppo (migrazione DROP + ricreazione vuota) e rimossa la colonna `user_text` come richiesto.
+  - Admin NON assegnatario di record: resta utente di gestione con visibilità globale ma nessun record proprio.
+  - Regola aziendale: **nessuno modifica/elimina record altrui**, nemmeno admin/manager (evita incomprensioni e responsabilità incrociate).
+- **Verifiche**: 22/22 test OK; migrazione + seed al primo avvio (60 record di test); end-to-end curl: admin 62 record + colonna Utente, mario 20 record senza colonna, export segregato, admin bloccato su update/delete record di giulia; bug `month=None` risolto (elenco resta visibile dopo blocco).
+- **Versioning**: bump `VERSION` `0.13.1` → `0.14.0` (MINOR).
+- **Branch**: commit su `develop`, tag annotato `v0.14.0`. Niente `main`.
+- **Commit**: `feat(multiuser): phase 11 data segregation`.
 
 ### Fase 12 — Gestione ruoli e amministrazione (Admin)
 - **Stato**: non iniziata.
@@ -264,8 +285,8 @@
 - Toggle dark/light funzionante dalla Fase 9b (due modalità, preferenza localStorage).
 - `pydantic-core` pinnato a 2.46.4 per compatibilità con pydantic 2.13.4.
 - Migrazioni schema con `CREATE TABLE IF NOT EXISTS` / `ALTER TABLE` controllato; Alembic proposto se la complessità cresce.
-- `user_id` nullable in `effort_entries` dal suo inserimento, valorizzato in Fase 11.
+- `user_id` con FK verso `users.id` (ON DELETE SET NULL) dalla Fase 11; nessuno modifica/elimina record altrui (regola aziendale).
 - La cancellazione è **permanente** e senza soft-delete/audit (da valutare in Fase 14/hardening).
-- I campi del form sono opzionali nella firma della route `POST /`: la validazione obbligatoria avviene comunque server-side via `EffortEntryCreate` per le azioni che creano/aggiornano record.
-- DB di sviluppo: per le prove la fixture è variata (ora 110 record).
+- I campi del form sono opzionali nella firma della route `POST /`: la validazione obbligatoria avviene comunque server-side via `EffortEntryCreate` per le azioni che creano/aggiornano record. Per `action=delete` bastano `record_id`.
+- DB di sviluppo: 4 utenti (admin + mario/giulia/luca) e ~62 record di test. La colonna `user_text` è stata rimossa in Fase 11.
 - Configurazione: il `.env` locale è per lo sviluppo; in produzione systemd legge `/etc/efftrack.env` (EnvironmentFile). Livello log controllato da `EFFORT_TRACKING_LOG_LEVEL`.

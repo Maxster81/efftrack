@@ -1,12 +1,12 @@
 # Active Context — Effort Tracking
 
 ## Stato corrente
-- **Ultima fase completata**: Fase 10 ✅ (2026-08-03) — autenticazione locale con sessione.
-- **Fase in corso**: nessuna. Prossima: Fase 11 (multiutente e segregazione).
+- **Ultima fase completata**: Fase 11 ✅ (2026-08-03) — multiutente e segregazione dati.
+- **Fase in corso**: nessuna. Prossima: Fase 12 (gestione ruoli e amministrazione).
 - **Stato**: idle, pronto per nuovo task.
-- **Versione corrente**: `0.13.0` (tag `v0.13.0` annotato su `develop`).
+- **Versione corrente**: `0.14.0` (tag `v0.14.0` annotato su `develop`).
 - **Roadmap estesa**: aggiunte Fase 4b (sidebar hamburger), Fase 5b (copia su settimana), Fase 12 (Admin), Fase 13 (Manager); hardening slitta a Fase 14. La Fase 9 è stata **sdoppiata** su richiesta utente: **Fase 9** (refactoring, logging, .env, systemd — solo backend) e **Fase 9b** (toggle dark/light, aggiornamento dipendenze — solo frontend). Vedi `progress.md`/`projectbrief.md`.
-- **Nota**: la tabella `effort_entries` ha la colonna `user_text` (String 128 nullable). Contiene dati reali (110 record: fixture gen-lug 2026 + preesistenti). **Merge su `main` autorizzato dall'utente in Fase 9 (due volte) e in Fase 9b (2026-08-03)**: a fine Fase 9b `main` ora include **tutte le fasi 1–9b, v0.12.0** (base completa e pulita prima delle modifiche invasive delle Fasi 10+).
+- **Nota**: la tabella `effort_entries` **non ha più** la colonna `user_text` (rimossa in Fase 11). `user_id` è ora una FK verso `users.id` (ON DELETE SET NULL). DB di sviluppo: 4 utenti (admin + mario/giulia/luca) e ~62 record di test. **Merge su `main` autorizzato in Fase 9 (due volte) e Fase 9b**: `main` include le fasi 1–9b, v0.12.0. Le fasi 10+ sono solo su `develop`.
 - **Nota ambiente**: sviluppo su **Ubuntu in WSL** (Python 3.12.3, pip 24.0). Venv ricreato in questa macchina. Dipendenze: fastapi 0.141.1, uvicorn 0.52.1, sqlalchemy 2.0.51, pydantic 2.13.4 (pydantic-core 2.46.4, pin compatibile), jinja2 3.1.6, python-multipart 0.0.32, python-dotenv 1.2.2, pytest 9.1.1 (in dev, non in produzione). `pydantic-core` 2.47.0 NON è adottato: incompatibile con pydantic 2.13.4.
 
 ## Decisioni recenti
@@ -202,18 +202,25 @@
 - Curl: GET / senza sessione → 303 /login; GET /export senza sessione → 303 /login; POST /login errato → "Credenziali non valide"; POST /login admin/admin → 303 /; GET / loggato → 200 (username admin + campo User readonly); GET /logout → 303 /login; GET / dopo logout → 303 /login.
 - **Verifica utente (browser)**: login/logout, campo User bloccato e precompilato.
 
-## Fasi successive (dopo 10)
-- **Fase 11**: multiutente e segregazione dati.
-- **Fase 12 — Admin**: tabella `roles`, CRUD utenti + assegnazione ruoli, CRUD lookup, sezione `/admin`.
+## Modifiche di Fase 11 (multiutente e segregazione)
+- **`app/models/effort_entry.py`**: `user_id` ora FK verso `users.id` (ON DELETE SET NULL) + indice; rimossa colonna `user_text`; aggiunta relazione `user`.
+- **`app/core/migrations.py`** (NUOVO): `run_schema_migrations` idempotente — ricrea `effort_entries` se presente `user_text` (dati di sviluppo eliminati). Eseguita prima di `create_all` nel lifespan.
+- **`app/core/seed.py`**: `seed_test_users` (mario/giulia/luca, pass `test`) e `seed_test_records` (~20 record/utente). Idempotenti.
+- **`app/routers/web.py`**: `_is_admin`/`_filter_by_user`; `user_id` valorizzato su insert; **regola aziendale**: update/delete bloccati per record altrui per TUTTI (admin inclusi); `_build_csv` usa username via JOIN; fix `_with_month` (ignora `"None"`).
+- **`app/templates/index.html`**: colonna Utente solo per admin; fix campo hidden `month` (`selected_month or ''`).
+- **`tests/test_models.py`**: 22 test OK (schema, seed, segregazione, regola aziendale, export).
+
+## Fasi successive
+- **Fase 12 — Admin**: tabella `roles`, CRUD utenti + assegnazione ruoli, CRUD lookup, sezione `/admin`. L'admin non vedrà più la card registrazione (solo elenco/gestione).
 - **Fase 13 — Manager**: vista/export dei record del proprio gruppo, senza gestione lookup/utenti.
-- **Fase 14 — Hardening**: ex Fase 12.
+- **Fase 14 — Hardening**: controllo validazioni, backup, note PostgreSQL.
 
 ## Rischi / punti aperti
-- **`memory-bank/Issue-Suggestion.md`** traccia issue minori e suggerimenti raccolti dai test utente (priorità molto bassa). Attualmente: **Issue 1** (persistenza filtro mese — RISOLTA in 0.13.1) e **Suggestion 1** (nascondere hamburger menu nella login — da valutare).
+- **`memory-bank/Issue-Suggestion.md`** traccia issue minori e suggerimenti raccolti dai test utente (priorità molto bassa). Attualmente: **Suggestion 1** (hamburger in login), **Suggestion 2** (incremento ore), **Suggestion 3** (menu su immagine utente), **Suggestion 4** (filtro anno+mese), **Suggestion 5** (evidenzia record modificato), **Suggestion 6** (checkbox ferie). Nessuna issue aperta (Issue 1 risolta in 0.13.1).
 - Password admin di default `admin/admin`: va cambiata subito in produzione via env var (Sicurezza Fase 14).
 - La sessione HTTP firmata richiede `SECRET_KEY` robusta in produzione (placeholder in sviluppo).
 - `pydantic-core` pinnato a 2.46.4 per compatibilità con pydantic 2.13.4; quando pydantic sarà aggiornato, andrà aggiornato insieme.
-- Migrazioni schema: `CREATE TABLE IF NOT EXISTS` / seed idempotente; poiché `code` è stato rimosso dopo la prima creazione, il DB va rigenerato se cambia schema (nessun ALTER automatico gestisce la rimozione colonna). Da valutare `ALTER TABLE` controllato o Alembic se cresce la complessità.
-- `user_id` nullable senza FK in `effort_entries`, valorizzato in Fase 11.
+- Migrazioni schema: `run_schema_migrations` gestisce le modifiche note (es. rimozione `user_text`); per cambi non gestiti (es. rimozione `code`) va rigenerato il DB. Alembic da valutare se la complessità cresce.
+- `user_id` FK verso `users.id` dalla Fase 11; nessuno modifica/elimina record altrui (regola aziendale).
 - La cancellazione è **permanente** e senza soft-delete/audit (da valutare in Fase 14/hardening).
 - Il `.env` reale in produzione è sostituito dal `/etc/efftrack.env` di systemd (documentato nel template).
