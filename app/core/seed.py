@@ -2,13 +2,19 @@
 
 Popola clients, groups e activities solo se la rispettiva tabella è
 vuota. Eseguito a ogni startup (vedi `app/main.py` lifespan).
+
+Fase 9: logging di quali lookup sono state populate all'avvio.
 """
 from __future__ import annotations
+
+import logging
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models import Activity, Client, Group
+
+logger: logging.Logger = logging.getLogger(__name__)
 
 # --- Dati di default (derivati dal vecchio tool) -----------------------------
 
@@ -35,16 +41,27 @@ _ACTIVITIES: list[dict[str, object]] = [
 
 def seed_lookup_tables(db: Session) -> None:
     """Inserisce i dati di default se le tabelle lookup sono vuote."""
-    if _is_empty(db, Client):
+    seeded_clients = _is_empty(db, Client)
+    seeded_groups = _is_empty(db, Group)
+    seeded_activities = _is_empty(db, Activity)
+
+    if seeded_clients:
         db.add_all(Client(**data) for data in _CLIENTS)
-
-    if _is_empty(db, Group):
+    if seeded_groups:
         db.add_all(Group(**data) for data in _GROUPS)
-
-    if _is_empty(db, Activity):
+    if seeded_activities:
         db.add_all(Activity(**data) for data in _ACTIVITIES)
 
-    db.commit()
+    if seeded_clients or seeded_groups or seeded_activities:
+        db.commit()
+        logger.info(
+            "Seed lookup completato (clients=%s, groups=%s, activities=%s)",
+            seeded_clients,
+            seeded_groups,
+            seeded_activities,
+        )
+    else:
+        logger.debug("Lookup già popolati, seed non necessario")
 
 
 def _is_empty(db: Session, model: type) -> bool:

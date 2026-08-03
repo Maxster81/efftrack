@@ -18,6 +18,8 @@
 - **SQLAlchemy 2.x** — ORM type-safe, predisposizione a migrazione PostgreSQL.
 - **Pydantic v2** — validazione input/output.
 - **python-multipart** — parsing form data.
+- **python-dotenv** — carica `.env` in sviluppo (dalla Fase 9).
+- **pytest** — framework di test (dipendenza DEV, in `requirements-dev.txt`).
 
 ## Database
 - **SQLite3** in `data/efftrack.db` (gitignored).
@@ -50,6 +52,12 @@ Poi:
 - `EFFORT_TRACKING_DB_URL` — default `sqlite:///./data/efftrack.db`.
 - `EFFORT_TRACKING_HOST` — default `0.0.0.0` in dev.
 - `EFFORT_TRACKING_PORT` — default `8000`.
+- `EFFORT_TRACKING_LOG_LEVEL` — default `INFO` (DEBUG, INFO, WARNING, ERROR).
+
+### File `.env`
+- Il file `.env` (gitignored) viene caricato automaticamente da `config.py` via `load_dotenv()`.
+- Il template di riferimento è `.env.example` (committato).
+- In produzione systemd usa `EnvironmentFile=/etc/efftrack.env`; NON si usa il `.env` locale.
 
 ## Vincoli di deploy
 - **No Docker** come prerequisito.
@@ -64,10 +72,11 @@ Poi:
 - Campi numerici vincolati a range consentiti.
 
 ## Test
-- **Framework**: `unittest` (standard library), nessuna dipendenza extra.
-- **Esecuzione**: `.venv/bin/python -m unittest discover -s tests -v`
+- **Framework**: `pytest` (dalla Fase 9), in `requirements-dev.txt` (dipendenza solo di sviluppo).
+- **Installazione**: `.venv/bin/pip install -r requirements-dev.txt`
+- **Esecuzione**: `.venv/bin/python -m pytest tests/ -v`
 - **DB di test**: SQLite in-memory isolato (`tests/test_models.py`), separato dal DB di sviluppo `data/efftrack.db`.
-- Se in futuro i test crescono molto, valuteremo `pytest` (proposta con analisi pro/contro).
+- `pytest` non è in `requirements.txt` (produzione pulita).
 
 ## Rigenerazione DB di sviluppo
 - Il DB `data/efftrack.db` è **gitignored** e viene creato/seeded automaticamente al primo avvio (lifespan di `app/main.py`).
@@ -76,7 +85,7 @@ Poi:
 ## Tool di sviluppo
 - `git` per versionamento, branching su `develop`.
 - `pip` per dipendenze.
-- `unittest` per i test automatici.
+- `pytest` per i test automatici.
 - Nessun tool esotico: editor + browser + curl.
 
 ## Note di compatibilità

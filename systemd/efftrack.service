@@ -11,12 +11,17 @@
 #      sudo mkdir -p /opt/efftrack
 #      sudo chown -R efftrack:efftrack /opt/efftrack
 #   4. Crea /etc/efftrack.env con le variabili (vedi .env.example).
+#      Variabili: EFFORT_TRACKING_SECRET_KEY, EFFORT_TRACKING_DB_URL,
+#      EFFORT_TRACKING_HOST, EFFORT_TRACKING_PORT, EFFORT_TRACKING_LOG_LEVEL.
+#      Nota: in produzione NON si usa il file .env locale; le variabili
+#      arrivano esclusivamente da questo EnvironmentFile.
 #   5. Ricarica systemd, abilita e avvia:
 #      sudo systemctl daemon-reload
 #      sudo systemctl enable --now efftrack.service
 #   6. Verifica:
 #      sudo systemctl status efftrack.service
 #      curl http://127.0.0.1:8000/health
+# I log dell'app escono su journald (journalctl -u efftrack -f).
 # =============================================================================
 
 [Unit]

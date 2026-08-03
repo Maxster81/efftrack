@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import csv
 import io
+import logging
 from datetime import date, timedelta
 from typing import Annotated
 
@@ -24,6 +25,8 @@ from app.db import get_db
 from app.models import Activity, Client, EffortEntry, Group
 from app.schemas.effort import EffortEntryCreate
 from fastapi.templating import Jinja2Templates
+
+logger: logging.Logger = logging.getLogger(__name__)
 
 # Template engine condiviso dal router web.
 # I template vivono in app/templates/ (path centralizzato in app/config.py).
@@ -113,7 +116,7 @@ async def index(
         context={
             "app_name": APP_NAME,
             "app_version": APP_VERSION,
-            "phase": "Fase 8 — Export CSV",
+            "phase": "Fase 9 — Refactoring, logging, env",
             "clients": clients,
             "groups": groups,
             "activities": activities,
@@ -172,7 +175,8 @@ async def save_entry(
             notes=notes,
             description=description,
         )
-    except ValidationError:
+    except ValidationError as exc:
+        logger.warning("Validazione fallita nel form: %s", exc.errors())
         return RedirectResponse("/?error=validazione", status_code=303)
 
     activity = db.execute(
@@ -181,6 +185,7 @@ async def save_entry(
 
     # Validazione condizionale: la descrizione è obbligatoria se richiesta.
     if activity is not None and activity.requires_description and not payload.description:
+        logger.warning("Descrizione mancante per attività che la richiede")
         return RedirectResponse("/?error=descrizione", status_code=303)
 
     # La copia su settimana non è supportata in modalità modifica:
@@ -203,14 +208,17 @@ def _delete_entry(record_id: int | None, db: Session) -> RedirectResponse:
     di validazione; altrimenti redirect con `?success=3`.
     """
     if record_id is None:
+        logger.warning("Eliminazione senza record_id")
         return RedirectResponse("/?error=validazione", status_code=303)
 
     entry = db.get(EffortEntry, record_id)
     if entry is None:
+        logger.warning("Tentativo di eliminazione record inesistente id=%s", record_id)
         return RedirectResponse("/?error=validazione", status_code=303)
 
     db.delete(entry)
     db.commit()
+    logger.info("Record eliminato id=%s", record_id)
     return RedirectResponse("/?success=3", status_code=303)
 
 
@@ -228,6 +236,7 @@ def _save_single(
     if record_id is not None:
         entry = db.get(EffortEntry, record_id)
         if entry is None:
+            logger.warning("Update di record inesistente id=%s", record_id)
             return RedirectResponse("/?error=validazione", status_code=303)
         entry.user_text = payload.user
         entry.client_id = payload.client_id
@@ -238,6 +247,7 @@ def _save_single(
         entry.notes = payload.notes
         entry.description = payload.description
         db.commit()
+        logger.info("Record aggiornato id=%s data=%s ore=%s", record_id, payload.date, payload.hours)
         return RedirectResponse("/?success=2", status_code=303)
 
     entry = EffortEntry(
@@ -253,6 +263,7 @@ def _save_single(
     )
     db.add(entry)
     db.commit()
+    logger.info("Record creato id=%s data=%s ore=%s", entry.id, payload.date, payload.hours)
     return RedirectResponse("/?success=1", status_code=303)
 
 
@@ -275,6 +286,7 @@ def _save_week(payload: EffortEntryCreate, db: Session) -> RedirectResponse:
             )
         )
     db.commit()
+    logger.info("Copia settimanale creata (settimana di %s)", payload.date.isoformat())
     return RedirectResponse("/?success=1", status_code=303)
 
 
@@ -306,6 +318,7 @@ async def export_csv(
     records = db.execute(stmt).scalars().all()
 
     filename = f"effort_{month}.csv" if month else "effort_tutti.csv"
+    logger.info("Export CSV generato (record=%d, mese=%s)", len(records), month or "tutti")
     return StreamingResponse(
         iter([_build_csv(records)]),
         media_type="text/csv; charset=utf-8",
@@ -360,6 +373,7 @@ async def health() -> JSONResponse:
     except SQLAlchemyError as exc:
         db_status = "error"
         db_error = str(exc)
+        logger.error("Health check: database non raggiungibile: %s", exc)
 
     payload: dict = {
         "app": APP_NAME,
