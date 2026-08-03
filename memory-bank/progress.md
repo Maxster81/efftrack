@@ -1,14 +1,13 @@
 # Progress — Effort Tracking
 
 ## Stato globale
-- **Ultima fase completata**: Fase 11 ✅ completata il 2026-08-03 (multiutente e segregazione).
-- **Ultima sottofase completata**: Fase 13a ✅ completata il 2026-08-03 (funzionalità admin: disabilita utente + assegnazione gruppo).
-- **Fase in corso**: nessuna. Prossima: Fase 13b (sicurezza e robustezza).
+- **Ultima sottofase completata**: Fase 13b ✅ completata il 2026-08-03 (sicurezza e robustezza: header HTTP, pagine errore 404/500, validazione ore 1-12 step 0.50).
+- **Fase in corso**: nessuna. Prossima: Fase 13c (test, doc e preparazione produzione).
 - **Stato**: idle, pronto per nuovo task.
-- **Versione corrente**: `0.19.0`.
+- **Versione corrente**: `0.20.0`.
 - **Roadmap estesa**: aggiunte Fase 4b (sidebar hamburger), Fase 5b (copia su settimana), Fase 12 (Admin, scomposta in 12a/12b/12c/12d); l'hardening passa a **Fase 13**, ora scomposta in 13a-13d. La Fase 9 è stata **sdoppiata** su richiesta utente in **Fase 9** (backend) e **Fase 9b** (frontend toggle dark/light + dipendenze).
 - **Scomposizione Fase 12 (riorganizzata 2026-08-03)**: approccio "dal basso verso l'alto". 12a-12d ✅ completate. Hardening = Fase 13.
-- **Scomposizione Fase 13 (riorganizzata 2026-08-03)**: 13a (ex 13b) funzionalità admin ✅, 13b (ex 13c) sicurezza, 13c (ex 13d) test+produzione, 13d (ex 13a) fix stilistici/UX (rinviata, richiede screenshot).
+- **Scomposizione Fase 13 (riorganizzata 2026-08-03)**: 13a (ex 13b) funzionalità admin ✅, 13b (ex 13c) sicurezza ✅, 13c (ex 13d) test+produzione (da fare), 13d (ex 13a) fix stilistici/UX (rinviata, richiede screenshot).
 - **DB di sviluppo**: rigenerato in Fase 12c con dataset multi-gruppo (2 gruppi SOC/NOC, 6 utenti di test con ~20 record ciascuno).
 
 > **⚠️ NOTA OPERATIVA — Issue e Suggerimenti:** le issue e i suggerimenti raccolti dai test utente sono tracciati **esclusivamente** in `memory-bank/Issue-Suggestion.md`. Prima di iniziare **ogni fase**, consultare quel file. Quando una voce viene risolta, va **rimossa** da lì nello stesso commit che la risolve. Prima di riportare in questo file eventuali checklist "da fare", verificare se esistono già in `Issue-Suggestion.md` per evitare duplicati o disallineamenti.
@@ -276,9 +275,9 @@ La Fase 12 è stata scomposta in sottofasi, riorganizzate "dal basso verso l'alt
 ### Scomposizione Fase 13 (riorganizzata su richiesta utente 2026-08-03)
 La Fase 13 (hardening) è stata scomposta in 4 sottofasi; 13d rinviata per ultima perché richiede screenshot non supportati dal modello attuale.
 - **Fase 13a (ex 13b)** — Funzionalità admin: disabilita utente + assegnazione gruppo (✅ 2026-08-03)
-- **Fase 13b (ex 13c)** — Sicurezza e robustezza (404/500, ore 1-12, XSS, headers + S4 filtro anno+mese) (non iniziata)
-- **Fase 13c (ex 13d)** — Test, doc e preparazione produzione (non iniziata)
-- **Fase 13d (ex 13a)** — Fix stilistici e UX (rinviata, richiede screenshot) (non iniziata)
+- **Fase 13b (ex 13c)** — Sicurezza e robustezza (404/500 ✅, ore 1-12 ✅, headers ✅; XSS rinviato a Fase 14, S4 filtro anno+mese rinviata a 13c/13d) (✅ 2026-08-03)
+- **Fase 13c (ex 13d)** — Test, doc e preparazione produzione (da fare)
+- **Fase 13d (ex 13a)** — Fix stilistici e UX (rinviata, richiede screenshot) (da fare)
 
 ### Fase 12a — Infrastruttura ruoli e permessi
 - **Stato**: ✅ completata il 2026-08-03.
@@ -360,6 +359,25 @@ La Fase 13 (hardening) è stata scomposta in 4 sottofasi; 13d rinviata per ultim
 - **Versioning**: bump `VERSION` `0.18.0` → `0.19.0` (MINOR).
 - **Branch**: commit su `develop`, tag annotato `v0.19.0`. Niente `main`.
 - **Commit**: `feat(admin): phase 13a user disable and group assignment`.
+
+### Fase 13b — Sicurezza e robustezza (header HTTP, errori 404/500, ore 1-12)
+- **Stato**: ✅ completata il 2026-08-03.
+- **Obiettivo**: innalzare la sicurezza del servizio e migliorare la robustezza di fronte agli errori. Chiusura di Issue G (header di sicurezza HTTP), Issue A (pagine errore 404/500), Issue D + Suggestion 2 (validazione ore 1-12 step 0.50).
+- **Area applicativa**:
+  - **`app/core/security_headers.py`** (NUOVO): middleware `SecurityHeadersMiddleware` (Starlette `BaseHTTPMiddleware`) che aggiunge a ogni risposta: `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Content-Security-Policy` (default-src 'self', style/script 'unsafe-inline' per il tema, img data:, object 'none', base-uri self, form-action self), `Strict-Transport-Security`, `Referrer-Policy: no-referrer`, `Permissions-Policy`. Non sovrascrive header già presenti.
+  - **`app/main.py`** (riscritto pulito): eliminati gli import duplicati residui; registrati `exception_handlers` per `StarletteHTTPException` (404→`404.html`, 500→`500.html`, altri codici (401/403/405/...)→`error.html` generico con codice+dettaglio) e `RequestValidationError` (→`500.html`); engine `templates` (Jinja2Templates) dal `TEMPLATES_DIR`; helper `_error_context(request)` **sincrono** e senza query DB (solo username da sessione). **Bug risolto durante e2e**: la funzione era `async def` ma chiamata senza `await` → errori 500 sul template 404. Resa sincrona (nessuna I/O). **Miglioramento su richiesta utente**: 401/403/405 ora templatizzati con `error.html` coerente col tema (prima erano HTML spoglio).
+  - **`app/schemas/effort.py`**: `EffortEntryCreate.hours` → `Field(ge=1, le=12)` + validatore `hours_step_half` (multipli di 0.50, tolleranza floating point, arrotondamento a 2 decimali). Rimossa la Suggestion 2 (step 0.50).
+  - **`tests/test_models.py`**: import di `EffortEntryCreate` e `ValidationError`; nuova classe `TestEffortEntryValidation` (6 test: range 1-12 valido, <1 rifiutato, >12 rifiutato, step 7.25 rifiutato, rounding floating, 12h per Supporto Specialistico consentito). Totale 47 test.
+- **Area UI**:
+  - **`app/templates/404.html`** (NUOVO): pagina errore 404 coerente con `500.html` (estende `base.html`, bottoni "Torna alla home" / "Vai alla dashboard").
+  - **`app/templates/500.html`**: (già creato nel task precedente) pagina errore 500.
+  - **`app/templates/index.html`**: input ore `min="1" max="12" step="0.50"`.
+  - **`app/static/form.js`**: `isValidHours` ora 1..12 step 0.50; messaggio "Inserisci le Ore Spese (da 1 a 12, step 0.50)."
+- **Verifiche**: 47/47 test OK (41 precedenti + 6 nuovi); e2e con server reale: header di sicurezza presenti su `/login` (tutti e 6), 404 → `404.html` con "404 — Pagina non trovata", login admin → 303 `/admin`, `/admin` 200 con sidebar. Bug `_error_context` async trovato e corretto.
+- **Decisioni**: XSS (Issue F) **non** affrontato in questa fase → rinviato a Fase 14 (audit sicurezza). Suggestion 4 (filtro anno+mese) rinviata a Fase 13c/13d. `_error_context` volutamente **senza query DB** per pagine di errore robuste anche in caso di problemi di connettività.
+- **Versioning**: bump `VERSION` `0.19.0` → `0.20.0` (MINOR).
+- **Branch**: commit su `develop`, tag annotato `v0.20.0`. Niente `main`.
+- **Commit**: `feat(security): phase 13b security headers and error pages`.
 
 ## Decisioni di versioning
 - **Strategia**: SemVer. Versione tracciata solo nel file `VERSION` (unico servizio, niente repliche in `__init__.py`).

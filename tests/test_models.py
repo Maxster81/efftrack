@@ -8,6 +8,7 @@ from __future__ import annotations
 import unittest
 from datetime import date
 
+from pydantic import ValidationError
 from sqlalchemy import create_engine, inspect, select
 from sqlalchemy.orm import Session
 
@@ -19,6 +20,7 @@ from app.core.seed import (
 )
 from app.db import Base
 from app.models import Activity, Client, EffortEntry, Group, User
+from app.schemas.effort import EffortEntryCreate
 
 
 class DatabaseTestCase(unittest.TestCase):
@@ -682,6 +684,61 @@ class TestSegregation(DatabaseTestCase):
         stmt_admin = select(EffortEntry)
         records_admin = self.db.execute(_filter_by_user(stmt_admin, admin)).scalars().all()
         self.assertEqual(len(records_admin), 3)  # 2 + 1 orfano
+
+
+class TestEffortEntryValidation(DatabaseTestCase):
+    """Test della validazione delle ore (Fase 13b, Issue D / Suggestion 2).
+
+    Il range è 1-12 con step 0.50, senza vincoli specifici per Supporto
+    Specialistico (possono esserci straordinari > 4h).
+    """
+
+    def _payload(self, hours: float) -> EffortEntryCreate:
+        client = self.db.execute(select(Client)).scalars().first()
+        group = self.db.execute(select(Group)).scalars().first()
+        activity = self.db.execute(select(Activity)).scalars().first()
+        return EffortEntryCreate(
+            user="admin",
+            date=date(2026, 8, 15),
+            client_id=client.id,
+            group_id=group.id,
+            activity_id=activity.id,
+            hours=hours,
+            notes=None,
+            description=None,
+        )
+
+    def test_valid_hours_range(self) -> None:
+        """Il range valido 1-12 è accettato."""
+        for h in (1, 1.5, 6.5, 11.5, 12):
+            with self.subTest(hours=h):
+                model = self._payload(h)
+                self.assertEqual(model.hours, round(h, 2))
+
+    def test_invalid_hours_below_min(self) -> None:
+        """Ore < 1 sono rifiutate."""
+        with self.assertRaises(ValidationError):
+            self._payload(0.5)
+
+    def test_invalid_hours_above_max(self) -> None:
+        """Ore > 12 sono rifiutate."""
+        with self.assertRaises(ValidationError):
+            self._payload(12.5)
+
+    def test_invalid_hours_step(self) -> None:
+        """Ore non multiple di 0.50 (es. 7.25) sono rifiutate."""
+        with self.assertRaises(ValidationError):
+            self._payload(7.25)
+
+    def test_hours_float_rounding(self) -> None:
+        """Il valore è arrotondato a 2 decimali per evitare errori floating point."""
+        model = self._payload(7.4999999)
+        self.assertEqual(model.hours, 7.5)
+
+    def test_high_hours_specialist_allowed(self) -> None:
+        """Nessun vincolo della vecchia 4h per Supporto Specialistico: 12h ok."""
+        model = self._payload(12)
+        self.assertEqual(model.hours, 12)
 
 
 if __name__ == "__main__":

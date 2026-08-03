@@ -24,7 +24,9 @@ class EffortEntryCreate(BaseModel):
     client_id: int = Field(gt=0)
     group_id: int = Field(gt=0)
     activity_id: int = Field(gt=0)
-    hours: float = Field(ge=0.25, le=24)
+    # Fase 13b (Issue D): range 1-12, step 0.50 (assorbe Suggestion 2).
+    # Nessun vincolo speciale per Supporto Specialistico (possono esserci straordinari > 4).
+    hours: float = Field(ge=1, le=12)
     notes: str | None = Field(default=None, max_length=2000)
     description: str | None = Field(default=None, max_length=2000)
 
@@ -39,10 +41,14 @@ class EffortEntryCreate(BaseModel):
 
     @field_validator("hours")
     @classmethod
-    def hours_step_quarter(cls, value: float) -> float:
-        """Le ore devono essere multipli di 0.25 (tolleranza floating point)."""
-        if abs(value * 4 - round(value * 4)) > 1e-6:
-            raise ValueError("Le ore devono essere multipli di 0.25.")
+    def hours_step_half(cls, value: float) -> float:
+        """Le ore devono essere multiple di 0.50 (Fase 13b, tolleranza floating point).
+
+        Il range (1-12) è già garantito dal Field; qui si verifica solo il passo.
+        Elimina anche i valori non multipli di 0.50 (es. 7.25).
+        """
+        if abs(value * 2 - round(value * 2)) > 1e-6:
+            raise ValueError("Le ore devono essere multiple di 0.50.")
         # Arrotonda per evitare errori floating point (es. 7.4999999 -> 7.5).
         return round(value, 2)
 

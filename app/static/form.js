@@ -68,13 +68,13 @@
     }
   }
 
-  // --- Validazione ore (0.25 .. 24, multipli di 0.25) ---
+  // --- Validazione ore (1 .. 12, multipli di 0.50, Fase 13b) ---
   function isValidHours(raw) {
     if (raw.trim() === "") { return false; }
     var value = parseFloat(raw.replace(",", "."));
-    if (isNaN(value) || value < 0.25 || value > 24) { return false; }
-    // Multiplo di 0.25: tolleranza floating point.
-    return Math.abs(value * 4 - Math.round(value * 4)) < 1e-6;
+    if (isNaN(value) || value < 1 || value > 12) { return false; }
+    // Multiplo di 0.50: tolleranza floating point.
+    return Math.abs(value * 2 - Math.round(value * 2)) < 1e-6;
   }
 
   // --- Validazione submit ---
@@ -132,7 +132,7 @@
     setInvalid(hours, !ok);
     if (!ok) {
       if (!firstInvalid) { firstInvalid = hours; }
-      showError("Inserisci le Ore Spese (da 0.25 a 24, step 0.25).");
+      showError("Inserisci le Ore Spese (da 1 a 12, step 0.50).");
     }
     valid = valid && ok;
 

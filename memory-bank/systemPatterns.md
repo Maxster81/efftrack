@@ -123,10 +123,12 @@ efftrack/
 - `app/core/permissions.py` è la **fonte di verità** per ruoli e permessi: costanti ruoli, helper `is_admin`/`is_manager`/`is_staff`, dependency FastAPI `require_admin`/`require_manager` (401/403).
 - `app/routers/admin.py` (prefisso `/admin`) protegge le route di amministrazione; in 12a è uno scheletro senza endpoint.
 
-## Sicurezza
+## Sicurezza (Fase 13b)
 - `SECRET_KEY` letto da env var, default di sviluppo con placeholder esplicito.
 - Validazione server-side obbligatoria su tutti gli input in persistenza.
-- Campi numerici limitati a range consentiti (es. `hours_spent` 1..24).
+- Campi numerici limitati a range consentiti: `hours` in `EffortEntryCreate` → `ge=1, le=12`, step 0.50 (validatore `hours_step_half` con tolleranza floating point e arrotondamento a 2 decimali). Nessun vincolo specifico per Supporto Specialistico (straordinari > 4h ammessi).
 - Dropdown validati lato server, mai fidarsi dei valori del browser.
 - Password mai in chiaro: solo hash bcrypt in `users.password_hash`.
 - La password admin in produzione va cambiata via env var (mai lasciare admin/admin).
+- **Header di sicurezza HTTP** (`app/core/security_headers.py`, Issue G): middleware `SecurityHeadersMiddleware` (Starlette `BaseHTTPMiddleware`) registrato in `main.py` che aggiunge a ogni risposta `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Content-Security-Policy` (default-src 'self'; style/script 'unsafe-inline' per il tema anti-FOUC; img data:; object 'none'; base-uri self; form-action self), `Strict-Transport-Security`, `Referrer-Policy: no-referrer`, `Permissions-Policy`. Non sovrascrive header già impostati.
+- **Pagine errore** (Issue A, Fase 13b): `exception_handlers` in `main.py` per `StarletteHTTPException` (404→`404.html`, 500→`500.html`, altri codici 401/403/405/...→`error.html` generico con `status_code`+`detail` nel context) e `RequestValidationError` (→`500.html`). engine `templates` (Jinja2Templates) dal `TEMPLATES_DIR`. `error.html` estende `base.html` coerente col tema. Helper `_error_context(request)` **sincrono** e **senza query DB** (solo username da sessione) per pagine di errore robuste anche in caso di problemi di connettività. Nota: i context di errore vanno costruiti con funzioni sincrone (no `async def`) per evitare coroutine passate a `TemplateResponse`.

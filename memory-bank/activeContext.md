@@ -1,12 +1,12 @@
 # Active Context — Effort Tracking
 
 ## Stato corrente
-- **Ultima sottofase completata**: Fase 13a ✅ (2026-08-03) — funzionalità admin (disabilita utente + assegnazione gruppo).
-- **Fase in corso**: nessuna. Prossima: Fase 13b (sicurezza e robustezza).
+- **Ultima sottofase completata**: Fase 13b ✅ (2026-08-03) — sicurezza e robustezza (header HTTP, pagine errore 404/500, validazione ore 1-12 step 0.50).
+- **Fase in corso**: nessuna. Prossima: Fase 13c (test, doc e preparazione produzione).
 - **Stato**: idle, pronto per nuovo task.
-- **Versione corrente**: `0.19.0`.
+- **Versione corrente**: `0.20.0`.
 - **Scomposizione Fase 12**: completata integralmente (12a-12d). Hardening = Fase 13, ora riorganizzata.
-- **Scomposizione Fase 13 (riorganizzata 2026-08-03)**: 13a (ex 13b, funzionalità admin: Issue K+L, S8 ✅), 13b (ex 13c, sicurezza: 404/500, ore 1-12, XSS, headers + S4 filtro anno+mese), 13c (ex 13d, test+produzione), 13d (ex 13a, fix stilistici/UX, rimandata perché richiede screenshot).
+- **Scomposizione Fase 13 (riorganizzata 2026-08-03)**: 13a (ex 13b, funzionalità admin: Issue K+L, S8 ✅), 13b (ex 13c, sicurezza: 404/500, ore 1-12, headers ✅; XSS rinviato a Fase 14, S4 rinviata a 13c/13d), 13c (ex 13d, test+produzione), 13d (ex 13a, fix stilistici/UX, rimandata perché richiede screenshot).
 - **DB di sviluppo**: rigenerato con dataset multi-gruppo (Fase 12c). 2 gruppi (SOC, NOC), 6 utenti di test con ~20 record ciascuno, password `test`. Admin resta utente di sola gestione (group_id NULL).
 - **Roadmap estesa**: aggiunte Fase 4b (sidebar hamburger), Fase 5b (copia su settimana), Fase 12 (Admin), Fase 13 (Manager); hardening slitta a Fase 14. La Fase 9 è stata **sdoppiata** su richiesta utente: **Fase 9** (refactoring, logging, .env, systemd — solo backend) e **Fase 9b** (toggle dark/light, aggiornamento dipendenze — solo frontend). Vedi `progress.md`/`projectbrief.md`.
 - **Nota**: la tabella `effort_entries` **non ha più** la colonna `user_text` (rimossa in Fase 11). `user_id` è ora una FK verso `users.id` (ON DELETE SET NULL). DB di sviluppo (Fase 12c): 2 gruppi (SOC, NOC), 6 utenti di test + admin, 120 record. **Merge su `main` autorizzato in Fase 9 (due volte) e Fase 9b**: `main` include le fasi 1–9b, v0.12.0. Le fasi 10+ sono solo su `develop`.
@@ -216,12 +216,12 @@
 ## Fasi successive (scomposizione Fase 13 riorganizzata 2026-08-03)
 L'ordine delle sottofasi è stato cambiato (13d rimandata per ultima perché richiede screenshot non supportati dal modello attuale).
 - **Fase 13a — Funzionalità admin** ✅ completata (2026-08-03): colonna `disabled` su User (login bloccato, record intatti) + migrazione; endpoint toggle disabilita/abilita; assegnazione `group_id` in creazione e modifica utente (Issue K + Issue L rivista); avvisi ed eliminazione solo per utenti disabilitati (Suggestion 8). Suggestion 4 (filtro anno+mese) rinviata a 13b.
-- **Fase 13b — Sicurezza e robustezza** (da fare): pagine errore 404/500, validazione ore 1-12 + vincoli Supporto Specialistico, verifica anti-XSS, security headers HTTP, **Suggestion 4 (filtro anno+mese)**.
-- **Fase 13c — Test, doc e preparazione produzione** (da fare): test funzionali con pytest, eventuale riposizionamento Export, review systemd, README deploy, note PostgreSQL.
-- **Fase 13d — Fix stilistici e UX** (rinviata): Issue I (stile admin utenti), Issue J (stile admin lookup), Suggestion 1 (hamburger login), Suggestion 2 (step ore 0.5), Suggestion 5 (evidenzia record). Richiede screenshot.
+- **Fase 13b — Sicurezza e robustezza** ✅ completata (2026-08-03): pagine errore 404/500 (Issue A), validazione ore 1-12 step 0.50 (Issue D + Suggestion 2), header di sicurezza HTTP (Issue G). Su richiesta utente anche i codici 401/403/405/... sono ora templatizzati con `error.html` generico (prima HTML spoglio). XSS (Issue F) rinviato a Fase 14 (audit sicurezza). Suggestion 4 (filtro anno+mese) rinviata a Fase 13c/13d.
+- **Fase 13c — Test, doc e preparazione produzione** (da fare): test funzionali con pytest (Issue H), eventuale riposizionamento Export (Issue C), review systemd, README deploy, note PostgreSQL.
+- **Fase 13d — Fix stilistici e UX** (rinviata): Issue I (stile admin utenti), Issue J (stile admin lookup), Suggestion 1 (hamburger login), Suggestion 5 (evidenzia record). Richiede screenshot.
 
 ## Rischi / punti aperti
-- **`memory-bank/Issue-Suggestion.md`** traccia issue minori e suggerimenti raccolti dai test utente (priorità molto bassa). Attualmente: **Suggestion 1** (hamburger in login), **Suggestion 2** (incremento ore), **Suggestion 3** (menu su immagine utente), **Suggestion 4** (filtro anno+mese), **Suggestion 5** (evidenzia record modificato), **Suggestion 6** (checkbox ferie). Nessuna issue aperta (Issue 1 risolta in 0.13.1).
+- **`memory-bank/Issue-Suggestion.md`** traccia le voci ancora aperte raccolte dai test utente (priorità molto bassa). Dopo la Fase 13b (Suggestion 2 risolta): **Suggestion 1** (hamburger in login), **Suggestion 3** (menu su immagine utente), **Suggestion 4** (filtro anno+mese), **Suggestion 5** (evidenzia record modificato), **Suggestion 6/7** (ferie, gruppo modificabile), **Suggestion 8** (eliminazione utente ritardata) + Issue B (nav Esporta), C (export fuori contesto), E (last_login), F (XSS→Fase 14), H (test funzionali→13c), I/J (stile admin→13d).
 - Password admin di default `admin/admin`: va cambiata subito in produzione via env var (Sicurezza Fase 14).
 - La sessione HTTP firmata richiede `SECRET_KEY` robusta in produzione (placeholder in sviluppo).
 - `pydantic-core` pinnato a 2.46.4 per compatibilità con pydantic 2.13.4; quando pydantic sarà aggiornato, andrà aggiornato insieme.

@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block title %}{{ app_name|default("Effort Tracking") }} &mdash; Pagina non trovata{% endblock %}
+
+{% block content %}
+  <section class="form-card" aria-labelledby="error-title">
+    <div class="admin-hero" style="text-align:center;">
+      <h2 id="error-title" class="card-title">404 — Pagina non trovata</h2>
+      <p>La pagina o la risorsa richiesta non esiste oppure è stata spostata.</p>
+      <p>Controlla l'indirizzo e riprova.</p>
+      <p>
+        <a class="filter-bar__export" href="/" role="button">Torna alla home</a>
+        {% if current_username is defined and current_username %}
+          <a class="filter-bar__export" href="/admin" role="button" style="margin-left:8px;">Vai alla dashboard</a>
+        {% endif %}
+      </p>
+    </div>
+  </section>
+{% endblock %}

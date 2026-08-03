@@ -11,13 +11,6 @@
 
 **Suggerimento:** nascondere il menu hamburger nella login, poiché potrebbe contenere sezioni riservate a specifiche tipologie di utenti o gruppi di appartenenza.
 
-## Suggestion 2 - Incrementale delle ore
-**Contesto:** Nuova registrazione o modifica.
-
-**Comportamento attuale:** Le ore vengono ingramentate di un quarto di ora alla volta
-
-**Suggerimento:** incrementare di mezz'ora alla volta
-
 ## Suggestion 3 - Menu a discesa sull'immagine utente
 **Contesto:** tutte le pagine, ad eccezione della pagina di login.
 
@@ -93,10 +86,6 @@ Aggiornare il suggerimento 3 senza rimuoverlo completamente, seguiranno ulterior
 > state risolte: vanno verificate prima di essere considerate chiuse o da fare.
 > Quando una voce viene verificata e risolta, va **rimossa** da qui.
 
-### Issue A — Gestione errori 404/500 con pagine HTML dedicate
-- **Stato**: 🔴 da verificare
-- **Descrizione**: Attualmente gli errori restituiscono JSON o pagine vuote. Servono pagine HTML dedicate per 404 e 500, coerenti con il tema.
-
 ### Issue B — Navbar: link "Esporta" non funzionante
 - **Stato**: 🔴 da verificare
 - **Descrizione**: Il link "Esporta" nella navbar non è funzionante. Va rimosso o reso operativo.
@@ -105,10 +94,6 @@ Aggiornare il suggerimento 3 senza rimuoverlo completamente, seguiranno ulterior
 - **Stato**: 🔴 da verificare
 - **Descrizione**: Il pulsante "Esporta CSV" è posizionato nella barra filtri ma non è chiaramente un'azione di export. Valutare se spostarlo in un menu contestuale o in una toolbar dedicata.
 
-### Issue D — Validazione avanzata ore spese (range 1-12, vincoli per Supporto Specialistico)
-- **Stato**: 🔴 da verificare
-- **Descrizione**: Il campo Ore Spese deve essere validato con range 1-12 (non 0.25-24 come attuale). Per Supporto Specialistico potrebbe esserci un vincolo diverso (es. max 4 ore).
-
 ### Issue E — Registrazione automatica data/ora ultimo login
 - **Stato**: 🔴 da verificare
 - **Descrizione**: Al momento non viene tracciato l'ultimo accesso degli utenti. Aggiungere campo `last_login` alla tabella `users` e popolarlo al login.
@@ -116,10 +101,6 @@ Aggiornare il suggerimento 3 senza rimuoverlo completamente, seguiranno ulterior
 ### Issue F — Sanificazione input e protezione XSS base
 - **Stato**: 🔴 da verificare
 - **Descrizione**: Verificare che tutti gli input utente siano sanificati contro XSS. Jinja2 auto-escape è attivo di default, ma verificare note, descrizione e campi testuali.
-
-### Issue G — Verifica sicurezza headers HTTP
-- **Stato**: 🔴 da verificare
-- **Descrizione**: Aggiungere header di sicurezza HTTP (Content-Security-Policy, X-Content-Type-Options, X-Frame-Options, ecc.) tramite middleware Starlette.
 
 ### Issue H — Test funzionali base con pytest
 - **Stato**: 🔴 da verificare
@@ -140,5 +121,9 @@ Aggiornare il suggerimento 3 senza rimuoverlo completamente, seguiranno ulterior
  - pulsante **AGGIUNGI** disallineato rispetto al campo **NOME**
  - vorrei uno stile più tabellare (creare vari mokup)
 
+<!-- Suggestion 2 risolta in Fase 13b (ore step 0.50). -->
+<!-- Issue A risolta in Fase 13b (pagine errore 404/500). -->
+<!-- Issue D risolta in Fase 13b (validazione ore 1-12, step 0.50). -->
+<!-- Issue G risolta in Fase 13b (header di sicurezza HTTP). -->
 <!-- Issue K risolta in Fase 13a (assegnazione gruppo utenti). -->
 <!-- Issue L risolta in Fase 13a (disabilita utente con flag disabled). -->
