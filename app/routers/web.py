@@ -116,7 +116,7 @@ async def index(
         context={
             "app_name": APP_NAME,
             "app_version": APP_VERSION,
-            "phase": "Fase 9 — Refactoring, logging, env",
+            "phase": "Fase 9b — Toggle dark/light",
             "clients": clients,
             "groups": groups,
             "activities": activities,

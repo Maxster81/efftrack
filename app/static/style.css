@@ -50,6 +50,28 @@
   --radius-lg: 12px;
 }
 
+/* Tema esplicito "light" (Fase 9b): replica :root per chiarezza.
+   La modalità dark è attivata da data-theme="dark" sull'elemento <html>. */
+[data-theme="light"] {
+  --color-primary: #1e3a5f;
+  --color-primary-contrast: #ffffff;
+  --color-primary-hover: #2a4d7a;
+
+  --color-accent: #c9d6e8;
+  --color-accent-strong: #4a78b8;
+
+  --color-bg: #f4f6f8;
+  --color-surface: #ffffff;
+  --color-surface-alt: #eef1f4;
+
+  --color-text: #1f2933;
+  --color-text-muted: #5a6573;
+  --color-text-on-primary: #ffffff;
+
+  --color-border: #d6dbe1;
+  --color-border-strong: #b6bdc6;
+}
+
 /* Predisposizione tema dark (toggle UI arriverà in Fase 9) */
 [data-theme="dark"] {
   --color-primary: #4a78b8;
@@ -152,6 +174,29 @@ a:hover { text-decoration: underline; }
 .app-header__user:hover {
   background: rgba(255, 255, 255, 0.12);
   border-color: rgba(255, 255, 255, 0.6);
+}
+.app-header__theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--color-text-on-primary);
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+.app-header__theme-toggle:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.6);
+}
+.app-header__theme-icon {
+  display: block;
+  font-size: 1.05rem;
+  line-height: 1;
 }
 .app-header__user-icon {
   display: block;

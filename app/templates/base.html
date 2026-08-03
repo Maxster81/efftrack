@@ -3,9 +3,18 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>{% block title %}{{ app_name }}{% endblock %}</title>
-  <link rel="stylesheet" href="{{ url_for('static', path='style.css') }}" />
-</head>
+   <title>{% block title %}{{ app_name }}{% endblock %}</title>
+   <link rel="stylesheet" href="{{ url_for('static', path='style.css') }}" />
+   <!-- Applica il tema salvato prima del rendering per evitare il flash
+        del tema chiaro all'avvio (Fase 9b). -->
+   <script>
+     (function () {
+       var t = null;
+       try { t = localStorage.getItem("theme-preference"); } catch (e) {}
+       if (t === "dark") { document.documentElement.setAttribute("data-theme", "dark"); }
+     })();
+   </script>
+ </head>
 <body>
   <header class="app-header" role="banner">
     <div class="app-header__inner">
@@ -21,9 +30,13 @@
         </button>
         <h1 class="app-header__title">{{ app_name }}</h1>
       </div>
-      <div class="app-header__actions">
-        <span class="app-header__phase" aria-label="Fase corrente">{{ phase }}</span>
-        <button type="button" class="app-header__user" aria-label="Utente (futuro login)" title="Utente">
+       <div class="app-header__actions">
+         <span class="app-header__phase" aria-label="Fase corrente">{{ phase }}</span>
+         <button type="button" class="app-header__theme-toggle" id="theme-toggle"
+                 aria-label="Passa al tema scuro" title="Tema chiaro attivo — passa allo scuro">
+           <span class="app-header__theme-icon" id="theme-toggle-icon" aria-hidden="true">🌙</span>
+         </button>
+         <button type="button" class="app-header__user" aria-label="Utente (futuro login)" title="Utente">
           <svg class="app-header__user-icon" width="22" height="22" viewBox="0 0 24 24" fill="none"
                xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
             <circle cx="12" cy="8" r="4" fill="currentColor" />
@@ -57,7 +70,8 @@
     <small>{{ app_name }} &middot; v{{ app_version }}</small>
   </footer>
 
-  {% block scripts %}{% endblock %}
-  <script src="{{ url_for('static', path='nav.js') }}" defer></script>
-</body>
+   {% block scripts %}{% endblock %}
+   <script src="{{ url_for('static', path='nav.js') }}" defer></script>
+   <script src="{{ url_for('static', path='theme.js') }}" defer></script>
+ </body>
 </html>

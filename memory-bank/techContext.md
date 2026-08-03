@@ -13,7 +13,7 @@
 
 ## Framework e librerie principali
 - **FastAPI** — web framework, tipizzazione nativa, `lifespan` pattern, router modulari.
-- **Uvicorn** (con extra `standard`) — ASGI server, bind su `0.0.0.0` in dev, su `127.0.0.1` in prod dietro reverse proxy.
+- **Uvicorn 0.52.1** (con extra `standard`) — ASGI server, bind su `0.0.0.0` in dev, su `127.0.0.1` in prod dietro reverse proxy.
 - **Jinja2** — template engine server-side.
 - **SQLAlchemy 2.x** — ORM type-safe, predisposizione a migrazione PostgreSQL.
 - **Pydantic v2** — validazione input/output.

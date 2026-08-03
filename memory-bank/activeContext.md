@@ -1,18 +1,18 @@
 # Active Context — Effort Tracking
 
 ## Stato corrente
-- **Ultima fase completata**: Fase 9 ✅ (2026-08-03) — refactoring, logging, `.env`, systemd.
-- **Fase in corso**: Fase 9b (toggle dark/light + aggiornamento dipendenze) — non avviata, in attesa di task.
-- **Stato**: in pausa tra la Fase 9 e la 9b.
-- **Versione corrente**: `0.11.0` (tag `v0.11.0` annotato su `develop`).
+- **Ultima fase completata**: Fase 9b ✅ (2026-08-03) — toggle dark/light + aggiornamento dipendenze.
+- **Fase in corso**: nessuna. Prossima: Fase 10 (autenticazione locale).
+- **Stato**: idle, pronto per nuovo task.
+- **Versione corrente**: `0.12.0` (tag `v0.12.0` annotato su `develop`).
 - **Roadmap estesa**: aggiunte Fase 4b (sidebar hamburger), Fase 5b (copia su settimana), Fase 12 (Admin), Fase 13 (Manager); hardening slitta a Fase 14. La Fase 9 è stata **sdoppiata** su richiesta utente: **Fase 9** (refactoring, logging, .env, systemd — solo backend) e **Fase 9b** (toggle dark/light, aggiornamento dipendenze — solo frontend). Vedi `progress.md`/`projectbrief.md`.
-- **Nota**: la tabella `effort_entries` ha la colonna `user_text` (String 128 nullable). Contiene dati reali (110 record: fixture gen-lug 2026 + preesistenti). **Merge su `main` autorizzato dall'utente in Fase 9 (2026-08-03)** prima di iniziare la fase: `main` ora include le fasi 7–9 (v0.11.0).
-- **Nota ambiente**: sviluppo su **Ubuntu in WSL** (Python 3.12.3, pip 24.0). Venv ricreato in questa macchina. Dipendenze: fastapi 0.141.1, uvicorn 0.52.0, sqlalchemy 2.0.51, pydantic 2.13.4, jinja2 3.1.6, python-multipart 0.0.32, python-dotenv 1.2.2, pytest 9.1.1 (in dev, non in produzione).
+- **Nota**: la tabella `effort_entries` ha la colonna `user_text` (String 128 nullable). Contiene dati reali (110 record: fixture gen-lug 2026 + preesistenti). **Merge su `main` autorizzato dall'utente due volte in Fase 9 (2026-08-03)**: una prima di iniziare (baseline stabile, `main` = Fase 8 v0.10.0) e una a fine fase dopo conferma esplicita (`main` ora include le fasi 7–9, v0.11.0).
+- **Nota ambiente**: sviluppo su **Ubuntu in WSL** (Python 3.12.3, pip 24.0). Venv ricreato in questa macchina. Dipendenze: fastapi 0.141.1, uvicorn 0.52.1, sqlalchemy 2.0.51, pydantic 2.13.4 (pydantic-core 2.46.4, pin compatibile), jinja2 3.1.6, python-multipart 0.0.32, python-dotenv 1.2.2, pytest 9.1.1 (in dev, non in produzione). `pydantic-core` 2.47.0 NON è adottato: incompatibile con pydantic 2.13.4.
 
 ## Decisioni recenti
 - **Stack**: FastAPI + Jinja2 + SQLAlchemy 2.x + SQLite.
 - **Palette UI**: blu navy + grigi neutri (variabili CSS in `:root`, predisposte per dark/light futuri).
-- **Tema**: struttura CSS variabili presente; toggle dark/light rimandato a Fase 9b.
+- **Tema**: toggle dark/light **funzionante** dalla Fase 9b (due modalità dark/light, preferenza in localStorage `theme-preference`, default light).
 - **Struttura**: repo unico con layout modulare (`app/{routers,services,repositories,schemas,models,core}`).
 - **Systemd**: template `efftrack.service` creato in Fase 0 ma non attivato.
 - **Branching**: `main` intoccato salvo autorizzazione esplicita. Tutto il lavoro su `develop`.
@@ -162,15 +162,29 @@
 - `GET /health` → 200 `{"app":"Effort Tracking","version":"0.11.0","status":"ok","db":"ok"}`.
 - `GET /` → 200; `GET /export` → 200 con log `Export CSV generato (record=110, mese=tutti)`.
 
-## Fasi successive (dopo 9)
-- **Fase 9b**: toggle dark/light + aggiornamento dipendenze (frontend).
+## Modifiche di Fase 9b (toggle dark/light + dipendenze)
+- **`app/static/theme.js`** (NUOVO): toggle bistabile dark/light (nessun rilevamento di sistema). Salva in `localStorage["theme-preference"]`, legge al caricamento, applica `data-theme="dark"` su `<html>`, aggiorna icona/label del pulsante. Default light.
+- **`app/templates/base.html`**: pulsante `.app-header__theme-toggle` (#theme-toggle) con icona ☀️/🌙 dentro `.app-header__actions` (tra fase e icone utente); script inline anti-FOUC nel `<head>` che applica il tema salvato **prima** del rendering; `theme.js` incluso con `defer` prima di `</body>`.
+- **`app/static/style.css`**: blocco `[data-theme="light"]` esplicito (replica :root per coerenza a tre-blocco: :root, light, dark); stile `.app-header__theme-toggle` e `.app-header__theme-icon` coerenti con `.app-header__user`; commento dark aggiornato.
+- **`app/routers/web.py`**: label fase → "Fase 9b — Toggle dark/light".
+- **Dipendenze**: `uvicorn` 0.52.0 → 0.52.1 (PATCH stabilità). `pydantic-core` tentativo di 2.47.0 **scartato e ripristinato a 2.46.4** per compatibilità con pydantic 2.13.4 (`pip check` OK).
+- **`VERSION`**: `0.11.0` → `0.12.0` (MINOR: nuova funzionalità toggle tema).
+
+## Verifiche Fase 9b (test + curl + avvio)
+- **Test**: 8/8 OK (pytest).
+- `GET /health` → 200 `v0.11.0` (la versione nel payload è quella di config; aggiornamento a 0.12.0 dopo bump).
+- `GET /` → label "Fase 9b — Toggle dark/light"; elemento `id="theme-toggle"` presente; script anti-FOUC (`theme-preference`) presente.
+- `/static/theme.js` → 200 `text/javascript`; `/static/style.css` → 200 `text/css`.
+- **Verifica utente (browser)**: click toggle alterna dark/light, preferenza persistita in localStorage, nessun flash al reload.
+
+## Fasi successive (dopo 9b)
 - **Fasi 10–11**: auth locale, multiutente/segregazione.
 - **Fase 12 — Admin**: tabella `roles`, CRUD utenti + assegnazione ruoli, CRUD lookup, sezione `/admin`.
 - **Fase 13 — Manager**: vista/export dei record del proprio gruppo, senza gestione lookup/utenti.
 - **Fase 14 — Hardening**: ex Fase 12.
 
 ## Rischi / punti aperti
-- Tema dark/light rimandato a Fase 9b (non avviata).
+- `pydantic-core` è pinnato a 2.46.4 per compatibilità con pydantic 2.13.4; quando pydantic sarà aggiornato, andrà aggiornato insieme.
 - Migrazioni schema: `CREATE TABLE IF NOT EXISTS` / seed idempotente; poiché `code` è stato rimosso dopo la prima creazione, il DB va rigenerato se cambia schema (nessun ALTER automatico gestisce la rimozione colonna). Da valutare `ALTER TABLE` controllato o Alembic se cresce la complessità.
 - `user_id` nullable senza FK in `effort_entries`, valorizzato in Fase 11.
 - La cancellazione è **permanente** e senza soft-delete/audit (da valutare in Fase 14/hardening).
