@@ -62,13 +62,38 @@ def _migrate_users_last_login(engine: Engine) -> None:
     logger.info("Colonna users.last_login aggiunta")
 
 
+def _migrate_users_group_id(engine: Engine) -> None:
+    """Migrazione Fase 12c: aggiunge la colonna `group_id` a `users`.
+
+    Idempotente: se la colonna esiste già, non fa nulla. Usa ALTER TABLE
+    con FK verso `groups.id` (nullable).
+    """
+    inspector = inspect(engine)
+    if "users" not in inspector.get_table_names():
+        return
+
+    columns = {col["name"] for col in inspector.get_columns("users")}
+    if "group_id" in columns:
+        logger.debug("Colonna users.group_id già presente, migrazione non necessaria")
+        return
+
+    logger.info("Migrazione Fase 12c: aggiunta colonna users.group_id")
+    with engine.begin() as connection:
+        connection.execute(
+            text("ALTER TABLE users ADD COLUMN group_id INTEGER REFERENCES groups(id)")
+        )
+    logger.info("Colonna users.group_id aggiunta")
+
+
 def run_schema_migrations(engine: Engine) -> None:
     """Applica le migrazioni controllate dello schema all'avvio.
 
     - Fase 11: rimozione di `effort_entries.user_text` e aggiunta della FK.
     - Fase 12b: aggiunta della colonna `users.last_login`.
+    - Fase 12c: aggiunta della colonna `users.group_id` (FK verso groups).
 
     Idempotente: se lo schema è già allineato, non fa nulla.
     """
     _migrate_effort_entries(engine)
     _migrate_users_last_login(engine)
+    _migrate_users_group_id(engine)

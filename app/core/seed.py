@@ -32,6 +32,7 @@ _CLIENTS: list[dict[str, str]] = [
 
 _GROUPS: list[dict[str, str]] = [
     {"name": "GRUPPO SOC"},
+    {"name": "GRUPPO NOC"},
 ]
 
 _ACTIVITIES: list[dict[str, object]] = [
@@ -45,11 +46,18 @@ _ACTIVITIES: list[dict[str, object]] = [
     },
 ]
 
-# Utenti di test (Fase 11): usati solo per verificare la segregazione dati.
-_TEST_USERS: list[dict[str, str]] = [
-    {"username": "mario", "password": "test", "role": "user"},
-    {"username": "giulia", "password": "test", "role": "user"},
-    {"username": "luca", "password": "test", "role": "user"},
+# Utenti di test (Fasi 11/12c): per verificare segregazione e ruoli.
+# La colonna `group` è il nome del gruppo di appartenenza (mappato a group_id
+# da seed_test_users); `group_none=True` lascia il group_id a None (es. admin).
+_TEST_USERS: list[dict[str, str | None]] = [
+    # 2 MANAGER: uno per SOC, uno per NOC.
+    {"username": "giulia", "password": "test", "role": "manager", "group": "GRUPPO SOC"},
+    {"username": "marco", "password": "test", "role": "manager", "group": "GRUPPO NOC"},
+    # 4 USER: 2 per SOC, 2 per NOC.
+    {"username": "mario", "password": "test", "role": "user", "group": "GRUPPO SOC"},
+    {"username": "paolo", "password": "test", "role": "user", "group": "GRUPPO SOC"},
+    {"username": "anna", "password": "test", "role": "user", "group": "GRUPPO NOC"},
+    {"username": "elisa", "password": "test", "role": "user", "group": "GRUPPO NOC"},
 ]
 
 # Record di test per ciascun utente di test (Fase 11).
@@ -103,40 +111,73 @@ def seed_admin_user(db: Session) -> None:
     logger.info("Utente admin creato: username=%s", ADMIN_USERNAME)
 
 
-def seed_test_users(db: Session) -> None:
-    """Crea gli utenti di test (mario, giulia, luca) se non esistono (Fase 11).
+def _username_list() -> list[str]:
+    """Lista di tutti gli username di test (per query e seed record)."""
+    return [str(u["username"]) for u in _TEST_USERS]
 
-    Idempotente per username: non duplica ni utente che esiste già.
+
+def seed_test_users(db: Session) -> None:
+    """Crea/aggiorna gli utenti di test (2 MANAGER + 4 USER su 2 gruppi, Fase 12c).
+
+    Idempotente per username. Ogni utente ha `role` e `group_id` derivati
+    dalla configurazione `_TEST_USERS`, mappando il nome del gruppo al suo id.
+    Gli utenti esistenti vengono aggiornati (upsert) per allineare ruolo/gruppo.
     Password di default "test" (solo sviluppo).
     """
-    existing = set(db.execute(select(User.username)).scalars().all())
-    created: list[str] = []
+    # Mappa nome gruppo → id (SOC e NOC).
+    groups = {g.name: g.id for g in db.execute(select(Group)).scalars().all()}
+
+    updated: list[str] = []
     for data in _TEST_USERS:
-        if data["username"] in existing:
-            continue
-        db.add(
-            User(
-                username=data["username"],
-                password_hash=bcrypt.hash(data["password"]),
-                role=data["role"],
+        username = data["username"]
+        role = data["role"]
+        group_name = data["group"]
+        group_id = groups.get(group_name) if group_name else None
+
+        user = db.execute(
+            select(User).where(User.username == username)
+        ).scalar_one_or_none()
+
+        if user is None:
+            db.add(
+                User(
+                    username=username,
+                    password_hash=bcrypt.hash(data["password"]),
+                    role=role,
+                    group_id=group_id,
+                )
             )
-        )
-        created.append(data["username"])
-    if created:
+            updated.append(f"{username} (creato, {role})")
+            continue
+
+        # Upsert per allineare ruolo e gruppo.
+        changed = False
+        if user.role != role:
+            user.role = role
+            changed = True
+        if user.group_id != group_id:
+            user.group_id = group_id
+            changed = True
+        if changed:
+            updated.append(f"{username} (aggiornato, {role})")
+
+    if updated:
         db.commit()
-        logger.info("Utenti di test creati: %s", ", ".join(created))
+        logger.info("Utenti di test aggiornati: %s", ", ".join(updated))
     else:
-        logger.debug("Utenti di test già presenti, seed non necessario")
+        logger.debug("Utenti di test già allineati, seed non necessario")
 
 
 def seed_test_records(db: Session) -> None:
-    """Crea ~20 record di effort per ciascun utente di test (Fase 11).
+    """Crea ~20 record di effort per ciascun utente di test (Fasi 11/12c).
 
     Idempotente: se esistono già record con `user_id` associati agli utenti
-    di test, non fa nulla. I record sono spalmati sui giorni feriali del 2026.
+    di test, non fa nulla. Ogni record usa il `group_id` del gruppo di
+    appartenenza dell'utente (così la vista manager per gruppo ha senso).
     """
+    usernames = _username_list()
     test_users = db.execute(
-        select(User).where(User.username.in_(["mario", "giulia", "luca"]))
+        select(User).where(User.username.in_(usernames))
     ).scalars().all()
     if not test_users:
         logger.debug("Nessun utente di test: seed record non necessario")
@@ -153,7 +194,7 @@ def seed_test_records(db: Session) -> None:
         return
 
     clients = db.execute(select(Client).order_by(Client.name)).scalars().all()
-    groups = db.execute(select(Group).order_by(Group.name)).scalars().all()
+    groups = {g.name: g.id for g in db.execute(select(Group)).scalars().all()}
     activities = db.execute(select(Activity).order_by(Activity.name)).scalars().all()
     if not clients or not groups or not activities:
         logger.debug("Lookup mancanti: seed record di test non possibile")
@@ -166,8 +207,12 @@ def seed_test_records(db: Session) -> None:
 
     rows = rng.sample(workdays, k=_TEST_RECORDS_PER_USER * len(test_users))
     created_ids = 0
-    for i, username in enumerate(["mario", "giulia", "luca"]):
+    for i, data in enumerate(_TEST_USERS):
+        username = data["username"]
+        group_name = data["group"]
         user = next(u for u in test_users if u.username == username)
+        group_id = groups.get(group_name) if group_name else None
+
         for j, work_date in enumerate(
             sorted(rows[i * _TEST_RECORDS_PER_USER : (i + 1) * _TEST_RECORDS_PER_USER])
         ):
@@ -176,7 +221,7 @@ def seed_test_records(db: Session) -> None:
             entry = EffortEntry(
                 user_id=user.id,
                 client_id=rng.choice(clients).id,
-                group_id=groups[0].id,
+                group_id=group_id,
                 activity_id=activity.id,
                 work_date=work_date,
                 hours_spent=rng.choice([4.0, 5.0, 6.0, 7.0, 7.5, 8.0]),

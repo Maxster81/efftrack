@@ -27,7 +27,7 @@ from sqlalchemy.orm import Session, selectinload
 from fastapi.templating import Jinja2Templates
 
 from app.config import APP_NAME, APP_VERSION, AUTH_ENABLED, TEMPLATES_DIR
-from app.core.permissions import is_admin
+from app.core.permissions import is_admin, is_manager
 from app.db import get_db
 from app.dependencies import get_current_user
 from app.models import Activity, Client, EffortEntry, Group, User
@@ -86,16 +86,17 @@ def _with_month(base_url: str, month: str | None) -> str:
 
 
 def _sidebar_items(user: User) -> list[dict[str, str]]:
-    """Voci della sidebar in base al ruolo dell'utente loggato (Fase 12b).
+    """Voci della sidebar in base al ruolo dell'utente loggato (Fasi 12b/12c).
 
-    In questa sottofase tutti i ruoli (USER, MANAGER, ADMIN) hanno almeno
-    il link "Registrazioni" che porta alla pagina principale. Le voci
-    specifiche per MANAGER (Gruppo) e ADMIN (Gestione utenti / Gestione
-    lookup) verranno aggiunte nelle fasi 12c e 12d.
+    - USER: solo "Registrazioni".
+    - MANAGER: "Registrazioni" + "Gruppo" (vista gruppo, Fase 12c).
+    - ADMIN: "Registrazioni" (+ Gestione utenti/lookup in Fase 12d).
     """
     items: list[dict[str, str]] = [
         {"label": "Registrazioni", "href": "/"},
     ]
+    if is_manager(user):
+        items.append({"label": "Gruppo", "href": "/group"})
     return items
 
 
@@ -433,6 +434,137 @@ def _build_csv(records: list[EffortEntry]) -> str:
             ]
         )
     return buffer.getvalue()
+
+
+def _is_manager_view(user: User | None) -> bool:
+    """True se l'utente è un manager (con un gruppo da gestire)."""
+    return user is not None and is_manager(user) and user.group_id is not None
+
+
+def _records_in_group_statement(db: Session, group_id: int) -> Select:
+    """Restituisce lo statement SQL dei record di tutti gli utenti del gruppo.
+
+    Fase 12c: la vista gruppo del manager mostra i record di tutti gli utenti
+    che hanno `group_id` uguale a quello del manager.
+    """
+    user_ids = db.execute(select(User.id).where(User.group_id == group_id)).scalars().all()
+    stmt: Select = (
+        select(EffortEntry)
+        .options(
+            selectinload(EffortEntry.client),
+            selectinload(EffortEntry.group),
+            selectinload(EffortEntry.activity),
+            selectinload(EffortEntry.user),
+        )
+        .order_by(EffortEntry.work_date.desc())
+    )
+    if user_ids:
+        stmt = stmt.where(EffortEntry.user_id.in_(user_ids))
+    else:
+        # Nessun membro nel gruppo: nessun record visibile.
+        stmt = stmt.where(False)
+    return stmt
+
+
+def _records_in_group(db: Session, group_id: int, month: str | None) -> list[EffortEntry]:
+    """Restituisce i record del gruppo indicato, opzionalmente filtrati per mese."""
+    stmt = _records_in_group_statement(db, group_id)
+    if month:
+        stmt = stmt.where(func.strftime("%Y-%m", EffortEntry.work_date) == month)
+    return db.execute(stmt).scalars().all()
+
+
+def _month_options_in_group(db: Session, group_id: int) -> list[tuple[str, str]]:
+    """Calcola le opzioni mese (YYYY-MM, label italiana) per i record del gruppo."""
+    month_stmt = (
+        select(func.strftime("%Y-%m", EffortEntry.work_date).label("month"))
+        .distinct()
+        .order_by(func.strftime("%Y-%m", EffortEntry.work_date).desc())
+        .where(
+            EffortEntry.user_id.in_(
+                select(User.id).where(User.group_id == group_id)
+            )
+        )
+    )
+    month_rows = db.execute(month_stmt).scalars().all()
+    return [
+        (m, f"{_MESI_ITALIANI[int(m.split('-')[1])]} {m.split('-')[0]}")
+        for m in month_rows
+    ]
+
+
+@router.get("/group", response_class=HTMLResponse, name="group_view")
+async def group_view(
+    request: Request,
+    db: Session = Depends(get_db),
+    user: User | None = Depends(get_current_user),
+    month: str | None = None,
+) -> HTMLResponse:
+    """Pagina del gruppo per il manager: solo visualizzazione/esportazione (Fase 12c).
+
+    Il manager vede i record di tutti gli utenti del gruppo che gestisce,
+    con filtro mese/anno. Non c'è il form di inserimento: la vista è read-only.
+    """
+    redirect = _require_auth(user)
+    if redirect is not None:
+        return redirect
+    assert user is not None
+    if not _is_manager_view(user):
+        logger.warning("Accesso negato a /group per utente %s (ruolo=%s)", user.username, user.role)
+        return RedirectResponse("/", status_code=303)
+
+    group = db.get(Group, user.group_id)
+    records = _records_in_group(db, user.group_id, month)
+    month_options = _month_options_in_group(db, user.group_id)
+
+    return templates.TemplateResponse(
+        request=request,
+        name="group.html",
+        context={
+            "app_name": APP_NAME,
+            "app_version": APP_VERSION,
+            "phase": "Fase 12c — Vista gruppo (manager)",
+            "group_name": group.name if group else "Gruppo",
+            "records": records,
+            "month_options": month_options,
+            "selected_month": month,
+            "current_username": user.username,
+            "auth_enabled": AUTH_ENABLED,
+            "is_admin": is_admin(user),
+            "sidebar_items": _sidebar_items(user),
+        },
+    )
+
+
+@router.get("/group/export", response_class=StreamingResponse, name="group_export_csv")
+async def group_export_csv(
+    request: Request,
+    db: Session = Depends(get_db),
+    user: User | None = Depends(get_current_user),
+    month: str | None = None,
+) -> StreamingResponse:
+    """Esporta in CSV i record del gruppo gestito dal manager (Fase 12c)."""
+    redirect = _require_auth(user)
+    if redirect is not None:
+        return redirect
+    assert user is not None
+    if not _is_manager_view(user):
+        logger.warning("Export negato per utente %s (ruolo=%s)", user.username, user.role)
+        return RedirectResponse("/", status_code=303)
+
+    group = db.get(Group, user.group_id)
+    stmt = _records_in_group_statement(db, user.group_id)
+    if month:
+        stmt = stmt.where(func.strftime("%Y-%m", EffortEntry.work_date) == month)
+    records = db.execute(stmt.order_by(EffortEntry.work_date.asc())).scalars().all()
+
+    filename = f"effort_{group.name if group else 'gruppo'}_{month or 'tutti'}.csv"
+    logger.info("Export CSV gruppo generato (record=%d, mese=%s)", len(records), month or "tutti")
+    return StreamingResponse(
+        iter([_build_csv(records)]),
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 @router.get("/health", name="health")

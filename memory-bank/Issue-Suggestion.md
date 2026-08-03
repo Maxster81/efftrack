@@ -51,6 +51,13 @@ Aggiornare il suggerimento 3 senza rimuoverlo completamente, seguiranno ulterior
 
 **Suggerimento:** prevedere una checkbox o un radio button che, se selezionato, renda tutti i campi non obbligatori e non compilabili, ad eccezione della data. Alla pressione di **SALVA**, per quella data verrà creato un record con i campi vuoti e con la dicitura **FERIE** nel campo **NOTE**.
 
+## Suggestion 6 - Verificare la reale necessità di scegliere il gruppo nella registrazione
+**Contesto:** vista Registrazioni, sezione filtro.
+
+**Comportamento attuale:** l'utente deve scegliere il gruppo di appartenenza
+
+**Suggerimento:** ma se un utente fa già parte di un gruppo, che necessità c'è di sceglierlo di nuovo durante la registrazione dell'evento?
+
 ---
 
 ## Issue da verificare (ereditate da progress.md disallineato)

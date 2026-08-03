@@ -2,12 +2,13 @@
 
 ## Stato globale
 - **Ultima fase completata**: Fase 11 ✅ completata il 2026-08-03 (multiutente e segregazione).
-- **Ultima sottofase completata**: Fase 12b ✅ completata il 2026-08-03 (ruolo USER — consolidamento).
-- **Fase in corso**: nessuna. Prossima: Fase 12c (ruolo MANAGER).
+- **Ultima sottofase completata**: Fase 12c ✅ completata il 2026-08-03 (ruolo MANAGER — vista gruppo).
+- **Fase in corso**: nessuna. Prossima: Fase 12d (ruolo ADMIN).
 - **Stato**: idle, pronto per nuovo task.
-- **Versione corrente**: `0.16.0`.
-- **Roadmap estesa**: aggiunte Fase 4b (sidebar hamburger), Fase 5b (copia su settimana), Fase 12 (Admin, scomposta in 12a/12b/12c/12d), Fase 13 (Manager → ora 12d); l'hardening passa da 12 a **Fase 13**. La Fase 9 è stata **sdoppiata** su richiesta utente in **Fase 9** (backend) e **Fase 9b** (frontend toggle dark/light + dipendenze).
-- **Scomposizione Fase 12 (riorganizzata 2026-08-03)**: approccio "dal basso verso l'alto" per aggiunta di permessi. 12a infrastruttura ✅, **12b ruolo USER** ✅, 12c ruolo MANAGER, 12d ruolo ADMIN. Hardening scalato a Fase 13.
+- **Versione corrente**: `0.17.0`.
+- **Roadmap estesa**: aggiunte Fase 4b (sidebar hamburger), Fase 5b (copia su settimana), Fase 12 (Admin, scomposta in 12a/12b/12c/12d); l'hardening passa a **Fase 13**. La Fase 9 è stata **sdoppiata** su richiesta utente in **Fase 9** (backend) e **Fase 9b** (frontend toggle dark/light + dipendenze).
+- **Scomposizione Fase 12 (riorganizzata 2026-08-03)**: approccio "dal basso verso l'alto" per aggiunta di permessi. 12a infrastruttura ✅, 12b ruolo USER ✅, **12c ruolo MANAGER** ✅, 12d ruolo ADMIN. Hardening scalato a Fase 13.
+- **DB di sviluppo**: rigenerato in Fase 12c con dataset multi-gruppo (2 gruppi SOC/NOC, 6 utenti di test con ~20 record ciascuno).
 
 > **⚠️ NOTA OPERATIVA — Issue e Suggerimenti:** le issue e i suggerimenti raccolti dai test utente sono tracciati **esclusivamente** in `memory-bank/Issue-Suggestion.md`. Prima di iniziare **ogni fase**, consultare quel file. Quando una voce viene risolta, va **rimossa** da lì nello stesso commit che la risolve. Prima di riportare in questo file eventuali checklist "da fare", verificare se esistono già in `Issue-Suggestion.md` per evitare duplicati o disallineamenti.
 
@@ -268,7 +269,7 @@
 La Fase 12 è stata scomposta in sottofasi, riorganizzate "dal basso verso l'alto" (per aggiunta di permessi). L'hardening scala a Fase 13.
 - **Fase 12a** — Infrastruttura ruoli e permessi (✅ 2026-08-03)
 - **Fase 12b** — Ruolo USER: consolidamento + last_login + sidebar (✅ 2026-08-03)
-- **Fase 12c** — Ruolo MANAGER: group_id, vista gruppo, export (non iniziata)
+- **Fase 12c** — Ruolo MANAGER: group_id, vista gruppo, export (✅ 2026-08-03)
 - **Fase 12d** — Ruolo ADMIN: CRUD utenti + gestione lookup, senza card registrazione (non iniziata)
 - **Fase 13** — Hardening produzione (es Fase 14; vi confluiscono anche le piccolezze di UX/issue minori) (non iniziata)
 
@@ -300,8 +301,20 @@ La Fase 12 è stata scomposta in sottofasi, riorganizzate "dal basso verso l'alt
 - **Branch**: commit su `develop`, tag annotato `v0.16.0`. Niente `main`.
 - **Commit**: `feat(roles): phase 12b user role consolidation and last_login`.
 
-### Fase 12c — Ruolo MANAGER (non iniziata)
-- **Obiettivo**: `group_id` su `users`, migrazione + seed, pagina gruppo read-only (`GET /group`) con filtro mese e export, sidebar con link "Registrazioni" + "Gruppo". Il manager sulla pagina personale si comporta come USER (solo propri record); la vista gruppo mostra/esporta i record di tutto il suo gruppo (compresi i propri).
+### Fase 12c — Ruolo MANAGER (vista gruppo)
+- **Stato**: ✅ completata il 2026-08-03.
+- **Obiettivo**: `group_id` su `users`, migrazione + seed multi-gruppo, pagina gruppo read-only (`GET /group`) con filtro mese ed export, sidebar con link "Registrazioni" + "Gruppo". Il manager sulla pagina personale si comporta come USER (solo propri record); la vista gruppo mostra/esporta i record di tutto il suo gruppo (compresi i propri).
+- **Cosa è stato fatto**:
+  - **`app/models/user.py`**: aggiunta colonna `group_id` (FK verso `groups.id`, nullable) + relazione `group`.
+  - **`app/core/migrations.py`**: migrazione `_migrate_users_group_id` (idempotente, `ALTER TABLE users ADD COLUMN group_id INTEGER REFERENCES groups(id)`).
+  - **`app/core/seed.py`**: esteso dataset di test — 2 gruppi (SOC, NOC), 2 manager (giulia SOC, marco NOC) e 4 user (mario/paolo SOC, anna/elisa NOC) con `group_id`; `seed_test_records` ora usa il `group_id` del gruppo di appartenenza (120 record totali, ~20/utente). `seed_test_users` crea/aggiorna (upsert) ruolo e gruppo.
+  - **`app/routers/web.py`**: helper `_is_manager_view`, `_records_in_group_statement`, `_records_in_group`, `_month_options_in_group`; route **`GET /group`** (read-only) e **`GET /group/export`** (CSV del gruppo); `_sidebar_items` estesa per MANAGER (link "Registrazioni" + "Gruppo").
+  - **`app/templates/group.html`** (NUOVO): template dedicato alla vista gruppo, senza card form, colonna "Utente" sempre visibile, filtro mese/anno, bouton "Esporta CSV". Righe non cliccabili.
+  - **`tests/test_models.py`**: test per colonna `group_id`, `_sidebar_items` manager, `_is_manager_view`, `_records_in_group`, `_month_options_in_group`, seed giulia manager, manager sulla propria pagina. Totale 33 test.
+- **Verifiche**: 33/33 test OK; DB rigenerato (2 gruppi, 6 utenti, 120 record); giulia `/group` → GRUPPO SOC 60 record; marco `/group` → GRUPPO NOC 60 record; mario (user) `/group` → 303 (bloccato).
+- **Versioning**: bump `VERSION` `0.16.0` → `0.17.0` (MINOR).
+- **Branch**: commit su `develop`, tag annotato `v0.17.0`. Niente `main`.
+- **Commit**: `feat(role): phase 12c manager role with group view`.
 
 ### Fase 12d — Ruolo ADMIN (non iniziata)
 - **Obiettivo**: pagina principale senza card registrazione (tabella tutti i record), **export lasciato attivo per admin** (decisione utente), sidebar con link "Registrazioni", "Gestione Utenti" e "Gestione Lookup", CRUD utenti e CRUD lookup con protezioni.
@@ -322,5 +335,5 @@ La Fase 12 è stata scomposta in sottofasi, riorganizzate "dal basso verso l'alt
 - `user_id` con FK verso `users.id` (ON DELETE SET NULL) dalla Fase 11; nessuno modifica/elimina record altrui (regola aziendale).
 - La cancellazione è **permanente** e senza soft-delete/audit (da valutare in Fase 14/hardening).
 - I campi del form sono opzionali nella firma della route `POST /`: la validazione obbligatoria avviene comunque server-side via `EffortEntryCreate` per le azioni che creano/aggiornano record. Per `action=delete` bastano `record_id`.
-- DB di sviluppo: 4 utenti (admin + mario/giulia/luca) e ~62 record di test. La colonna `user_text` è stata rimossa in Fase 11.
+- DB di sviluppo (Fase 12c): 2 gruppi (SOC, NOC), 6 utenti di test (giulia/marco manager, mario/paolo/anna/elisa user) con ~20 record ciascuno, password `test`, più admin. La colonna `user_text` è stata rimossa in Fase 11.
 - Configurazione: il `.env` locale è per lo sviluppo; in produzione systemd legge `/etc/efftrack.env` (EnvironmentFile). Livello log controllato da `EFFORT_TRACKING_LOG_LEVEL`.

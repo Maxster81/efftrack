@@ -61,6 +61,15 @@ class TestSchema(DatabaseTestCase):
         columns = {col["name"] for col in inspect(self.engine).get_columns("users")}
         self.assertIn("last_login", columns)
 
+    def test_users_has_group_id_column(self) -> None:
+        """Fase 12c: la tabella users ha la colonna group_id (FK verso groups)."""
+        columns = {col["name"] for col in inspect(self.engine).get_columns("users")}
+        self.assertIn("group_id", columns)
+        fks = inspect(self.engine).get_foreign_keys("users")
+        group_fks = [fk for fk in fks if "group_id" in fk["constrained_columns"]]
+        self.assertEqual(len(group_fks), 1)
+        self.assertEqual(group_fks[0]["referred_table"], "groups")
+
     def test_effort_entries_has_no_user_text(self) -> None:
         """Fase 11: la colonna legacy user_text è stata rimossa."""
         columns = {col["name"] for col in inspect(self.engine).get_columns("effort_entries")}
@@ -81,7 +90,7 @@ class TestSeed(DatabaseTestCase):
 
     def test_groups_seed(self) -> None:
         groups = self.db.execute(select(Group).order_by(Group.name)).scalars().all()
-        self.assertEqual([g.name for g in groups], ["GRUPPO SOC"])
+        self.assertEqual([g.name for g in groups], ["GRUPPO NOC", "GRUPPO SOC"])
 
     def test_activities_seed(self) -> None:
         activities = self.db.execute(select(Activity).order_by(Activity.name)).scalars().all()
@@ -243,26 +252,35 @@ class TestEffortEntry(DatabaseTestCase):
 
 
 class TestTestUsers(DatabaseTestCase):
-    """Test degli utenti di test (Fase 11)."""
+    """Test degli utenti di test (Fasi 11/12c)."""
 
-    def test_seed_creates_three_users(self) -> None:
-        """Crea gli utenti mario, giulia e luca."""
+    def test_seed_creates_six_users(self) -> None:
+        """Crea 2 manager (giulia, marco) e 4 user (mario, paolo, anna, elisa)."""
         seed_test_users(self.db)
         usernames = set(self.db.execute(select(User.username)).scalars().all())
-        self.assertIn("mario", usernames)
-        self.assertIn("giulia", usernames)
-        self.assertIn("luca", usernames)
+        for name in ["giulia", "marco", "mario", "paolo", "anna", "elisa"]:
+            self.assertIn(name, usernames)
+
+    def test_seed_promotes_giulia_to_manager(self) -> None:
+        """Fase 12c: giulia è manager del GRUPPO SOC."""
+        seed_test_users(self.db)
+        giulia = self.db.execute(
+            select(User).where(User.username == "giulia")
+        ).scalar_one_or_none()
+        self.assertIsNotNone(giulia)
+        self.assertEqual(giulia.role, "manager")
+        self.assertIsNotNone(giulia.group_id)
 
     def test_seed_users_is_idempotent(self) -> None:
         """Un secondo seed non duplica gli utenti di test."""
         seed_test_users(self.db)
         seed_test_users(self.db)
         count = len(self.db.execute(select(User)).scalars().all())
-        self.assertEqual(count, 4)  # admin + 3 di test
+        self.assertEqual(count, 7)  # admin + 6 di test
 
 
 class TestTestRecords(DatabaseTestCase):
-    """Test dei record di test per la segregazione (Fase 11)."""
+    """Test dei record di test per la segregazione (Fasi 11/12c)."""
 
     @classmethod
     def setUpClass(cls) -> None:
@@ -284,14 +302,15 @@ class TestTestRecords(DatabaseTestCase):
         with Session(self.engine) as db:
             seed_test_records(db)
         total = _count_total_records(self.engine)
-        self.assertEqual(total, 60)  # 3 utenti × 20
+        self.assertEqual(total, 120)  # 6 utenti × 20
 
 
 def _count_records_per_user(engine) -> dict[str, int]:
     """Conteggia i record di effort per ciascun utente di test."""
+    usernames = ["giulia", "marco", "mario", "paolo", "anna", "elisa"]
     with Session(engine) as db:
         users = db.execute(
-            select(User).where(User.username.in_(["mario", "giulia", "luca"]))
+            select(User).where(User.username.in_(usernames))
         ).scalars().all()
         result: dict[str, int] = {}
         for u in users:
@@ -309,7 +328,7 @@ def _count_total_records(engine) -> int:
 
 
 class TestSidebar(DatabaseTestCase):
-    """Test delle voci della sidebar in base al ruolo (Fase 12b)."""
+    """Test delle voci della sidebar in base al ruolo (Fasi 12b/12c)."""
 
     def test_user_sidebar_has_registrazioni_link(self) -> None:
         from app.routers.web import _sidebar_items
@@ -324,6 +343,122 @@ class TestSidebar(DatabaseTestCase):
         user = User(username="admin", password_hash="x", role="admin")
         items = _sidebar_items(user)
         self.assertEqual(items, [{"label": "Registrazioni", "href": "/"}])
+
+    def test_manager_sidebar_has_registrazioni_and_group(self) -> None:
+        """Fase 12c: il manager ha i link Registrazioni e Gruppo."""
+        from app.routers.web import _sidebar_items
+
+        group = self.db.execute(select(Group)).scalars().first()
+        user = User(username="giulia", password_hash="x", role="manager", group_id=group.id)
+        items = _sidebar_items(user)
+        self.assertEqual(
+            items,
+            [
+                {"label": "Registrazioni", "href": "/"},
+                {"label": "Gruppo", "href": "/group"},
+            ],
+        )
+
+    def test_manager_view_requires_group(self) -> None:
+        """Fase 12c: un manager senza group_id non è abilitato alla vista gruppo."""
+        from app.routers.web import _is_manager_view
+
+        manager_no_group = User(username="giulia", password_hash="x", role="manager", group_id=None)
+        self.assertFalse(_is_manager_view(manager_no_group))
+
+        group = self.db.execute(select(Group)).scalars().first()
+        manager = User(username="giulia", password_hash="x", role="manager", group_id=group.id)
+        self.assertTrue(_is_manager_view(manager))
+
+
+class TestManagerGroup(DatabaseTestCase):
+    """Test del ruolo MANAGER e della vista gruppo (Fase 12c)."""
+
+    def setUp(self) -> None:
+        """Pulisce gli effort e gli utenti non-admin prima di ogni test."""
+        super().setUp()
+        self.db.execute(EffortEntry.__table__.delete())
+        self.db.execute(User.__table__.delete().where(User.username != "admin"))
+        self.db.commit()
+        self.group = self.db.execute(select(Group)).scalars().first()
+        self.client = self.db.execute(select(Client)).scalars().first()
+        self.activity = self.db.execute(select(Activity)).scalars().first()
+
+    def _create_users(self) -> tuple[User, User, User]:
+        """Crea manager + 2 utenti del gruppo + 1 utente fuori gruppo.
+
+        Usa username unici per evitare collisioni con la fixture condivisa
+        (il setUp pulisce gli utenti non-admin prima di ogni test).
+        """
+        manager = User(username="mgmt1", password_hash="x", role="manager", group_id=self.group.id)
+        member = User(username="mem1", password_hash="x", role="user", group_id=self.group.id)
+        member2 = User(username="mem2", password_hash="x", role="user", group_id=self.group.id)
+        outsider = User(username="ext1", password_hash="x", role="user", group_id=None)
+        self.db.add_all([manager, member, member2, outsider])
+        self.db.commit()
+        return manager, member, member2, outsider
+
+    def _add_entry(self, user: User) -> None:
+        """Crea un record di effort per l'utente indicato."""
+        self.db.add(
+            EffortEntry(
+                user_id=user.id,
+                client_id=self.client.id,
+                group_id=self.group.id,
+                activity_id=self.activity.id,
+                work_date=date(2026, 6, 10),
+                hours_spent=8.0,
+            )
+        )
+        self.db.commit()
+
+    def test_seed_promotes_giulia_to_manager(self) -> None:
+        """Fase 12c: giulia (creata/promossa) è manager del GRUPPO SOC."""
+        seed_test_users(self.db)
+        giulia = self.db.execute(
+            select(User).where(User.username == "giulia")
+        ).scalar_one_or_none()
+        self.assertIsNotNone(giulia)
+        self.assertEqual(giulia.role, "manager")
+        self.assertIsNotNone(giulia.group_id)
+
+    def test_records_in_group_shows_only_group_members(self) -> None:
+        """La vista gruppo mostra solo i record dei membri del gruppo."""
+        from app.routers.web import _records_in_group
+
+        manager, member, member2, outsider = self._create_users()
+        self._add_entry(member)
+        self._add_entry(member2)
+        self._add_entry(outsider)
+
+        records = _records_in_group(self.db, self.group.id, month=None)
+        user_ids = {r.user_id for r in records}
+        self.assertIn(member.id, user_ids)
+        self.assertIn(member2.id, user_ids)
+        self.assertNotIn(outsider.id, user_ids)
+
+    def test_month_options_in_group(self) -> None:
+        """Le opzioni mese della vista gruppo derivano dai record del gruppo."""
+        from app.routers.web import _month_options_in_group
+
+        manager, member, member2, outsider = self._create_users()
+        self._add_entry(member)  # 2026-06
+        months = _month_options_in_group(self.db, self.group.id)
+        self.assertIn("2026-06", [m for m, _ in months])
+
+    def test_manager_sees_own_records_on_personal_page(self) -> None:
+        """Il manager sulla propria pagina vede solo i propri record (come USER)."""
+        from app.routers.web import _filter_by_user
+
+        manager, member, member2, outsider = self._create_users()
+        self._add_entry(manager)
+        self._add_entry(member)
+
+        stmt = select(EffortEntry)
+        filtered = _filter_by_user(stmt, manager)
+        records = self.db.execute(filtered).scalars().all()
+        self.assertEqual(len(records), 1)
+        self.assertEqual(records[0].user_id, manager.id)
 
 
 class TestSegregation(DatabaseTestCase):
