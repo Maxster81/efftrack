@@ -73,6 +73,51 @@ class TestSeed(DatabaseTestCase):
         self.assertEqual(n_clients, 2)
 
 
+class TestExportCsv(DatabaseTestCase):
+    """Test della generazione del CSV di export (Fase 8)."""
+
+    def test_build_csv_header_and_row(self) -> None:
+        """Il CSV contiene il BOM, l'header e una riga formattata."""
+        from app.routers.web import _build_csv
+
+        client = self.db.execute(select(Client)).scalars().first()
+        group = self.db.execute(select(Group)).scalars().first()
+        activity = self.db.execute(select(Activity)).scalars().first()
+
+        from datetime import date
+
+        entry = EffortEntry(
+            user_id=None,
+            user_text="Mario",
+            client_id=client.id,
+            group_id=group.id,
+            activity_id=activity.id,
+            work_date=date(2026, 7, 31),
+            hours_spent=7.5,
+            notes="Nota di test",
+            description=None,
+        )
+        # Assegna le relazioni direttamente sull'oggetto: `_build_csv`
+        # accede a `client.name`, `group.name` e `activity.name`.
+        entry.client = client
+        entry.group = group
+        entry.activity = activity
+        self.db.add(entry)
+        self.db.commit()
+
+        csv_lines = _build_csv([entry]).splitlines()
+        # La prima riga inizia con il BOM UTF-8.
+        self.assertTrue(csv_lines[0].startswith("\ufeffData"))
+        self.assertEqual(len(csv_lines), 2)
+        row = csv_lines[1]
+        self.assertIn("31/07/2026", row)
+        self.assertIn("Mario", row)
+        self.assertIn("INAIL", row)
+        self.assertIn("GRUPPO SOC", row)
+        self.assertIn("7.5", row)
+        self.assertIn("Nota di test", row)
+
+
 class TestEffortEntry(DatabaseTestCase):
     def test_insert_entry(self) -> None:
         client = self.db.execute(select(Client)).scalars().first()
@@ -100,6 +145,34 @@ class TestEffortEntry(DatabaseTestCase):
         self.assertEqual(saved.hours_spent, 7.5)
         self.assertEqual(saved.client.name, client.name)
         self.assertEqual(saved.user_text, "Test User")
+        self.entry_id = saved.id
+
+    def test_update_entry(self) -> None:
+        """Aggiorna un record esistente e verifica i nuovi valori (Fase 7)."""
+        # Prepara un record da aggiornare.
+        self.test_insert_entry()
+        from datetime import date
+
+        entry = self.db.get(EffortEntry, self.entry_id)
+        self.assertIsNotNone(entry)
+
+        second_client = self.db.execute(select(Client).order_by(Client.id.desc())).scalars().first()
+        entry.user_text = "Nuovo User"
+        entry.client_id = second_client.id
+        entry.work_date = date(2026, 8, 1)
+        entry.hours_spent = 8.0
+        entry.notes = "Note aggiornate"
+        entry.description = "Descrizione aggiornata"
+        self.db.commit()
+
+        updated = self.db.get(EffortEntry, self.entry_id)
+        self.assertEqual(updated.user_text, "Nuovo User")
+        self.assertEqual(updated.client_id, second_client.id)
+        self.assertEqual(updated.work_date.isoformat(), "2026-08-01")
+        self.assertEqual(updated.hours_spent, 8.0)
+        self.assertEqual(updated.notes, "Note aggiornate")
+        self.assertEqual(updated.description, "Descrizione aggiornata")
+        self.assertIsNotNone(updated.updated_at)
 
 
 if __name__ == "__main__":

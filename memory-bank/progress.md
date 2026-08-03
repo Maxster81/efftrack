@@ -1,10 +1,10 @@
 # Progress — Effort Tracking
 
 ## Stato globale
-- **Ultima fase completata**: Fase 6 ✅ completata il 2026-07-31.
-- **Fase in corso**: nessuna. In attesa di task per la Fase 7.
-- **Stato**: idle, pronto per nuovo task. Merge autorizzato su `main` (2026-07-31).
-- **Versione corrente**: `0.8.0` (tag `v0.8.0` annotato su `develop`).
+- **Ultima fase completata**: Fase 8 ✅ completata il 2026-07-31 (export CSV con filtro mese).
+- **Fase in corso**: nessuna. In attesa di task per la Fase 9 (Refactoring, logging, env, systemd).
+- **Stato**: idle, pronto per nuovo task.
+- **Versione corrente**: `0.10.0` (tag `v0.10.0` annotato su `develop`).
 - **Roadmap estesa**: aggiunte Fase 4b (sidebar hamburger), Fase 5b (copia su settimana), Fase 12 (Admin), Fase 13 (Manager); l'hardening passa da 12 a 14.
 
 ## Roadmap
@@ -140,13 +140,35 @@
 - **Branch**: commit su `develop`, tag annotato `v0.8.0`. Merge autorizzato su `main` dall'utente.
 - **Commit**: `feat(ui): phase 6 records list with month filter`.
 
-### Fase 7 — Selezione record e update
-- **Stato**: non iniziata.
-- **Obiettivo**: click su riga → form precompilato → update.
+### Fase 7 — Selezione record e update/delete
+- **Stato**: ✅ completata il 2026-07-31.
+- **Obiettivo**: click su riga → form precompilato → update/delete. Il pulsante "Salva" gestisce sia insert che update in base alla presenza di `record_id`.
+- **Cosa è stato fatto**:
+  - **`web.py`**: campi form opzionali nella firma della route (validazione demandata a Pydantic `EffortEntryCreate`); parametro `record_id` (hidden field) per distinguere insert (None) da update (valorizzato). `_save_single` ora aggiorna il record se esiste `record_id` → `/?success=2`. Nuova `action=delete` con `_delete_entry` → `/?success=3` (o `/?error=validazione` se id assente/inesistente). `action=week` bloccato in modifica. Banner per `success=1/2/3`. Label "Fase 7 — Selezione record e update".
+  - **`index.html`**: input hidden `#record-id` dentro il form; righe tabella cliccabili (`role="button"`, `tabindex="0"`, `data-*` per popolare il form); titolo dinamico (Nuova/Modifica registrazione); pulsanti "Annulla modifica" e "Elimina registrazione" (visibili solo in modifica); hide di "Copia su settimana" in modifica.
+  - **`row-select.js`** (nuovo): popolamento form al click riga/tastiera, modalità modifica, annulla, `window.confirm` prima della cancellazione, espone helper `EffortTrack`.
+  - **`form.js`**: espone `syncDescriptionVisibility`; salta la validazione client-side su `#edit-delete`.
+  - **`style.css`**: `.is-selected`, `:focus-visible`, `.btn-tertiary`, `.btn-danger`, `.card-title__edit`.
+  - **`tests/test_models.py`**: nuovo test `test_update_entry`.
+  - **Bug fix**: l'input hidden `record_id` era inizialmente fuori dal `<form>` (non inviato nella POST, con la creazione di record duplicati) → spostato dentro il form.
+  - Verifiche: 7/7 test OK; update via curl (`record_id=106`) → `/?success=2` senza duplicati; delete via curl → `/?success=3` con rimozione dal DB; retrocompatibilità insert → `/?success=1`; banner success=2/3 renderizzati; eliminazione dal browser confermata nel DB (record 31/07/2026 rimossi da `effort_entries`).
+- **Versioning**: bump `VERSION` `0.8.0` → `0.9.0` (MINOR).
+- **Branch**: commit su `develop`, tag annotato `v0.9.0`. Niente `main`.
+- **Commit**: `feat(db): phase 7 record select, update and delete`.
 
 ### Fase 8 — Export CSV / XLSX
-- **Stato**: non iniziata.
+- **Stato**: ✅ completata il 2026-07-31.
 - **Obiettivo**: export con filtri base.
+- **Decisione utente**: export **sempre mensile**, pulsante a destra del dropdown mese (estremamente destra della card); formato **solo CSV** per ora (XLSX rimandato). Tutte le colonne della tabella.
+- **Cosa è stato fatto**:
+  - **`web.py`**: nuova route `GET /export` (`export_csv`) con filtro `?month=YYYY-MM`; funzione testabile `_build_csv(records)` (BOM UTF-8, header `_CSV_HEADER`, date DD/MM/YYYY); `StreamingResponse` con `Content-Disposition: attachment` e filename `effort_YYYY-MM.csv` / `effort_tutti.csv`. Label "Fase 8 — Export CSV".
+  - **`index.html`**: nella `filter-bar`, `<span class="filter-bar__spacer">` + link `<a class="filter-bar__export" role="button">Esporta CSV</a>` all'estrema destra; href `/export` con `?month=` se mese selezionato.
+  - **`style.css`**: classi `.filter-bar__spacer` (flex flexibile) e `.filter-bar__export` (outline navy, hover accent, focus-visible).
+  - **`tests/test_models.py`**: classe `TestExportCsv` (BOM, header, riga formattata). Totale 8 test.
+  - **Verifiche**: 8/8 test OK; `/export` 200 con `effort_tutti.csv` (BOM + header + dati); `/export?month=2026-01` 200 con `effort_2026-01.csv` (11 record + header); `/` contiene label e link "Esporta CSV". Verifica utente (browser) positiva.
+- **Versioning**: bump `VERSION` `0.9.0` → `0.10.0` (MINOR).
+- **Branch**: commit su `develop`, tag annotato `v0.10.0`. Niente `main`.
+- **Commit**: `feat(db): phase 8 csv export with month filter`.
 
 ### Fase 9 — Refactoring, logging, env, systemd
 - **Stato**: non iniziata.
@@ -182,6 +204,7 @@
 ## Cose note / limitazioni accettate
 - Tema dark/light solo come struttura CSS variabili fino a Fase 9.
 - Migrazioni schema con `CREATE TABLE IF NOT EXISTS` / `ALTER TABLE` controllato fino a Fase 9; Alembic proposto se la complessità cresce.
-- Nessun test automatico fino a Fase 4.
 - `user_id` nullable in `effort_entries` dal suo inserimento, valorizzato in Fase 11.
-- Import `Engine` non usato in `app/routers/web.py` (da ripulire in refactor futuro).
+- La cancellazione è **permanente** e senza soft-delete/audit (da valutare in Fase 9/hardening).
+- I campi del form sono opzionali nella firma della route `POST /`: la validazione obbligatoria avviene comunque server-side via `EffortEntryCreate` per le azioni che creano/aggiornano record.
+- DB di sviluppo: per le prove la fixture è variata (ora 105 record dopo eliminazioni manuali di test).

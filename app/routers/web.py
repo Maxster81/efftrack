@@ -7,11 +7,13 @@ successive a partire dalla Fase 2.
 """
 from __future__ import annotations
 
+import csv
+import io
 from datetime import date, timedelta
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Form, Request
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, StreamingResponse
 from pydantic import ValidationError
 from sqlalchemy import func, select, text
 from sqlalchemy.exc import SQLAlchemyError
@@ -36,6 +38,18 @@ _MESI_ITALIANI = [
     "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre",
 ]
 
+# Header del CSV di export (Fase 8), coerente con le colonne della tabella.
+_CSV_HEADER = [
+    "Data",
+    "Cliente",
+    "Gruppo",
+    "Attività",
+    "Utente",
+    "Ore",
+    "Note",
+    "Descrizione attività",
+]
+
 
 @router.get("/", response_class=HTMLResponse, name="index")
 async def index(
@@ -47,12 +61,13 @@ async def index(
 ) -> HTMLResponse:
     """Pagina principale: form di inserimento + tabella elenco.
 
-    Fase 6: la tabella inferiore è popolata dai record di `effort_entries`
+    Fase 7: la tabella inferiore è popolata dai record di `effort_entries`
     (ordinati per data decrescente) e mostra un dropdown filtro mese/anno
     basato sui mesi distinti presenti nei record. Il parametro `month`
     (es. `?month=2026-07`) filtra i record di quel mese; il mese resta
     derivato da `work_date`, mai persistito. `success`/`error` (set dal
-    POST) mostrano i banner.
+    POST) mostrano i banner. `success=1` = record inserito, `success=2` =
+    record aggiornato (Fase 7).
     """
     clients = db.execute(select(Client).order_by(Client.name)).scalars().all()
     groups = db.execute(select(Group).order_by(Group.name)).scalars().all()
@@ -87,6 +102,10 @@ async def index(
     success_message: str | None = None
     if success == 1:
         success_message = "Record salvato correttamente."
+    elif success == 2:
+        success_message = "Registrazione aggiornata correttamente."
+    elif success == 3:
+        success_message = "Registrazione eliminata correttamente."
 
     return templates.TemplateResponse(
         request=request,
@@ -94,7 +113,7 @@ async def index(
         context={
             "app_name": APP_NAME,
             "app_version": APP_VERSION,
-            "phase": "Fase 6 — Elenco record con filtro mese/anno",
+            "phase": "Fase 8 — Export CSV",
             "clients": clients,
             "groups": groups,
             "activities": activities,
@@ -110,25 +129,37 @@ async def index(
 
 @router.post("/", response_class=HTMLResponse, name="save_entry")
 async def save_entry(
-    user: Annotated[str, Form()],
-    date: Annotated[date, Form()],
-    client_id: Annotated[int, Form(gt=0)],
-    group_id: Annotated[int, Form(gt=0)],
-    activity_id: Annotated[int, Form(gt=0)],
-    hours: Annotated[float, Form()],
+    user: Annotated[str | None, Form()] = None,
+    date: Annotated[date | None, Form()] = None,
+    client_id: Annotated[int | None, Form()] = None,
+    group_id: Annotated[int | None, Form()] = None,
+    activity_id: Annotated[int | None, Form()] = None,
+    hours: Annotated[float | None, Form()] = None,
     notes: Annotated[str | None, Form()] = None,
     description: Annotated[str | None, Form()] = None,
     action: Annotated[str, Form()] = "single",
+    record_id: Annotated[int | None, Form()] = None,
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
-    """Salva un nuovo record di effort nel database.
+    """Salva o aggiorna un record di effort nel database.
 
     Fase 5: persistenza reale su `effort_entries`. `action` può essere
     "single" (salvataggio di un singolo record) oppure "week" (copia su
     settimana: crea un record per ogni giorno feriale lun→ven della
-    settimana che contiene la data del form). Verifica che l'attività
-    richieda una descrizione prima di creare i record.
+    settimana che contiene la data del form).
+
+    Fase 7: se `record_id` è presente, `action=single` aggiorna il record
+    esistente invece di crearne uno nuovo (modalità "modifica"). La copia
+    su settimana è pensata solo per l'inserimento (i valori non sono
+    validi in modalità modifica). Verifica che l'attività richieda una
+    descrizione prima di creare/aggiornare i record. `action=delete`
+    elimina definitivamente il record indicato da `record_id` (richiede
+    solo l'id, non i campi del form).
     """
+    # Eliminazione definitiva: richiede solo `record_id`, non i campi del form.
+    if action == "delete":
+        return _delete_entry(record_id, db)
+
     # Costruisce il modello Pydantic per la validazione server-side completa.
     try:
         payload = EffortEntryCreate(
@@ -152,14 +183,63 @@ async def save_entry(
     if activity is not None and activity.requires_description and not payload.description:
         return RedirectResponse("/?error=descrizione", status_code=303)
 
+    # La copia su settimana non è supportata in modalità modifica:
+    # se il record è in fase di update, il pulsante "Copia su settimana"
+    # viene nascosto lato UI; qui si blocca comunque per sicurezza.
+    if action == "week" and record_id is not None:
+        return RedirectResponse("/?error=validazione", status_code=303)
+
     if action == "week":
         return _save_week(payload, db)
 
-    return _save_single(payload, db)
+    return _save_single(payload, db, record_id=record_id)
 
 
-def _save_single(payload: EffortEntryCreate, db: Session) -> RedirectResponse:
-    """Crea e salva un singolo record di effort."""
+def _delete_entry(record_id: int | None, db: Session) -> RedirectResponse:
+    """Elimina definitivamente un record di effort dal database.
+
+    Fase 7: con `record_id` valorizzato recupera e cancella il record.
+    Se l'id non è presente o il record non esiste, redirect con errore
+    di validazione; altrimenti redirect con `?success=3`.
+    """
+    if record_id is None:
+        return RedirectResponse("/?error=validazione", status_code=303)
+
+    entry = db.get(EffortEntry, record_id)
+    if entry is None:
+        return RedirectResponse("/?error=validazione", status_code=303)
+
+    db.delete(entry)
+    db.commit()
+    return RedirectResponse("/?success=3", status_code=303)
+
+
+def _save_single(
+    payload: EffortEntryCreate,
+    db: Session,
+    record_id: int | None = None,
+) -> RedirectResponse:
+    """Crea un nuovo record oppure aggiorna quello indicato da `record_id`.
+
+    Fase 7: con `record_id` valorizzato, recupera il record esistente e ne
+    aggiorna i campi modificabili dal form, poi fa redirect con
+    `?success=2`. Se il record non esiste, redirect con errore validazione.
+    """
+    if record_id is not None:
+        entry = db.get(EffortEntry, record_id)
+        if entry is None:
+            return RedirectResponse("/?error=validazione", status_code=303)
+        entry.user_text = payload.user
+        entry.client_id = payload.client_id
+        entry.group_id = payload.group_id
+        entry.activity_id = payload.activity_id
+        entry.work_date = payload.date
+        entry.hours_spent = payload.hours
+        entry.notes = payload.notes
+        entry.description = payload.description
+        db.commit()
+        return RedirectResponse("/?success=2", status_code=303)
+
     entry = EffortEntry(
         user_id=None,
         user_text=payload.user,
@@ -196,6 +276,69 @@ def _save_week(payload: EffortEntryCreate, db: Session) -> RedirectResponse:
         )
     db.commit()
     return RedirectResponse("/?success=1", status_code=303)
+
+
+@router.get("/export", response_class=StreamingResponse, name="export_csv")
+async def export_csv(
+    db: Session = Depends(get_db),
+    month: str | None = None,
+) -> StreamingResponse:
+    """Esporta i record di effort in formato CSV.
+
+    Fase 8: genera un CSV con le stesse colonne della tabella (Data,
+    Cliente, Gruppo, Attività, Utente, Ore, Note, Descrizione attività).
+    Il parametro opzionale `month` (es. `?month=2026-07`) filtra i record
+    di quel mese; senza filtro vengono esportati tutti i record. La data
+    è formattata DD/MM/YYYY. Il file inizia con il BOM UTF-8 per una
+    corretta apertura in Excel/Windows.
+    """
+    stmt = (
+        select(EffortEntry)
+        .options(
+            selectinload(EffortEntry.client),
+            selectinload(EffortEntry.group),
+            selectinload(EffortEntry.activity),
+        )
+        .order_by(EffortEntry.work_date.asc())
+    )
+    if month:
+        stmt = stmt.where(func.strftime("%Y-%m", EffortEntry.work_date) == month)
+    records = db.execute(stmt).scalars().all()
+
+    filename = f"effort_{month}.csv" if month else "effort_tutti.csv"
+    return StreamingResponse(
+        iter([_build_csv(records)]),
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+def _build_csv(records: list[EffortEntry]) -> str:
+    """Costruisce il contenuto CSV (con BOM UTF-8) dai record di effort.
+
+    Fase 8: le righe seguono l'ordine de `records` così come passato dal
+    chiamante (l'endpoint le ordina per data crescente). Header coerente
+    con le colonne della tabella. La funzione è separata dall'endpoint
+    per renderne il contenuto facilmente testabile senza richieste HTTP.
+    """
+    buffer = io.StringIO()
+    buffer.write("\ufeff")  # BOM UTF-8 per compatibilità Excel/Windows.
+    writer = csv.writer(buffer)
+    writer.writerow(_CSV_HEADER)
+    for record in records:
+        writer.writerow(
+            [
+                record.work_date.strftime("%d/%m/%Y"),
+                record.client.name,
+                record.group.name,
+                record.activity.name,
+                record.user_text or "",
+                record.hours_spent,
+                record.notes or "",
+                record.description or "",
+            ]
+        )
+    return buffer.getvalue()
 
 
 @router.get("/health", name="health")
