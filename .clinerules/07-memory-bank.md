@@ -69,6 +69,7 @@ Create files/folders within `memory-bank/` when they help organize:
   - `systemPatterns.md`
   - `techContext.md`
 - Ogni cambiamento richiesto dall'utente che modifica scopo, ordine delle fasi o priorità deve essere riportato in `projectbrief.md` o `productContext.md` se impatta il prodotto.
+- **Issue-Suggestion.md è un backlog di voci APERTE:** quando una issue o suggestion viene risolta, va **rimossa dal file** nello stesso commit che la risolve, così il file contiene sempre e solo le voci ancora da fare.
 
 ## Documentation Updates
 

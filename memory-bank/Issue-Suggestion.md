@@ -1,14 +1,10 @@
-## In questa sezione verranno descritti problemi minori e/o miglioramenti apportabili. 
-## Questi interventi potranno essere valutati al termine delle fasi concordate, ma è opportuno tenerli sempre presenti, perché potrebbero essere affrontati più facilmente in una fase specifica.
+# Issue e Suggerimenti (test utente)
 
-### Issue 1 - Persistenza del filtro mese
-**Contesto:** Sezione Registrazioni.
+> **Nota operativa:** questo file contiene SOLO le issue/suggestion ancora **aperte**.
+> Quando una voce viene risolta, va **rimossa** nello stesso commit che la risolve,
+> così che il file resti sempre aggiornato e non si accumulino voci già chiuse.
 
-**Comportamento attuale:** quando è attivo un filtro mese e si seleziona un record, si modifica un valore e si preme **Salva**, il filtro viene reimpostato su **Tutti i mesi**.
-
-**Suggerimento:** mantenere il mese selezionato anche dopo il salvataggio, in modo da non interrompere il flusso di lavoro dell’utente.
-
-### Suggestion 1 - Visibilità del menu hamburger nella login
+## Suggestion 1 - Visibilità del menu hamburger nella login
 **Contesto:** Pagina di login.
 
 **Comportamento attuale:** il menu hamburger è visibile anche nella pagina di login.
