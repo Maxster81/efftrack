@@ -30,14 +30,14 @@
 - ESCI
 Aggiornare il suggerimento 3 senza rimuoverlo completamente, seguiranno ulteriori azioni
 
-## Suggesrtion 4: Prevedere filtro per anni e mesi
+## Suggestione 4: Prevedere filtro per anni e mesi
 **Contesto:** vista Registrazioni, filtro
 
 **Comportamento attuale:** il filtro è su base mensile che inlcude l'anno.
 
 **Suggerimento:** per evitare una colonna di filtro che nel corso del tempo potrebbe diventare enorme, prevedere il filtro sia per anno che per mese, così da avere una colonna mese "bloccata" ai 12 elementi/mesi
 
-## Suggesrtion 5: Illuminare il record modificato
+## Suggestione 5: Illuminare il record modificato
 **Contesto:** vista Registrazioni, filtro
 
 **Comportamento attuale:** alla pressione del pulsante Salva, compare regsitrazione effettuata
@@ -50,3 +50,48 @@ Aggiornare il suggerimento 3 senza rimuoverlo completamente, seguiranno ulterior
 **Comportamento attuale:** non è presente alcuna opzione dedicata ai giorni di ferie.
 
 **Suggerimento:** prevedere una checkbox o un radio button che, se selezionato, renda tutti i campi non obbligatori e non compilabili, ad eccezione della data. Alla pressione di **SALVA**, per quella data verrà creato un record con i campi vuoti e con la dicitura **FERIE** nel campo **NOTE**.
+
+---
+
+## Issue da verificare (ereditate da progress.md disallineato)
+
+> Le seguenti voci provengono dalla vecchia sezione "Cosa Manca / Da Fare" di `progress.md`
+> (numerazione precedente allo sdoppiamento della Fase 12). NON è confermato se siano già
+> state risolte: vanno verificate prima di essere considerate chiuse o da fare.
+> Quando una voce viene verificata e risolta, va **rimossa** da qui.
+
+### Issue A — Gestione errori 404/500 con pagine HTML dedicate
+- **Stato**: 🔴 da verificare
+- **Descrizione**: Attualmente gli errori restituiscono JSON o pagine vuote. Servono pagine HTML dedicate per 404 e 500, coerenti con il tema.
+
+### Issue B — Navbar: link "Esporta" non funzionante
+- **Stato**: 🔴 da verificare
+- **Descrizione**: Il link "Esporta" nella navbar non è funzionante. Va rimosso o reso operativo.
+
+### Issue C — Bottone "Esporta" nella pagina principale è fuori contesto
+- **Stato**: 🔴 da verificare
+- **Descrizione**: Il pulsante "Esporta CSV" è posizionato nella barra filtri ma non è chiaramente un'azione di export. Valutare se spostarlo in un menu contestuale o in una toolbar dedicata.
+
+### Issue D — Validazione avanzata ore spese (range 1-12, vincoli per Supporto Specialistico)
+- **Stato**: 🔴 da verificare
+- **Descrizione**: Il campo Ore Spese deve essere validato con range 1-12 (non 0.25-24 come attuale). Per Supporto Specialistico potrebbe esserci un vincolo diverso (es. max 4 ore).
+
+### Issue E — Registrazione automatica data/ora ultimo login
+- **Stato**: 🔴 da verificare
+- **Descrizione**: Al momento non viene tracciato l'ultimo accesso degli utenti. Aggiungere campo `last_login` alla tabella `users` e popolarlo al login.
+
+### Issue F — Sanificazione input e protezione XSS base
+- **Stato**: 🔴 da verificare
+- **Descrizione**: Verificare che tutti gli input utente siano sanificati contro XSS. Jinja2 auto-escape è attivo di default, ma verificare note, descrizione e campi testuali.
+
+### Issue G — Verifica sicurezza headers HTTP
+- **Stato**: 🔴 da verificare
+- **Descrizione**: Aggiungere header di sicurezza HTTP (Content-Security-Policy, X-Content-Type-Options, X-Frame-Options, ecc.) tramite middleware Starlette.
+
+### Issue H — Test funzionali base con pytest
+- **Stato**: 🔴 da verificare
+- **Descrizione**: I test attuali coprono solo i modelli. Mancano test per:
+  - Route web (GET /, POST /, redirect)
+  - Route API
+  - Autenticazione e permessi
+  - Export CSV

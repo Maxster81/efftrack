@@ -57,8 +57,9 @@
     </div>
   </header>
 
-  <!-- Sidebar laterale (menu navigazione). Contenitore predisposto in Fase 4b:
-       le voci verranno popolate in base al ruolo nelle Fasi 12-13. -->
+  <!-- Sidebar laterale (menu navigazione). Le voci sono popolate in base
+       al ruolo dell'utente loggato (Fase 12b+): ogni route passa la lista
+       `sidebar_items` nel context del template. -->
   <div class="sidebar-overlay" id="sidebar-overlay" hidden></div>
   <nav class="sidebar" id="app-sidebar" aria-label="Menu di navigazione">
     <div class="sidebar__header">
@@ -67,7 +68,11 @@
               aria-label="Chiudi menu di navigazione">✕</button>
     </div>
     <ul class="sidebar__menu" id="sidebar-menu">
-      {# voci popolate in Fase 12-13 in base al ruolo #}
+      {% for item in sidebar_items or [] %}
+        <li>
+          <a href="{{ item.href }}">{{ item.label }}</a>
+        </li>
+      {% endfor %}
     </ul>
   </nav>
 

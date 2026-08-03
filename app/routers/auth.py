@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session
 from app.config import APP_NAME, APP_VERSION, AUTH_ENABLED, TEMPLATES_DIR
 from app.db import get_db
 from app.models import User
+from app.models.effort_entry import utcnow
 from fastapi.templating import Jinja2Templates
 
 logger: logging.Logger = logging.getLogger(__name__)
@@ -35,6 +36,7 @@ def _login_context(error: str = "") -> dict:
         "auth_enabled": AUTH_ENABLED,
         "current_username": "",
         "error": error,
+        "sidebar_items": [],
     }
 
 
@@ -75,6 +77,10 @@ async def login_submit(
             name="login.html",
             context=_login_context("Credenziali non valide."),
         )
+
+    # Fase 12b: traccia l'ultimo accesso dell'utente.
+    user.last_login = utcnow()
+    db.commit()
 
     request.session["user_id"] = user.id
     logger.info("Login riuscito: username=%s (role=%s)", user.username, user.role)

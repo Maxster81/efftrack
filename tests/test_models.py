@@ -56,6 +56,11 @@ class TestSchema(DatabaseTestCase):
         for table in {"clients", "groups", "activities", "effort_entries", "users"}:
             self.assertIn(table, table_names)
 
+    def test_users_has_last_login_column(self) -> None:
+        """Fase 12b: la tabella users ha la colonna last_login."""
+        columns = {col["name"] for col in inspect(self.engine).get_columns("users")}
+        self.assertIn("last_login", columns)
+
     def test_effort_entries_has_no_user_text(self) -> None:
         """Fase 11: la colonna legacy user_text è stata rimossa."""
         columns = {col["name"] for col in inspect(self.engine).get_columns("effort_entries")}
@@ -301,6 +306,24 @@ def _count_total_records(engine) -> int:
     """Conteggia tutti i record di effort."""
     with Session(engine) as db:
         return len(db.execute(select(EffortEntry)).scalars().all())
+
+
+class TestSidebar(DatabaseTestCase):
+    """Test delle voci della sidebar in base al ruolo (Fase 12b)."""
+
+    def test_user_sidebar_has_registrazioni_link(self) -> None:
+        from app.routers.web import _sidebar_items
+
+        user = User(username="mario", password_hash="x", role="user")
+        items = _sidebar_items(user)
+        self.assertEqual(items, [{"label": "Registrazioni", "href": "/"}])
+
+    def test_admin_sidebar_has_registrazioni_link(self) -> None:
+        from app.routers.web import _sidebar_items
+
+        user = User(username="admin", password_hash="x", role="admin")
+        items = _sidebar_items(user)
+        self.assertEqual(items, [{"label": "Registrazioni", "href": "/"}])
 
 
 class TestSegregation(DatabaseTestCase):

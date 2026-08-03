@@ -85,6 +85,20 @@ def _with_month(base_url: str, month: str | None) -> str:
     return base_url
 
 
+def _sidebar_items(user: User) -> list[dict[str, str]]:
+    """Voci della sidebar in base al ruolo dell'utente loggato (Fase 12b).
+
+    In questa sottofase tutti i ruoli (USER, MANAGER, ADMIN) hanno almeno
+    il link "Registrazioni" che porta alla pagina principale. Le voci
+    specifiche per MANAGER (Gruppo) e ADMIN (Gestione utenti / Gestione
+    lookup) verranno aggiunte nelle fasi 12c e 12d.
+    """
+    items: list[dict[str, str]] = [
+        {"label": "Registrazioni", "href": "/"},
+    ]
+    return items
+
+
 @router.get("/", response_class=HTMLResponse, name="index")
 async def index(
     request: Request,
@@ -162,6 +176,7 @@ async def index(
             "current_username": current_username,
             "auth_enabled": AUTH_ENABLED,
             "is_admin": is_admin(user),
+            "sidebar_items": _sidebar_items(user),
         },
     )
 

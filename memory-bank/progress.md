@@ -2,10 +2,14 @@
 
 ## Stato globale
 - **Ultima fase completata**: Fase 11 ✅ completata il 2026-08-03 (multiutente e segregazione).
-- **Fase in corso**: nessuna. Prossima: Fase 12 (gestione ruoli e amministrazione).
+- **Ultima sottofase completata**: Fase 12b ✅ completata il 2026-08-03 (ruolo USER — consolidamento).
+- **Fase in corso**: nessuna. Prossima: Fase 12c (ruolo MANAGER).
 - **Stato**: idle, pronto per nuovo task.
-- **Versione corrente**: `0.14.0` (tag `v0.14.0` annotato su `develop`).
-- **Roadmap estesa**: aggiunte Fase 4b (sidebar hamburger), Fase 5b (copia su settimana), Fase 12 (Admin), Fase 13 (Manager); l'hardening passa da 12 a 14. La Fase 9 è stata **sdoppiata** su richiesta utente in **Fase 9** (backend) e **Fase 9b** (frontend toggle dark/light + dipendenze).
+- **Versione corrente**: `0.16.0`.
+- **Roadmap estesa**: aggiunte Fase 4b (sidebar hamburger), Fase 5b (copia su settimana), Fase 12 (Admin, scomposta in 12a/12b/12c/12d), Fase 13 (Manager → ora 12d); l'hardening passa da 12 a **Fase 13**. La Fase 9 è stata **sdoppiata** su richiesta utente in **Fase 9** (backend) e **Fase 9b** (frontend toggle dark/light + dipendenze).
+- **Scomposizione Fase 12 (riorganizzata 2026-08-03)**: approccio "dal basso verso l'alto" per aggiunta di permessi. 12a infrastruttura ✅, **12b ruolo USER** ✅, 12c ruolo MANAGER, 12d ruolo ADMIN. Hardening scalato a Fase 13.
+
+> **⚠️ NOTA OPERATIVA — Issue e Suggerimenti:** le issue e i suggerimenti raccolti dai test utente sono tracciati **esclusivamente** in `memory-bank/Issue-Suggestion.md`. Prima di iniziare **ogni fase**, consultare quel file. Quando una voce viene risolta, va **rimossa** da lì nello stesso commit che la risolve. Prima di riportare in questo file eventuali checklist "da fare", verificare se esistono già in `Issue-Suggestion.md` per evitare duplicati o disallineamenti.
 
 ## Roadmap
 
@@ -260,13 +264,13 @@
 - **Branch**: commit su `develop`, tag annotato `v0.14.0`. Niente `main`.
 - **Commit**: `feat(multiuser): phase 11 data segregation`.
 
-### Scomposizione Fase 12 (su richiesta utente 2026-08-03)
-La Fase 12 è stata scomposta in sottofasi; la **Fase 13 è stata incorporata** nella 12d, quindi l'hardening scala a Fase 13.
+### Scomposizione Fase 12 (riorganizzata su richiesta utente 2026-08-03)
+La Fase 12 è stata scomposta in sottofasi, riorganizzate "dal basso verso l'alto" (per aggiunta di permessi). L'hardening scala a Fase 13.
 - **Fase 12a** — Infrastruttura ruoli e permessi (✅ 2026-08-03)
-- **Fase 12b** — Admin: CRUD utenti + gestione lookup (non iniziata)
-- **Fase 12c** — Visibilità per ruolo (admin senza form, sidebar popolata, user invariato) (non iniziata)
-- **Fase 12d** — Manager: group_id, vista gruppo, export (ex Fase 13) (non iniziata)
-- **Fase 13** — Hardening produzione (ex Fase 14) (non iniziata)
+- **Fase 12b** — Ruolo USER: consolidamento + last_login + sidebar (✅ 2026-08-03)
+- **Fase 12c** — Ruolo MANAGER: group_id, vista gruppo, export (non iniziata)
+- **Fase 12d** — Ruolo ADMIN: CRUD utenti + gestione lookup, senza card registrazione (non iniziata)
+- **Fase 13** — Hardening produzione (es Fase 14; vi confluiscono anche le piccolezze di UX/issue minori) (non iniziata)
 
 ### Fase 12a — Infrastruttura ruoli e permessi
 - **Stato**: ✅ completata il 2026-08-03.
@@ -280,6 +284,27 @@ La Fase 12 è stata scomposta in sottofasi; la **Fase 13 è stata incorporata** 
 - **Versioning**: bump `VERSION` `0.14.0` → `0.15.0` (MINOR).
 - **Branch**: commit su `develop`, tag annotato `v0.15.0`. Niente `main`.
 - **Commit**: `feat(auth): phase 12a roles and permissions infrastructure`.
+
+### Fase 12b — Ruolo USER (consolidamento)
+- **Stato**: ✅ completata il 2026-08-03.
+- **Obiettivo**: verificare e blindare il comportamento del ruolo USER e predispore la sidebar dinamica. Prima fase dell'approccio "dal basso verso l'alto": si consolidano i permessi minimi prima di aggiungere quelli di MANAGER e ADMIN.
+- **Cosa è stato fatto**:
+  - **`app/models/user.py`**: aggiunta colonna `last_login` (DateTime nullable) per tracciare l'ultimo accesso.
+  - **`app/core/migrations.py`**: nuova migrazione `_migrate_users_last_login` (idempotente, `ALTER TABLE users ADD COLUMN last_login DATETIME`).
+  - **`app/routers/auth.py`**: al login riuscito `user.last_login = utcnow()` + commit; `sidebar_items: []` nel context login (sidebar vuota in pagina di login).
+  - **`app/routers/web.py`**: funzione `_sidebar_items(user)` che per ora restituisce il link "Registrazioni" per ogni ruolo autenticato; passata al context della route `index`.
+  - **`app/templates/base.html`**: la sidebar popola le voci iterando `sidebar_items or []`, riusando le classi CSS esistenti (`.sidebar__menu li a`) senza duplicare stili.
+  - **`tests/test_models.py`**: test per colonna `last_login` e per `_sidebar_items` (USER e ADMIN).
+- **Verifiche**: 25/25 test OK; migrazione applicata al riavvio (log `Aggiunta colonna users.last_login`); login mario → `last_login` popolato; sidebar con "Registrazioni" per utente e admin, vuota in login; isolamento utente (22 record propri, colonna Utente nascosta), export segregato (0 voci altrui).
+- **Versioning**: bump `VERSION` `0.15.0` → `0.16.0` (MINOR).
+- **Branch**: commit su `develop`, tag annotato `v0.16.0`. Niente `main`.
+- **Commit**: `feat(roles): phase 12b user role consolidation and last_login`.
+
+### Fase 12c — Ruolo MANAGER (non iniziata)
+- **Obiettivo**: `group_id` su `users`, migrazione + seed, pagina gruppo read-only (`GET /group`) con filtro mese e export, sidebar con link "Registrazioni" + "Gruppo". Il manager sulla pagina personale si comporta come USER (solo propri record); la vista gruppo mostra/esporta i record di tutto il suo gruppo (compresi i propri).
+
+### Fase 12d — Ruolo ADMIN (non iniziata)
+- **Obiettivo**: pagina principale senza card registrazione (tabella tutti i record), **export lasciato attivo per admin** (decisione utente), sidebar con link "Registrazioni", "Gestione Utenti" e "Gestione Lookup", CRUD utenti e CRUD lookup con protezioni.
 
 ## Decisioni di versioning
 - **Strategia**: SemVer. Versione tracciata solo nel file `VERSION` (unico servizio, niente repliche in `__init__.py`).
