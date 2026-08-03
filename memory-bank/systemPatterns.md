@@ -119,6 +119,10 @@ efftrack/
 - `/health` resta pubblico.
 - Seed utente admin idempotente (primo utente master) con username/password da config (env var).
 
+## Autorizzazione e ruoli (Fase 12a)
+- `app/core/permissions.py` è la **fonte di verità** per ruoli e permessi: costanti ruoli, helper `is_admin`/`is_manager`/`is_staff`, dependency FastAPI `require_admin`/`require_manager` (401/403).
+- `app/routers/admin.py` (prefisso `/admin`) protegge le route di amministrazione; in 12a è uno scheletro senza endpoint.
+
 ## Sicurezza
 - `SECRET_KEY` letto da env var, default di sviluppo con placeholder esplicito.
 - Validazione server-side obbligatoria su tutti gli input in persistenza.

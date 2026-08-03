@@ -260,17 +260,26 @@
 - **Branch**: commit su `develop`, tag annotato `v0.14.0`. Niente `main`.
 - **Commit**: `feat(multiuser): phase 11 data segregation`.
 
-### Fase 12 — Gestione ruoli e amministrazione (Admin)
-- **Stato**: non iniziata.
-- **Obiettivo**: tabella `roles` (admin/manager/user) e FK su `users`. L'Admin può: CRUD utenti e assegnazione ruoli; CRUD lookup (clienti, gruppi, attività). Sezione `/admin` visibile solo al ruolo admin. I dropdown non saranno più statici dopo il seed.
+### Scomposizione Fase 12 (su richiesta utente 2026-08-03)
+La Fase 12 è stata scomposta in sottofasi; la **Fase 13 è stata incorporata** nella 12d, quindi l'hardening scala a Fase 13.
+- **Fase 12a** — Infrastruttura ruoli e permessi (✅ 2026-08-03)
+- **Fase 12b** — Admin: CRUD utenti + gestione lookup (non iniziata)
+- **Fase 12c** — Visibilità per ruolo (admin senza form, sidebar popolata, user invariato) (non iniziata)
+- **Fase 12d** — Manager: group_id, vista gruppo, export (ex Fase 13) (non iniziata)
+- **Fase 13** — Hardening produzione (ex Fase 14) (non iniziata)
 
-### Fase 13 — Export manager e gestione gruppo (Manager)
-- **Stato**: non iniziata.
-- **Obiettivo**: il Manager vede i record di tutti gli utenti del proprio gruppo e può esportarne i dati (CSV/XLSX), ma NON modifica lookup né gestisce utenti (quello è admin). Serve associazione utente→gruppo.
-
-### Fase 14 — Hardening produzione
-- **Stato**: non iniziata.
-- **Obiettivo**: controllo validazioni, gestione errori, backup SQLite, note migrazione PostgreSQL.
+### Fase 12a — Infrastruttura ruoli e permessi
+- **Stato**: ✅ completata il 2026-08-03.
+- **Obiettivo**: creare le basi tecniche dei ruoli senza modifica UI. Unica fonte di verità per i controlli di autorizzazione e scheletro del router `/admin`.
+- **Cosa è stato fatto**:
+  - **`app/core/permissions.py`** (NUOVO): costanti ruoli, helper `is_admin`/`is_manager`/`is_staff`, dependency `require_admin`/`require_manager`.
+  - **`app/routers/admin.py`** (NUOVO): router `/admin` scheletro, pronto per la 12b.
+  - **`app/routers/web.py`**: rimosso duplicato locale `_is_admin` → usa `is_admin` da permissions.
+  - **`app/main.py`**: registra `admin_router`.
+- **Verifiche**: 22/22 test OK; server avvia con il router `/admin` senza errori.
+- **Versioning**: bump `VERSION` `0.14.0` → `0.15.0` (MINOR).
+- **Branch**: commit su `develop`, tag annotato `v0.15.0`. Niente `main`.
+- **Commit**: `feat(auth): phase 12a roles and permissions infrastructure`.
 
 ## Decisioni di versioning
 - **Strategia**: SemVer. Versione tracciata solo nel file `VERSION` (unico servizio, niente repliche in `__init__.py`).

@@ -1,10 +1,11 @@
 # Active Context — Effort Tracking
 
 ## Stato corrente
-- **Ultima fase completata**: Fase 11 ✅ (2026-08-03) — multiutente e segregazione dati.
-- **Fase in corso**: nessuna. Prossima: Fase 12 (gestione ruoli e amministrazione).
+- **Ultima sottofase completata**: Fase 12a ✅ (2026-08-03) — infrastruttura ruoli e permessi.
+- **Fase in corso**: nessuna. Prossima: Fase 12b (admin CRUD utenti e lookup).
 - **Stato**: idle, pronto per nuovo task.
-- **Versione corrente**: `0.14.0` (tag `v0.14.0` annotato su `develop`).
+- **Versione corrente**: `0.15.0` (tag `v0.15.0` annotato su `develop`).
+- **Scomposizione Fase 12** (2026-08-03): 12a infrastruttura ✅, 12b admin CRUD, 12c visibilità per ruolo, 12d manager (ex Fase 13). Hardening scala a Fase 13.
 - **Roadmap estesa**: aggiunte Fase 4b (sidebar hamburger), Fase 5b (copia su settimana), Fase 12 (Admin), Fase 13 (Manager); hardening slitta a Fase 14. La Fase 9 è stata **sdoppiata** su richiesta utente: **Fase 9** (refactoring, logging, .env, systemd — solo backend) e **Fase 9b** (toggle dark/light, aggiornamento dipendenze — solo frontend). Vedi `progress.md`/`projectbrief.md`.
 - **Nota**: la tabella `effort_entries` **non ha più** la colonna `user_text` (rimossa in Fase 11). `user_id` è ora una FK verso `users.id` (ON DELETE SET NULL). DB di sviluppo: 4 utenti (admin + mario/giulia/luca) e ~62 record di test. **Merge su `main` autorizzato in Fase 9 (due volte) e Fase 9b**: `main` include le fasi 1–9b, v0.12.0. Le fasi 10+ sono solo su `develop`.
 - **Nota ambiente**: sviluppo su **Ubuntu in WSL** (Python 3.12.3, pip 24.0). Venv ricreato in questa macchina. Dipendenze: fastapi 0.141.1, uvicorn 0.52.1, sqlalchemy 2.0.51, pydantic 2.13.4 (pydantic-core 2.46.4, pin compatibile), jinja2 3.1.6, python-multipart 0.0.32, python-dotenv 1.2.2, pytest 9.1.1 (in dev, non in produzione). `pydantic-core` 2.47.0 NON è adottato: incompatibile con pydantic 2.13.4.
@@ -210,10 +211,11 @@
 - **`app/templates/index.html`**: colonna Utente solo per admin; fix campo hidden `month` (`selected_month or ''`).
 - **`tests/test_models.py`**: 22 test OK (schema, seed, segregazione, regola aziendale, export).
 
-## Fasi successive
-- **Fase 12 — Admin**: tabella `roles`, CRUD utenti + assegnazione ruoli, CRUD lookup, sezione `/admin`. L'admin non vedrà più la card registrazione (solo elenco/gestione).
-- **Fase 13 — Manager**: vista/export dei record del proprio gruppo, senza gestione lookup/utenti.
-- **Fase 14 — Hardening**: controllo validazioni, backup, note PostgreSQL.
+## Fasi successive (scomposizione Fase 12)
+- **Fase 12b — Admin CRUD utenti e lookup**: sezione `/admin`, gestione utenti (CRUD + ruoli) e lookup (clienti, gruppi, attività).
+- **Fase 12c — Visibilità per ruolo**: admin senza card registrazione, sidebar popolata, user invariato.
+- **Fase 12d — Manager e gestione gruppo**: `group_id` su `users`, vista/export del gruppo (ex Fase 13).
+- **Fase 13 — Hardening**: ex Fase 14. Controllo validazioni, backup, note PostgreSQL.
 
 ## Rischi / punti aperti
 - **`memory-bank/Issue-Suggestion.md`** traccia issue minori e suggerimenti raccolti dai test utente (priorità molto bassa). Attualmente: **Suggestion 1** (hamburger in login), **Suggestion 2** (incremento ore), **Suggestion 3** (menu su immagine utente), **Suggestion 4** (filtro anno+mese), **Suggestion 5** (evidenzia record modificato), **Suggestion 6** (checkbox ferie). Nessuna issue aperta (Issue 1 risolta in 0.13.1).

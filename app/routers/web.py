@@ -27,6 +27,7 @@ from sqlalchemy.orm import Session, selectinload
 from fastapi.templating import Jinja2Templates
 
 from app.config import APP_NAME, APP_VERSION, AUTH_ENABLED, TEMPLATES_DIR
+from app.core.permissions import is_admin
 from app.db import get_db
 from app.dependencies import get_current_user
 from app.models import Activity, Client, EffortEntry, Group, User
@@ -59,11 +60,6 @@ _CSV_HEADER = [
 ]
 
 
-def _is_admin(user: User | None) -> bool:
-    """True se l'utente ha ruolo admin (supervisore su tutti i record)."""
-    return user is not None and user.role == "admin"
-
-
 def _require_auth(user: User | None) -> RedirectResponse | None:
     """Se l'auth è attiva e manca l'utente, restituisce il redirect al login."""
     if AUTH_ENABLED and user is None:
@@ -76,7 +72,7 @@ def _filter_by_user(stmt: Select, user: User) -> Select:
 
     L'admin vede tutti i record; un utente normale solo i propri.
     """
-    if _is_admin(user):
+    if is_admin(user):
         return stmt
     return stmt.where(EffortEntry.user_id == user.id)
 
@@ -165,7 +161,7 @@ async def index(
             "error": error,
             "current_username": current_username,
             "auth_enabled": AUTH_ENABLED,
-            "is_admin": _is_admin(user),
+            "is_admin": is_admin(user),
         },
     )
 
