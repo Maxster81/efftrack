@@ -1,10 +1,10 @@
 # Active Context — Effort Tracking
 
 ## Stato corrente
-- **Ultima fase completata**: Fase 9b ✅ (2026-08-03) — toggle dark/light + aggiornamento dipendenze.
-- **Fase in corso**: nessuna. Prossima: Fase 10 (autenticazione locale).
+- **Ultima fase completata**: Fase 10 ✅ (2026-08-03) — autenticazione locale con sessione.
+- **Fase in corso**: nessuna. Prossima: Fase 11 (multiutente e segregazione).
 - **Stato**: idle, pronto per nuovo task.
-- **Versione corrente**: `0.12.0` (tag `v0.12.0` annotato su `develop`).
+- **Versione corrente**: `0.13.0` (tag `v0.13.0` annotato su `develop`).
 - **Roadmap estesa**: aggiunte Fase 4b (sidebar hamburger), Fase 5b (copia su settimana), Fase 12 (Admin), Fase 13 (Manager); hardening slitta a Fase 14. La Fase 9 è stata **sdoppiata** su richiesta utente: **Fase 9** (refactoring, logging, .env, systemd — solo backend) e **Fase 9b** (toggle dark/light, aggiornamento dipendenze — solo frontend). Vedi `progress.md`/`projectbrief.md`.
 - **Nota**: la tabella `effort_entries` ha la colonna `user_text` (String 128 nullable). Contiene dati reali (110 record: fixture gen-lug 2026 + preesistenti). **Merge su `main` autorizzato dall'utente in Fase 9 (due volte) e in Fase 9b (2026-08-03)**: a fine Fase 9b `main` ora include **tutte le fasi 1–9b, v0.12.0** (base completa e pulita prima delle modifiche invasive delle Fasi 10+).
 - **Nota ambiente**: sviluppo su **Ubuntu in WSL** (Python 3.12.3, pip 24.0). Venv ricreato in questa macchina. Dipendenze: fastapi 0.141.1, uvicorn 0.52.1, sqlalchemy 2.0.51, pydantic 2.13.4 (pydantic-core 2.46.4, pin compatibile), jinja2 3.1.6, python-multipart 0.0.32, python-dotenv 1.2.2, pytest 9.1.1 (in dev, non in produzione). `pydantic-core` 2.47.0 NON è adottato: incompatibile con pydantic 2.13.4.
@@ -177,14 +177,41 @@
 - `/static/theme.js` → 200 `text/javascript`; `/static/style.css` → 200 `text/css`.
 - **Verifica utente (browser)**: click toggle alterna dark/light, preferenza persistita in localStorage, nessun flash al reload.
 
-## Fasi successive (dopo 9b)
-- **Fasi 10–11**: auth locale, multiutente/segregazione.
+## Modifiche di Fase 10 (autenticazione locale)
+- **`app/models/user.py`** (NUOVO): tabella `users` (id, username UNIQUE, password_hash, role).
+- **`app/models/__init__.py`**: import `User`.
+- **`app/core/seed.py`**: `seed_admin_user(db)` idempotente — utente admin creato se tabella users vuota; username/password da config.
+- **`app/config.py`**: `AUTH_ENABLED` (default true), `ADMIN_USERNAME`/`ADMIN_PASSWORD` (default admin/admin) da env var.
+- **`app/dependencies.py`** (NUOVO): `get_current_user` — legge `request.session["user_id"]`, carica l'utente; session DB non chiusa (dependency pura, evita autoclose).
+- **`app/routers/auth.py`** (NUOVO): login/logout con sessione; verifiche bcrypt; `Response` come return type di POST (evita errore FastAPI con Union di risposte).
+- **`app/main.py`**: `SessionMiddleware` con `SECRET_KEY`; `seed_admin_user` nel lifespan; include router auth.
+- **`app/routers/web.py`**: `_require_auth` + `Depends(get_current_user)` su `/`, `/export`, POST; campo User forzato allo username sessione; context `current_username`/`auth_enabled`; label "Fase 10 — Autenticazione"; `/health` pubblico.
+- **`app/templates/login.html`** (NUOVO): form di login.
+- **`app/templates/base.html`**: area utente (username + Esci) o link Accedi.
+- **`app/templates/index.html`**: campo User `readonly` con `current_username` quando auth.
+- **`app/static/form.js`**: validazione User saltata se readonly.
+- **`app/static/style.css`**: `.login-card`, `.login-form`, `.app-header__user-auth`, `.app-header__logout/.login`.
+- **`requirements.txt`**: `passlib[bcrypt]>=1.7`, `bcrypt<4.1`, `itsdangerous>=2.0.0`.
+- **`.env.example` / `.env`**: `EFFORT_TRACKING_AUTH_ENABLED`, `ADMIN_USERNAME`, `ADMIN_PASSWORD`.
+- **`tests/test_models.py`**: 3 nuovi test admin (creazione, hash valido, idempotenza) + tabella users nello schema. Totale 11 test.
+- **`VERSION`**: `0.12.0` → `0.13.0` (MINOR).
+
+## Verifiche Fase 10 (test + curl + avvio)
+- **Test**: 11/11 OK; `pip check` pulito.
+- Log avvio: `Utente admin creato: username=admin`.
+- Curl: GET / senza sessione → 303 /login; GET /export senza sessione → 303 /login; POST /login errato → "Credenziali non valide"; POST /login admin/admin → 303 /; GET / loggato → 200 (username admin + campo User readonly); GET /logout → 303 /login; GET / dopo logout → 303 /login.
+- **Verifica utente (browser)**: login/logout, campo User bloccato e precompilato.
+
+## Fasi successive (dopo 10)
+- **Fase 11**: multiutente e segregazione dati.
 - **Fase 12 — Admin**: tabella `roles`, CRUD utenti + assegnazione ruoli, CRUD lookup, sezione `/admin`.
 - **Fase 13 — Manager**: vista/export dei record del proprio gruppo, senza gestione lookup/utenti.
 - **Fase 14 — Hardening**: ex Fase 12.
 
 ## Rischi / punti aperti
-- `pydantic-core` è pinnato a 2.46.4 per compatibilità con pydantic 2.13.4; quando pydantic sarà aggiornato, andrà aggiornato insieme.
+- Password admin di default `admin/admin`: va cambiata subito in produzione via env var (Sicurezza Fase 14).
+- La sessione HTTP firmata richiede `SECRET_KEY` robusta in produzione (placeholder in sviluppo).
+- `pydantic-core` pinnato a 2.46.4 per compatibilità con pydantic 2.13.4; quando pydantic sarà aggiornato, andrà aggiornato insieme.
 - Migrazioni schema: `CREATE TABLE IF NOT EXISTS` / seed idempotente; poiché `code` è stato rimosso dopo la prima creazione, il DB va rigenerato se cambia schema (nessun ALTER automatico gestisce la rimozione colonna). Da valutare `ALTER TABLE` controllato o Alembic se cresce la complessità.
 - `user_id` nullable senza FK in `effort_entries`, valorizzato in Fase 11.
 - La cancellazione è **permanente** e senza soft-delete/audit (da valutare in Fase 14/hardening).

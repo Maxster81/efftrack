@@ -201,6 +201,32 @@ a:hover { text-decoration: underline; }
 .app-header__user-icon {
   display: block;
 }
+.app-header__user-auth {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  font-size: 0.9rem;
+}
+.app-header__user-name {
+  font-weight: 600;
+}
+.app-header__logout,
+.app-header__login {
+  color: var(--color-text-on-primary);
+  text-decoration: none;
+  font-size: 0.85rem;
+  opacity: 0.9;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--radius-sm);
+  transition: background-color 0.15s ease, opacity 0.15s ease;
+}
+.app-header__logout:hover,
+.app-header__login:hover {
+  background: rgba(255, 255, 255, 0.12);
+  text-decoration: none;
+  opacity: 1;
+}
 
 /* ---------- Sidebar (menu hamburger, Fase 4b) ---------- */
 .sidebar-overlay {
@@ -550,6 +576,21 @@ a:hover { text-decoration: underline; }
   color: var(--color-text-muted);
   padding: var(--space-xl) var(--space-md) !important;
   font-style: italic;
+}
+
+/* ---------- Login (Fase 10) ---------- */
+.login-card {
+  max-width: 420px;
+  margin: var(--space-xl) auto;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+.login-form {
+  display: grid;
+  gap: var(--space-md);
 }
 
 /* ---------- Form: stato nascosto, errori (Fase 3) ---------- */

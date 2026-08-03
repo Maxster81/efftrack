@@ -12,6 +12,7 @@ from app.models.activity import Activity
 from app.models.client import Client
 from app.models.effort_entry import EffortEntry
 from app.models.group import Group
+from app.models.user import User
 
 __all__ = [
     "Activity",
@@ -19,4 +20,5 @@ __all__ = [
     "Client",
     "EffortEntry",
     "Group",
+    "User",
 ]

@@ -10,9 +10,9 @@ import unittest
 from sqlalchemy import create_engine, inspect, select
 from sqlalchemy.orm import Session
 
-from app.core.seed import seed_lookup_tables
+from app.core.seed import seed_admin_user, seed_lookup_tables
 from app.db import Base
-from app.models import Activity, Client, EffortEntry, Group
+from app.models import Activity, Client, EffortEntry, Group, User
 
 
 class DatabaseTestCase(unittest.TestCase):
@@ -44,9 +44,9 @@ class DatabaseTestCase(unittest.TestCase):
 
 class TestSchema(DatabaseTestCase):
     def test_expected_tables_exist(self) -> None:
-        """Le 4 tabelle attese sono presenti nello schema."""
+        """Le 5 tabelle attese sono presenti nello schema."""
         table_names = set(inspect(self.engine).get_table_names())
-        for table in {"clients", "groups", "activities", "effort_entries"}:
+        for table in {"clients", "groups", "activities", "effort_entries", "users"}:
             self.assertIn(table, table_names)
 
 
@@ -71,6 +71,33 @@ class TestSeed(DatabaseTestCase):
         seed_lookup_tables(self.db)
         n_clients = len(self.db.execute(select(Client)).scalars().all())
         self.assertEqual(n_clients, 2)
+
+
+class TestAdminUser(DatabaseTestCase):
+    """Test di creazione dell'utente admin (Fase 10)."""
+
+    def test_admin_seed_creates_user(self) -> None:
+        """Crea l'utente admin con password hashata e ruolo admin."""
+        seed_admin_user(self.db)
+        user = self.db.execute(select(User)).scalars().first()
+        self.assertIsNotNone(user)
+        self.assertEqual(user.username, "admin")
+        self.assertEqual(user.role, "admin")
+
+    def test_admin_password_hash_is_valid(self) -> None:
+        """L'hash della password admin verifica con la password di default."""
+        from passlib.hash import bcrypt
+
+        seed_admin_user(self.db)
+        user = self.db.execute(select(User)).scalars().first()
+        self.assertTrue(bcrypt.verify("admin", user.password_hash))
+
+    def test_admin_seed_is_idempotent(self) -> None:
+        """Un secondo seed non deve duplicare l'utente admin."""
+        seed_admin_user(self.db)
+        seed_admin_user(self.db)
+        count = len(self.db.execute(select(User)).scalars().all())
+        self.assertEqual(count, 1)
 
 
 class TestExportCsv(DatabaseTestCase):

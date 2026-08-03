@@ -36,15 +36,24 @@
                  aria-label="Passa al tema scuro" title="Tema chiaro attivo — passa allo scuro">
            <span class="app-header__theme-icon" id="theme-toggle-icon" aria-hidden="true">🌙</span>
          </button>
-         <button type="button" class="app-header__user" aria-label="Utente (futuro login)" title="Utente">
-          <svg class="app-header__user-icon" width="22" height="22" viewBox="0 0 24 24" fill="none"
-               xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-            <circle cx="12" cy="8" r="4" fill="currentColor" />
-            <path d="M4 20c0-3.3 3.6-6 8-6s8 2.7 8 6" stroke="currentColor" stroke-width="2"
-                  stroke-linecap="round" fill="none" />
-          </svg>
-        </button>
-      </div>
+         {% if auth_enabled and current_username %}
+           <div class="app-header__user-auth" aria-label="Utente autenticato">
+             <span class="app-header__user-name">{{ current_username }}</span>
+             <a class="app-header__logout" href="/logout">Esci</a>
+           </div>
+         {% elif auth_enabled %}
+           <a class="app-header__login" href="/login">Accedi</a>
+         {% else %}
+           <button type="button" class="app-header__user" aria-label="Utente (auth disattiva)" title="Utente">
+             <svg class="app-header__user-icon" width="22" height="22" viewBox="0 0 24 24" fill="none"
+                  xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+               <circle cx="12" cy="8" r="4" fill="currentColor" />
+               <path d="M4 20c0-3.3 3.6-6 8-6s8 2.7 8 6" stroke="currentColor" stroke-width="2"
+                     stroke-linecap="round" fill="none" />
+             </svg>
+           </button>
+         {% endif %}
+       </div>
     </div>
   </header>
 

@@ -36,7 +36,7 @@ DATABASE_URL: str = os.environ.get(
 )
 
 
-# --- Sicurezza (placeholder, auth attiva da Fase 10) -------------------------
+# --- Sicurezza (auth attiva dalla Fase 10) -----------------------------------
 
 # Placeholder esplicito: in produzione va sovrascritto con un valore robusto.
 SECRET_KEY: str = os.environ.get(
@@ -45,6 +45,14 @@ SECRET_KEY: str = os.environ.get(
 )
 ALGORITHM: str = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
+
+# Attivazione auth. Se False, il web server resta pubblico (utile in sviluppo/test).
+AUTH_ENABLED: bool = os.environ.get("EFFORT_TRACKING_AUTH_ENABLED", "true").lower() in ("1", "true", "yes", "on")
+
+# Credenziali del primo utente amministratore creato al bootstrap (Fase 10).
+# Usate solo se la tabella users è vuota. In produzione vanno sovrascritte via env.
+ADMIN_USERNAME: str = os.environ.get("EFFORT_TRACKING_ADMIN_USERNAME", "admin")
+ADMIN_PASSWORD: str = os.environ.get("EFFORT_TRACKING_ADMIN_PASSWORD", "admin")
 
 
 # --- Server -------------------------------------------------------------------
@@ -66,7 +74,7 @@ LOG_FORMAT: str = "%(asctime)s %(levelname)s [%(name)s] %(message)s"
 # --- Costanti applicative -----------------------------------------------------
 
 APP_NAME: str = "Effort Tracking"
-APP_VERSION: str = "0.12.0"
+APP_VERSION: str = "0.13.0"
 
 
 # --- Path applicativi (templates, static) ------------------------------------

@@ -1,9 +1,12 @@
 """Router web dell'applicazione Effort Tracking.
 
 Espone le pagine HTML renderizzate server-side con Jinja2 e gli endpoint
-di base (indice, health check). Le route business reali (form di
-inserimento, elenco, selezione, export) verranno aggiunte nelle fasi
-successive a partire dalla Fase 2.
+di base (indice, health check). Dalla Fase 10 le route business sono
+protette: se l'autenticazione è attiva e non c'è una sessione valida,
+l'utente viene rediretto al login.
+
+Il campo User del form, quando autenticato, è precompilato e forzato
+lato server con lo username della sessione (readonly lato client).
 """
 from __future__ import annotations
 
@@ -19,17 +22,17 @@ from pydantic import ValidationError
 from sqlalchemy import func, select, text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session, selectinload
-
-from app.config import APP_NAME, APP_VERSION, TEMPLATES_DIR
-from app.db import get_db
-from app.models import Activity, Client, EffortEntry, Group
-from app.schemas.effort import EffortEntryCreate
 from fastapi.templating import Jinja2Templates
+
+from app.config import APP_NAME, APP_VERSION, AUTH_ENABLED, TEMPLATES_DIR
+from app.db import get_db
+from app.dependencies import get_current_user
+from app.models import Activity, Client, EffortEntry, Group, User
+from app.schemas.effort import EffortEntryCreate
 
 logger: logging.Logger = logging.getLogger(__name__)
 
 # Template engine condiviso dal router web.
-# I template vivono in app/templates/ (path centralizzato in app/config.py).
 templates: Jinja2Templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
 
@@ -54,29 +57,31 @@ _CSV_HEADER = [
 ]
 
 
+def _require_auth(user: User | None) -> RedirectResponse | None:
+    """Se l'auth è attiva e manca l'utente, restituisce il redirect al login."""
+    if AUTH_ENABLED and user is None:
+        return RedirectResponse("/login", status_code=303)
+    return None
+
+
 @router.get("/", response_class=HTMLResponse, name="index")
 async def index(
     request: Request,
     db: Session = Depends(get_db),
+    user: User | None = Depends(get_current_user),
     success: int | None = None,
     error: str | None = None,
     month: str | None = None,
 ) -> HTMLResponse:
-    """Pagina principale: form di inserimento + tabella elenco.
+    """Pagina principale: form di inserimento + tabella elenco (protetta)."""
+    redirect = _require_auth(user)
+    if redirect is not None:
+        return redirect
 
-    Fase 7: la tabella inferiore è popolata dai record di `effort_entries`
-    (ordinati per data decrescente) e mostra un dropdown filtro mese/anno
-    basato sui mesi distinti presenti nei record. Il parametro `month`
-    (es. `?month=2026-07`) filtra i record di quel mese; il mese resta
-    derivato da `work_date`, mai persistito. `success`/`error` (set dal
-    POST) mostrano i banner. `success=1` = record inserito, `success=2` =
-    record aggiornato (Fase 7).
-    """
     clients = db.execute(select(Client).order_by(Client.name)).scalars().all()
     groups = db.execute(select(Group).order_by(Group.name)).scalars().all()
     activities = db.execute(select(Activity).order_by(Activity.name)).scalars().all()
 
-    # Mesi distinti presenti nei record, ordinati dal più recente.
     month_rows = db.execute(
         select(func.strftime("%Y-%m", EffortEntry.work_date).label("month"))
         .distinct()
@@ -88,7 +93,6 @@ async def index(
         anno, num = m.split("-")
         month_options.append((m, f"{_MESI_ITALIANI[int(num)]} {anno}"))
 
-    # Record con filtro mese opzionale, eager load delle relazioni.
     stmt = (
         select(EffortEntry)
         .options(
@@ -110,13 +114,16 @@ async def index(
     elif success == 3:
         success_message = "Registrazione eliminata correttamente."
 
+    # In Fase 10, con auth attiva, l'utente corrente è sempre loggato qui.
+    current_username: str = user.username if user is not None else ""
+
     return templates.TemplateResponse(
         request=request,
         name="index.html",
         context={
             "app_name": APP_NAME,
             "app_version": APP_VERSION,
-            "phase": "Fase 9b — Toggle dark/light",
+            "phase": "Fase 10 — Autenticazione",
             "clients": clients,
             "groups": groups,
             "activities": activities,
@@ -126,12 +133,15 @@ async def index(
             "today": date.today().isoformat(),
             "success_message": success_message,
             "error": error,
+            "current_username": current_username,
+            "auth_enabled": AUTH_ENABLED,
         },
     )
 
 
 @router.post("/", response_class=HTMLResponse, name="save_entry")
 async def save_entry(
+    request: Request,
     user: Annotated[str | None, Form()] = None,
     date: Annotated[date | None, Form()] = None,
     client_id: Annotated[int | None, Form()] = None,
@@ -142,28 +152,27 @@ async def save_entry(
     description: Annotated[str | None, Form()] = None,
     action: Annotated[str, Form()] = "single",
     record_id: Annotated[int | None, Form()] = None,
+    current_user: User | None = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
-    """Salva o aggiorna un record di effort nel database.
+    """Salva o aggiorna un record di effort (protetta).
 
-    Fase 5: persistenza reale su `effort_entries`. `action` può essere
-    "single" (salvataggio di un singolo record) oppure "week" (copia su
-    settimana: crea un record per ogni giorno feriale lun→ven della
-    settimana che contiene la data del form).
-
-    Fase 7: se `record_id` è presente, `action=single` aggiorna il record
-    esistente invece di crearne uno nuovo (modalità "modifica"). La copia
-    su settimana è pensata solo per l'inserimento (i valori non sono
-    validi in modalità modifica). Verifica che l'attività richieda una
-    descrizione prima di creare/aggiornare i record. `action=delete`
-    elimina definitivamente il record indicato da `record_id` (richiede
-    solo l'id, non i campi del form).
+    Con auth attiva, il campo User viene forzato lato server allo username
+    della sessione, indipendentemente da quanto inviato dal browser.
     """
-    # Eliminazione definitiva: richiede solo `record_id`, non i campi del form.
+    redirect = _require_auth(current_user)
+    if redirect is not None:
+        return redirect
+
+    # Con auth attiva, rispetta sempre l'utente della sessione (il campo
+    # User è readonly lato client, ma qui se ne garantisce l'integrità).
+    if AUTH_ENABLED and current_user is not None:
+        user = current_user.username
+
+    # Eliminazione definitiva: richiede solo `record_id`.
     if action == "delete":
         return _delete_entry(record_id, db)
 
-    # Costruisce il modello Pydantic per la validazione server-side completa.
     try:
         payload = EffortEntryCreate(
             user=user,
@@ -183,14 +192,10 @@ async def save_entry(
         select(Activity).where(Activity.id == payload.activity_id)
     ).scalar_one_or_none()
 
-    # Validazione condizionale: la descrizione è obbligatoria se richiesta.
     if activity is not None and activity.requires_description and not payload.description:
         logger.warning("Descrizione mancante per attività che la richiede")
         return RedirectResponse("/?error=descrizione", status_code=303)
 
-    # La copia su settimana non è supportata in modalità modifica:
-    # se il record è in fase di update, il pulsante "Copia su settimana"
-    # viene nascosto lato UI; qui si blocca comunque per sicurezza.
     if action == "week" and record_id is not None:
         return RedirectResponse("/?error=validazione", status_code=303)
 
@@ -201,12 +206,7 @@ async def save_entry(
 
 
 def _delete_entry(record_id: int | None, db: Session) -> RedirectResponse:
-    """Elimina definitivamente un record di effort dal database.
-
-    Fase 7: con `record_id` valorizzato recupera e cancella il record.
-    Se l'id non è presente o il record non esiste, redirect con errore
-    di validazione; altrimenti redirect con `?success=3`.
-    """
+    """Elimina definitivamente un record di effort dal database."""
     if record_id is None:
         logger.warning("Eliminazione senza record_id")
         return RedirectResponse("/?error=validazione", status_code=303)
@@ -227,12 +227,7 @@ def _save_single(
     db: Session,
     record_id: int | None = None,
 ) -> RedirectResponse:
-    """Crea un nuovo record oppure aggiorna quello indicato da `record_id`.
-
-    Fase 7: con `record_id` valorizzato, recupera il record esistente e ne
-    aggiorna i campi modificabili dal form, poi fa redirect con
-    `?success=2`. Se il record non esiste, redirect con errore validazione.
-    """
+    """Crea un nuovo record oppure aggiorna quello indicato da `record_id`."""
     if record_id is not None:
         entry = db.get(EffortEntry, record_id)
         if entry is None:
@@ -269,7 +264,6 @@ def _save_single(
 
 def _save_week(payload: EffortEntryCreate, db: Session) -> RedirectResponse:
     """Copia il form su tutti i giorni feriali della settimana della data."""
-    # Lunedì della settimana che contiene la data selezionata (lun=0).
     monday = payload.date - timedelta(days=payload.date.weekday())
     for offset in range(5):  # lun, mar, mer, gio, ven
         db.add(
@@ -292,18 +286,16 @@ def _save_week(payload: EffortEntryCreate, db: Session) -> RedirectResponse:
 
 @router.get("/export", response_class=StreamingResponse, name="export_csv")
 async def export_csv(
+    request: Request,
     db: Session = Depends(get_db),
+    user: User | None = Depends(get_current_user),
     month: str | None = None,
 ) -> StreamingResponse:
-    """Esporta i record di effort in formato CSV.
+    """Esporta i record di effort in formato CSV (protetta)."""
+    redirect = _require_auth(user)
+    if redirect is not None:
+        return redirect
 
-    Fase 8: genera un CSV con le stesse colonne della tabella (Data,
-    Cliente, Gruppo, Attività, Utente, Ore, Note, Descrizione attività).
-    Il parametro opzionale `month` (es. `?month=2026-07`) filtra i record
-    di quel mese; senza filtro vengono esportati tutti i record. La data
-    è formattata DD/MM/YYYY. Il file inizia con il BOM UTF-8 per una
-    corretta apertura in Excel/Windows.
-    """
     stmt = (
         select(EffortEntry)
         .options(
@@ -327,13 +319,7 @@ async def export_csv(
 
 
 def _build_csv(records: list[EffortEntry]) -> str:
-    """Costruisce il contenuto CSV (con BOM UTF-8) dai record di effort.
-
-    Fase 8: le righe seguono l'ordine de `records` così come passato dal
-    chiamante (l'endpoint le ordina per data crescente). Header coerente
-    con le colonne della tabella. La funzione è separata dall'endpoint
-    per renderne il contenuto facilmente testabile senza richieste HTTP.
-    """
+    """Costruisce il contenuto CSV (con BOM UTF-8) dai record di effort."""
     buffer = io.StringIO()
     buffer.write("\ufeff")  # BOM UTF-8 per compatibilità Excel/Windows.
     writer = csv.writer(buffer)
@@ -356,13 +342,7 @@ def _build_csv(records: list[EffortEntry]) -> str:
 
 @router.get("/health", name="health")
 async def health() -> JSONResponse:
-    """Health check: stato applicazione + check base della connettività al DB.
-
-    Restituisce 200 con `status: ok` se la connessione al DB risponde,
-    altrimenti 503 con `status: degraded` e dettaglio dell'errore.
-    """
-    # Import lazy per evitare di inizializzare l'engine al solo caricamento
-    # del modulo (utile in test e in contesti senza DB).
+    """Health check: stato applicazione + check base della connettività al DB (pubblico)."""
     from app.db import engine as db_engine  # noqa: WPS433
 
     db_status: str = "ok"

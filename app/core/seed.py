@@ -1,18 +1,21 @@
-"""Seed idempotente delle tabelle lookup.
+"""Seed idempotente delle tabelle lookup e dell'utente admin.
 
-Popola clients, groups e activities solo se la rispettiva tabella è
-vuota. Eseguito a ogni startup (vedi `app/main.py` lifespan).
+Popola clients, groups, activities e l'utente admin solo se le rispettive
+tabelle sono vuote. Eseguito a ogni startup (vedi `app/main.py` lifespan).
 
 Fase 9: logging di quali lookup sono state populate all'avvio.
+Fase 10: seed dell'utente admin (primo utente master) con password da config.
 """
 from __future__ import annotations
 
 import logging
 
+from passlib.hash import bcrypt
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import Activity, Client, Group
+from app.config import ADMIN_PASSWORD, ADMIN_USERNAME
+from app.models import Activity, Client, Group, User
 
 logger: logging.Logger = logging.getLogger(__name__)
 
@@ -62,6 +65,28 @@ def seed_lookup_tables(db: Session) -> None:
         )
     else:
         logger.debug("Lookup già popolati, seed non necessario")
+
+
+def seed_admin_user(db: Session) -> None:
+    """Crea l'utente amministratore iniziale se la tabella users è vuota.
+
+    Idempotente: se esiste già almeno un utente, non fa nulla. La password
+    proviene da `ADMIN_PASSWORD` (env var, default "admin" in sviluppo).
+    """
+    if not _is_empty(db, User):
+        logger.debug("Utenti già presenti, seed admin non necessario")
+        return
+
+    password_hash: str = bcrypt.hash(ADMIN_PASSWORD)
+    db.add(
+        User(
+            username=ADMIN_USERNAME,
+            password_hash=password_hash,
+            role="admin",
+        )
+    )
+    db.commit()
+    logger.info("Utente admin creato: username=%s", ADMIN_USERNAME)
 
 
 def _is_empty(db: Session, model: type) -> bool:

@@ -19,6 +19,8 @@
 - **Pydantic v2** — validazione input/output.
 - **python-multipart** — parsing form data.
 - **python-dotenv** — carica `.env` in sviluppo (dalla Fase 9).
+- **passlib[bcrypt]** — hashing password (Fase 10); `bcrypt` pinnato `<4.1` per compatibilità con passlib 1.7.4.
+- **itsdangerous** — richiesto da `SessionMiddleware` per firmare i cookie di sessione (Fase 10).
 - **pytest** — framework di test (dipendenza DEV, in `requirements-dev.txt`).
 
 ## Database

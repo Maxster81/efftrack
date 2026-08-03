@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block title %}Accedi &mdash; {{ app_name }}{% endblock %}
+
+{% block content %}
+  <section class="login-card" aria-labelledby="login-title">
+    <h2 id="login-title" class="card-title">Accedi</h2>
+
+    {% if error %}
+      <div class="form-error" role="alert">{{ error }}</div>
+    {% endif %}
+
+    <form class="login-form" method="post" action="/login"
+          aria-label="Form di accesso" novalidate>
+      <div class="form-group">
+        <label for="login-username">Username</label>
+        <input type="text" id="login-username" name="username"
+               placeholder="Il tuo nome utente" autocomplete="username" required />
+      </div>
+
+      <div class="form-group">
+        <label for="login-password">Password</label>
+        <input type="password" id="login-password" name="password"
+               placeholder="La tua password" autocomplete="current-password" required />
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="btn-primary">Accedi</button>
+      </div>
+    </form>
+  </section>
+{% endblock %}

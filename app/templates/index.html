@@ -40,7 +40,10 @@
       <div class="form-row">
         <div class="form-group">
           <label for="effort-user">User</label>
-          <input type="text" id="effort-user" name="user" placeholder="Inserisci utente"
+          <input type="text" id="effort-user" name="user"
+                 {% if auth_enabled and current_username %}readonly value="{{ current_username }}"
+                 {% elif auth_enabled %}readonly
+                 {% else %}placeholder="Inserisci utente"{% endif %}
                  autocomplete="off" />
         </div>
 

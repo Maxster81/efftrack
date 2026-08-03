@@ -93,10 +93,14 @@
       if (!ok && !firstInvalid) { firstInvalid = field; }
     }
 
-    // User
+    // User: obbligatorio solo se NON è readonly (quando loggato è precompilato
+    // dal server dalla sessione, quindi già valorizzato in Fase 10).
     var user = document.getElementById("effort-user");
-    var ok = validateRequired(user, "Il campo User è obbligatorio.");
-    mark(user, ok);
+    var ok = true;
+    if (user && !user.readOnly) {
+      ok = validateRequired(user, "Il campo User è obbligatorio.");
+      mark(user, ok);
+    }
     valid = valid && ok;
 
     // Data

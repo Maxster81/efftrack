@@ -1,10 +1,10 @@
 # Progress — Effort Tracking
 
 ## Stato globale
-- **Ultima fase completata**: Fase 9b ✅ completata il 2026-08-03 (toggle dark/light + aggiornamento dipendenze).
-- **Fase in corso**: nessuna. Prossima: Fase 10 (autenticazione locale).
+- **Ultima fase completata**: Fase 10 ✅ completata il 2026-08-03 (autenticazione locale).
+- **Fase in corso**: nessuna. Prossima: Fase 11 (multiutente e segregazione).
 - **Stato**: idle, pronto per nuovo task.
-- **Versione corrente**: `0.12.0` (tag `v0.12.0` annotato su `develop`).
+- **Versione corrente**: `0.13.0` (tag `v0.13.0` annotato su `develop`).
 - **Roadmap estesa**: aggiunte Fase 4b (sidebar hamburger), Fase 5b (copia su settimana), Fase 12 (Admin), Fase 13 (Manager); l'hardening passa da 12 a 14. La Fase 9 è stata **sdoppiata** su richiesta utente in **Fase 9** (backend) e **Fase 9b** (frontend toggle dark/light + dipendenze).
 
 ## Roadmap
@@ -207,8 +207,33 @@
 - **Commit**: `feat(ui): phase 9b theme toggle and deps update`.
 
 ### Fase 10 — Autenticazione locale
-- **Stato**: non iniziata.
-- **Obiettivo**: login user/password con password hashate e sessione.
+- **Stato**: ✅ completata il 2026-08-03.
+- **Obiettivo**: login user/password con password hashate (bcrypt) e sessione HTTP firmata.
+- **Cosa è stato fatto**:
+  - **`app/models/user.py`** (nuovo): tabella `users` (id, username UNIQUE, password_hash, role).
+  - **`app/models/__init__.py`**: import `User`.
+  - **`app/core/seed.py`**: `seed_admin_user(db)` idempotente — crea l'utente admin (role=admin) se la tabella users è vuota; password/username da `config`.
+  - **`app/config.py`**: `AUTH_ENABLED` (env `EFFORT_TRACKING_AUTH_ENABLED`, default true), `ADMIN_USERNAME`/`ADMIN_PASSWORD` (env, default admin/admin).
+  - **`app/dependencies.py`** (nuovo): `get_current_user` (dependency FastAPI che legge la sessione e carica l'utente).
+  - **`app/routers/auth.py`** (nuovo): `GET /login`, `POST /login` (verifica bcrypt, crea sessione), `GET /logout` (cancella sessione). Use `Response` come return type di POST per evitare l'errore FastAPI con Union di risposte.
+  - **`app/main.py`**: `SessionMiddleware` con `SECRET_KEY`; chiama `seed_admin_user` nel lifespan; registra il router auth.
+  - **`app/routers/web.py`**: route `/`, `/export`, `POST /` protette con `_require_auth` (redirect a `/login` se manca sessione); campo User forzato allo username della sessione quando auth attiva; passa `current_username`/`auth_enabled` al template; label "Fase 10 — Autenticazione". `/health` resta pubblico.
+  - **`app/templates/login.html`** (nuovo): form di login.
+  - **`app/templates/base.html`**: area utente con username + "Esci" se loggato, link "Accedi" se no.
+  - **`app/templates/index.html`**: campo User `readonly` con `current_username` quando auth attiva.
+  - **`app/static/form.js`**: validazione User saltata quando il campo è readonly.
+  - **`app/static/style.css`**: stili `.login-card`, `.login-form`, `.app-header__user-auth`, `.app-header__logout/.login`.
+  - **`requirements.txt`**: `passlib[bcrypt]>=1.7`, `bcrypt<4.1` (pin per compatibilità passlib 1.7.4), `itsdangerous>=2.0.0` (richiesto da SessionMiddleware).
+  - **`.env.example` / `.env`**: `EFFORT_TRACKING_AUTH_ENABLED`, `EFFORT_TRACKING_ADMIN_USERNAME`, `EFFORT_TRACKING_ADMIN_PASSWORD`.
+  - **`VERSION`**: `0.12.0` → `0.13.0` (MINOR).
+- **Decisioni tecniche**:
+  - Sessione HTTP firmata (SessionMiddleware) invece di JWT: più semplice e adatto a app server-rendered (vedi clinerules 06-security).
+  - Campo User del form forzato lato server → `readonly` lato client.
+  - `bcrypt` pinnato `<4.1` per il bug noto di passlib 1.7.4 (`detect_wrap_bug`).
+- **Verifiche**: 11/11 test OK (8 precedenti + 3 nuovi: creazione admin, hash valido, idempotenza); `pip check` pulito; flusso curl completo: GET / senza sessione → 303 /login; POST /login errato → errore; POST /login admin/admin → 303 /; GET / loggato → 200 con username admin + campo User readonly; GET /logout → 303 /login; GET / dopo logout → 303 /login.
+- **Versioning**: bump `VERSION` `0.12.0` → `0.13.0` (MINOR).
+- **Branch**: commit su `develop`, tag annotato `v0.13.0`. Niente `main`.
+- **Commit**: `feat(auth): phase 10 local authentication with session`.
 
 ### Fase 11 — Multiutente e segregazione
 - **Stato**: non iniziata.
@@ -234,6 +259,8 @@
 - **PATCH** = bug fix, refactoring interno, miglioramenti UI.
 
 ## Cose note / limitazioni accettate
+- Auth attiva da Fase 10: route business protette da sessione, `/health` pubblico.
+- `bcrypt` pinnato `<4.1` per compatibilità con passlib 1.7.4.
 - Toggle dark/light funzionante dalla Fase 9b (due modalità, preferenza localStorage).
 - `pydantic-core` pinnato a 2.46.4 per compatibilità con pydantic 2.13.4.
 - Migrazioni schema con `CREATE TABLE IF NOT EXISTS` / `ALTER TABLE` controllato; Alembic proposto se la complessità cresce.
