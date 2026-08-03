@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block title %}{{ app_name }} &mdash; Pannello Amministratore{% endblock %}
+
+{% block content %}
+  <section class="form-card" aria-labelledby="admin-title">
+    <div class="admin-hero">
+      <h2 id="admin-title" class="card-title">Pannello di Amministrazione</h2>
+      <p>Benvenuto, <strong>{{ current_username }}</strong>. Da qui puoi gestire utenti e lookup.</p>
+      <p>Ciao a tutti, questa è la dashboard amministrativa.</p>
+    </div>
+  </section>
+
+  <section class="records-card" aria-labelledby="admin-links-title">
+    <div class="records-card__header">
+      <h2 id="admin-links-title" class="card-title">Vai a</h2>
+    </div>
+    <ul class="admin-links">
+      <li><a class="filter-bar__export" href="/admin/records" role="button">Registrazioni (tutti i record)</a></li>
+      <li><a class="filter-bar__export" href="/admin/users" role="button">Gestione Utenti</a></li>
+      <li><a class="filter-bar__export" href="/admin/lookup" role="button">Gestione Lookup</a></li>
+    </ul>
+  </section>
+{% endblock %}

@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block title %}{{ app_name }} &mdash; Registrazioni (Admin){% endblock %}
+
+{% block content %}
+      {# ------------------------------------------------------------
+         Fase 12d — Tutti i record (admin).
+         Tabella con TUTTI i record del sistema, filtro mese/anno ed
+         export CSV. Nessuna card form: l'admin non inserisce record.
+         ------------------------------------------------------------ #}
+
+  <section class="records-card" aria-labelledby="records-title">
+    <div class="records-card__header">
+      <h2 id="records-title" class="card-title">Registrazioni (tutti gli utenti)</h2>
+      <span class="records-count" aria-label="Numero registrazioni">
+        ({{ records|length }} record)
+      </span>
+    </div>
+
+    {% if month_options %}
+      <form class="filter-bar" method="get" action="/admin/records" aria-label="Filtra registrazioni per mese">
+        <label class="filter-bar__label" for="month-filter">Filtra per mese</label>
+        <select id="month-filter" name="month" class="filter-bar__select"
+                onchange="this.form.submit()">
+          <option value="">Tutti i mesi</option>
+          {% for value, label in month_options %}
+            <option value="{{ value }}" {% if value == selected_month %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+        <span class="filter-bar__spacer" aria-hidden="true"></span>
+        <a class="filter-bar__export" href="/admin/records/export{% if selected_month %}?month={{ selected_month }}{% endif %}"
+           role="button">Esporta CSV</a>
+      </form>
+    {% endif %}
+
+    <div class="table-scroll">
+      <table class="records-table">
+        <thead>
+          <tr>
+            <th scope="col">Data</th>
+            <th scope="col">Cliente</th>
+            <th scope="col">Gruppo</th>
+            <th scope="col">Attività</th>
+            <th scope="col">Utente</th>
+            <th scope="col" class="col-hours">Ore</th>
+            <th scope="col">Note</th>
+            <th scope="col">Descrizione attività</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if records %}
+            {% for record in records %}
+              <tr class="records-table__row">
+                <td>{{ record.work_date.strftime('%d/%m/%Y') }}</td>
+                <td>{{ record.client.name }}</td>
+                <td>{{ record.group.name }}</td>
+                <td>{{ record.activity.name }}</td>
+                <td>{{ record.user.username if record.user else '' }}</td>
+                <td class="col-hours">{{ record.hours_spent }}</td>
+                <td>{{ record.notes or '' }}</td>
+                <td>{{ record.description or '' }}</td>
+              </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td colspan="8" class="empty-state">Nessuna registrazione presente.</td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+{% endblock %}

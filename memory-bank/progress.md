@@ -2,12 +2,12 @@
 
 ## Stato globale
 - **Ultima fase completata**: Fase 11 ✅ completata il 2026-08-03 (multiutente e segregazione).
-- **Ultima sottofase completata**: Fase 12c ✅ completata il 2026-08-03 (ruolo MANAGER — vista gruppo).
-- **Fase in corso**: nessuna. Prossima: Fase 12d (ruolo ADMIN).
+- **Ultima sottofase completata**: Fase 12d ✅ completata il 2026-08-03 (ruolo ADMIN — pannello amministrativo).
+- **Fase in corso**: nessuna. Prossima: Fase 13 (hardening produzione).
 - **Stato**: idle, pronto per nuovo task.
-- **Versione corrente**: `0.17.0`.
+- **Versione corrente**: `0.18.0`.
 - **Roadmap estesa**: aggiunte Fase 4b (sidebar hamburger), Fase 5b (copia su settimana), Fase 12 (Admin, scomposta in 12a/12b/12c/12d); l'hardening passa a **Fase 13**. La Fase 9 è stata **sdoppiata** su richiesta utente in **Fase 9** (backend) e **Fase 9b** (frontend toggle dark/light + dipendenze).
-- **Scomposizione Fase 12 (riorganizzata 2026-08-03)**: approccio "dal basso verso l'alto" per aggiunta di permessi. 12a infrastruttura ✅, 12b ruolo USER ✅, **12c ruolo MANAGER** ✅, 12d ruolo ADMIN. Hardening scalato a Fase 13.
+- **Scomposizione Fase 12 (riorganizzata 2026-08-03)**: approccio "dal basso verso l'alto" per aggiunta di permessi. 12a infrastruttura ✅, 12b ruolo USER ✅, 12c ruolo MANAGER ✅, **12d ruolo ADMIN** ✅. La Fase 12 è integralmente completata. Hardening scalato a Fase 13.
 - **DB di sviluppo**: rigenerato in Fase 12c con dataset multi-gruppo (2 gruppi SOC/NOC, 6 utenti di test con ~20 record ciascuno).
 
 > **⚠️ NOTA OPERATIVA — Issue e Suggerimenti:** le issue e i suggerimenti raccolti dai test utente sono tracciati **esclusivamente** in `memory-bank/Issue-Suggestion.md`. Prima di iniziare **ogni fase**, consultare quel file. Quando una voce viene risolta, va **rimossa** da lì nello stesso commit che la risolve. Prima di riportare in questo file eventuali checklist "da fare", verificare se esistono già in `Issue-Suggestion.md` per evitare duplicati o disallineamenti.
@@ -270,7 +270,7 @@ La Fase 12 è stata scomposta in sottofasi, riorganizzate "dal basso verso l'alt
 - **Fase 12a** — Infrastruttura ruoli e permessi (✅ 2026-08-03)
 - **Fase 12b** — Ruolo USER: consolidamento + last_login + sidebar (✅ 2026-08-03)
 - **Fase 12c** — Ruolo MANAGER: group_id, vista gruppo, export (✅ 2026-08-03)
-- **Fase 12d** — Ruolo ADMIN: CRUD utenti + gestione lookup, senza card registrazione (non iniziata)
+- **Fase 12d** — Ruolo ADMIN: pannello amministrativo (CRUD utenti + lookup + records) (✅ 2026-08-03)
 - **Fase 13** — Hardening produzione (es Fase 14; vi confluiscono anche le piccolezze di UX/issue minori) (non iniziata)
 
 ### Fase 12a — Infrastruttura ruoli e permessi
@@ -316,8 +316,22 @@ La Fase 12 è stata scomposta in sottofasi, riorganizzate "dal basso verso l'alt
 - **Branch**: commit su `develop`, tag annotato `v0.17.0`. Niente `main`.
 - **Commit**: `feat(role): phase 12c manager role with group view`.
 
-### Fase 12d — Ruolo ADMIN (non iniziata)
-- **Obiettivo**: pagina principale senza card registrazione (tabella tutti i record), **export lasciato attivo per admin** (decisione utente), sidebar con link "Registrazioni", "Gestione Utenti" e "Gestione Lookup", CRUD utenti e CRUD lookup con protezioni.
+### Fase 12d — Ruolo ADMIN (pannello amministrativo)
+- **Stato**: ✅ completata il 2026-08-03.
+- **Obiettivo**: pannello admin completo. L'admin al login atterra sulla **dashboard `/admin`**; `GET /` redirige a `/admin` per l'admin. **Export mantenuto attivo per admin** (decisione utente). Sidebar admin con 4 voci.
+- **Cosa è stato fatto**:
+  - **`app/schemas/effort.py`**: nuovi modelli Pydantic `UserCreate`, `PasswordChange`, `RoleChange`, `LookupCreate`.
+  - **`app/routers/admin.py`** (riscritto): dashboard `/admin`, records `/admin/records` (+ `/admin/records/export`), gestione utenti `/admin/users` (crea, cambia password, cambia ruolo, elimina) e gestione lookup `/admin/lookup` (create/edit/delete per clienti, gruppi, attività).
+  - **`app/routers/web.py`**: `GET /` per admin → redirect `/admin`; `_sidebar_items` estesa per ADMIN (Dashboard, Registrazioni, Gestione Utenti, Gestione Lookup).
+  - **`app/routers/auth.py`**: dopo il login, admin → `/admin` (redirect).
+  - **Templates nuovi**: `admin_dashboard.html` (benvenuto), `admin_records.html` (tutti i record + export, no form), `admin_users.html` (CRUD utenti), `admin_lookup.html` (CRUD lookup con blocchi per elementi in uso).
+  - **`app/static/style.css`**: stili admin/lookup/visually-hidden.
+  - **`tests/test_models.py`**: test sidebar admin (4 voci) e mapping `_lookup_model`. Totale 35 test.
+- **Protezioni**: no auto-declassamento, no auto-eliminazione, no eliminazione ultimo admin, no eliminazione lookup con record associati.
+- **Verifiche**: 35/35 test OK; flusso curl: login admin → `/admin`, `/` → redirect `/admin`, dashboard 200, records (120 record), users 200, lookup 200, creazione utente/lookup ok, auto-declassamento bloccato, eliminazione lookup in uso bloccata; DB rigenerato a dataset standard (120 record).
+- **Versioning**: bump `VERSION` `0.17.0` → `0.18.0` (MINOR).
+- **Branch**: commit su `develop`, tag annotato `v0.18.0`. Niente `main`.
+- **Commit**: `feat(admin): phase 12d admin panel with user and lookup management`.
 
 ## Decisioni di versioning
 - **Strategia**: SemVer. Versione tracciata solo nel file `VERSION` (unico servizio, niente repliche in `__init__.py`).

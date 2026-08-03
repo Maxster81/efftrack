@@ -54,3 +54,64 @@ class EffortEntryCreate(BaseModel):
             return None
         stripped = value.strip()
         return stripped or None
+
+
+class UserCreate(BaseModel):
+    """Input per la creazione di un utente da parte dell'admin (Fase 12d)."""
+
+    username: str = Field(min_length=1, max_length=64)
+    password: str = Field(min_length=1, max_length=128)
+
+    @field_validator("username")
+    @classmethod
+    def username_not_blank(cls, value: str) -> str:
+        stripped = value.strip()
+        if not stripped:
+            raise ValueError("Il campo username è obbligatorio.")
+        return stripped
+
+
+class PasswordChange(BaseModel):
+    """Input per il cambio password di un utente (Fase 12d)."""
+
+    password: str = Field(min_length=1, max_length=128)
+
+
+class RoleChange(BaseModel):
+    """Input per il cambio ruolo di un utente (Fase 12d)."""
+
+    role: str = Field(min_length=1, max_length=20)
+
+    @field_validator("role")
+    @classmethod
+    def role_valid(cls, value: str) -> str:
+        allowed = {"admin", "manager", "user"}
+        if value not in allowed:
+            raise ValueError("Ruolo non valido.")
+        return value
+
+
+class LookupCreate(BaseModel):
+    """Input per la creazione/aggiornamento di una voce lookup (Fase 12d).
+
+    `type` indica la tabella: client, group, activity.
+    """
+
+    type: str = Field(min_length=1, max_length=20)
+    name: str = Field(min_length=1, max_length=128)
+
+    @field_validator("type")
+    @classmethod
+    def type_valid(cls, value: str) -> str:
+        allowed = {"client", "group", "activity"}
+        if value not in allowed:
+            raise ValueError("Tipo lookup non valido.")
+        return value
+
+    @field_validator("name")
+    @classmethod
+    def name_not_blank(cls, value: str) -> str:
+        stripped = value.strip()
+        if not stripped:
+            raise ValueError("Il campo nome è obbligatorio.")
+        return stripped

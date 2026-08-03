@@ -337,13 +337,6 @@ class TestSidebar(DatabaseTestCase):
         items = _sidebar_items(user)
         self.assertEqual(items, [{"label": "Registrazioni", "href": "/"}])
 
-    def test_admin_sidebar_has_registrazioni_link(self) -> None:
-        from app.routers.web import _sidebar_items
-
-        user = User(username="admin", password_hash="x", role="admin")
-        items = _sidebar_items(user)
-        self.assertEqual(items, [{"label": "Registrazioni", "href": "/"}])
-
     def test_manager_sidebar_has_registrazioni_and_group(self) -> None:
         """Fase 12c: il manager ha i link Registrazioni e Gruppo."""
         from app.routers.web import _sidebar_items
@@ -369,6 +362,35 @@ class TestSidebar(DatabaseTestCase):
         group = self.db.execute(select(Group)).scalars().first()
         manager = User(username="giulia", password_hash="x", role="manager", group_id=group.id)
         self.assertTrue(_is_manager_view(manager))
+
+
+class TestAdminSidebar(DatabaseTestCase):
+    """Test della sidebar del ruolo ADMIN (Fase 12d)."""
+
+    def test_admin_sidebar_has_four_items(self) -> None:
+        from app.routers.web import _sidebar_items
+
+        admin = User(username="admin", password_hash="x", role="admin")
+        items = _sidebar_items(admin)
+        labels = [i["label"] for i in items]
+        self.assertEqual(
+            labels,
+            ["Dashboard", "Registrazioni", "Gestione Utenti", "Gestione Lookup"],
+        )
+
+    def test_lookup_model_mapping(self) -> None:
+        """Fase 12d: il mapping dei tipi di lookup restituisce i modelli giusti."""
+        from app.routers.admin import _lookup_model
+
+        self.assertIs(_lookup_model("client"), Client)
+        self.assertIs(_lookup_model("group"), Group)
+        self.assertIs(_lookup_model("activity"), Activity)
+
+    def test_invalid_lookup_type_raises(self) -> None:
+        from app.routers.admin import _lookup_model
+
+        with self.assertRaises(ValueError):
+            _lookup_model("bogus")
 
 
 class TestManagerGroup(DatabaseTestCase):

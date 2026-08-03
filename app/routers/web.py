@@ -86,12 +86,20 @@ def _with_month(base_url: str, month: str | None) -> str:
 
 
 def _sidebar_items(user: User) -> list[dict[str, str]]:
-    """Voci della sidebar in base al ruolo dell'utente loggato (Fasi 12b/12c).
+    """Voci della sidebar in base al ruolo dell'utente loggato (Fasi 12b/12c/12d).
 
     - USER: solo "Registrazioni".
     - MANAGER: "Registrazioni" + "Gruppo" (vista gruppo, Fase 12c).
-    - ADMIN: "Registrazioni" (+ Gestione utenti/lookup in Fase 12d).
+    - ADMIN: Dashboard + Registrazioni + Gestione Utenti + Gestione Lookup (Fase 12d).
+      L'admin atterra su `/admin` e gestisce tutto dall'area admin.
     """
+    if is_admin(user):
+        return [
+            {"label": "Dashboard", "href": "/admin"},
+            {"label": "Registrazioni", "href": "/admin/records"},
+            {"label": "Gestione Utenti", "href": "/admin/users"},
+            {"label": "Gestione Lookup", "href": "/admin/lookup"},
+        ]
     items: list[dict[str, str]] = [
         {"label": "Registrazioni", "href": "/"},
     ]
@@ -114,6 +122,11 @@ async def index(
     if redirect is not None:
         return redirect
     assert user is not None  # con auth attiva, dopo _require_auth l'utente c'è.
+
+    # Fase 12d: l'admin atterra sulla dashboard /admin, non sulla pagina
+    # di registrazione (che non può usare: niente card form, solo consultazione).
+    if is_admin(user):
+        return RedirectResponse("/admin", status_code=303)
 
     clients = db.execute(select(Client).order_by(Client.name)).scalars().all()
     groups = db.execute(select(Group).order_by(Group.name)).scalars().all()

@@ -624,3 +624,87 @@ a:hover { text-decoration: underline; }
   color: #1e8449;
   font-size: 0.92rem;
 }
+
+/* ------------------------------------------------------------
+   Fase 12d — Pannello Admin (dashboard, utenti, lookup).
+   ------------------------------------------------------------ */
+.admin-hero {
+  padding: var(--space-md) 0;
+}
+
+.admin-links {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+  padding: 0;
+  margin: var(--space-md) 0;
+}
+
+.admin-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  align-items: center;
+}
+
+.admin-actions form {
+  display: inline-flex;
+  gap: var(--space-xs);
+  align-items: center;
+}
+
+.admin-actions input[type="password"],
+.admin-actions input[type="text"] {
+  padding: var(--space-xs);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.lookup-section {
+  margin-bottom: var(--space-lg);
+  padding-bottom: var(--space-md);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.lookup-list {
+  list-style: none;
+  padding: 0;
+  margin: var(--space-sm) 0 0 0;
+}
+
+.lookup-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  padding: var(--space-xs) 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.lookup-item:last-child {
+  border-bottom: none;
+}
+
+.lookup-name {
+  font-weight: 600;
+}
+
+.text-muted {
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+}
+
+.visually-hidden {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

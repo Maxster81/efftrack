@@ -1,12 +1,12 @@
 # Active Context — Effort Tracking
 
 ## Stato corrente
-- **Ultima sottofase completata**: Fase 12c ✅ (2026-08-03) — ruolo MANAGER (vista gruppo).
-- **Fase in corso**: nessuna. Prossima: Fase 12d (ruolo ADMIN).
+- **Ultima sottofase completata**: Fase 12d ✅ (2026-08-03) — ruolo ADMIN (pannello amministrativo).
+- **Fase in corso**: nessuna. Prossima: Fase 13 (hardening produzione).
 - **Stato**: idle, pronto per nuovo task.
-- **Versione corrente**: `0.17.0`.
-- **Scomposizione Fase 12** (riorganizzata 2026-08-03 su richiesta utente, per aggiunta di permessi dal basso verso l'alto): 12a infrastruttura ✅, 12b ruolo USER ✅, **12c ruolo MANAGER** ✅, **12d ruolo ADMIN** (da fare). Hardening scala a Fase 13.
-- **Nota riorganizzazione**: la numerazione applica l'approccio "dal basso verso l'alto": prima USER (permessi minimi), poi MANAGER (aggiunge vista gruppo), infine ADMIN (CRUD utenti + lookup). Ogni sottofase aggiunge permessi al ruolo precedente invece di togliere.
+- **Versione corrente**: `0.18.0`.
+- **Scomposizione Fase 12** (riorganizzata 2026-08-03 su richiesta utente, per aggiunta di permessi dal basso verso l'alto): 12a infrastruttura ✅, 12b ruolo USER ✅, 12c ruolo MANAGER ✅, **12d ruolo ADMIN** ✅. Hardening scala a Fase 13.
+- **Nota riorganizzazione**: la numerazione applica l'approccio "dal basso verso l'alto": prima USER (permessi minimi), poi MANAGER (aggiunge vista gruppo), infine ADMIN (CRUD utenti + lookup). Ogni sottofase aggiunge permessi al ruolo precedente invece di togliere. La Fase 12 è ora interamente completata.
 - **DB di sviluppo**: rigenerato con dataset multi-gruppo (Fase 12c). 2 gruppi (SOC, NOC), 6 utenti di test (giulia/marco manager, mario/paolo/anna/elisa user) con ~20 record ciascuno, password `test`. Admin resta utente di sola gestione (group_id NULL).
 - **Roadmap estesa**: aggiunte Fase 4b (sidebar hamburger), Fase 5b (copia su settimana), Fase 12 (Admin), Fase 13 (Manager); hardening slitta a Fase 14. La Fase 9 è stata **sdoppiata** su richiesta utente: **Fase 9** (refactoring, logging, .env, systemd — solo backend) e **Fase 9b** (toggle dark/light, aggiornamento dipendenze — solo frontend). Vedi `progress.md`/`projectbrief.md`.
 - **Nota**: la tabella `effort_entries` **non ha più** la colonna `user_text` (rimossa in Fase 11). `user_id` è ora una FK verso `users.id` (ON DELETE SET NULL). DB di sviluppo (Fase 12c): 2 gruppi (SOC, NOC), 6 utenti di test + admin, 120 record. **Merge su `main` autorizzato in Fase 9 (due volte) e Fase 9b**: `main` include le fasi 1–9b, v0.12.0. Le fasi 10+ sono solo su `develop`.
@@ -216,8 +216,8 @@
 ## Fasi successive (scomposizione Fase 12 riorganizzata)
 - **Fase 12b — Ruolo USER** ✅ completata: `last_login` su users, sidebar popolata con link "Registrazioni", test di consolidamento.
 - **Fase 12c — Ruolo MANAGER** ✅ completata: `group_id` su `users`, migrazione + seed multi-gruppo, pagina gruppo read-only (`GET /group` + `GET /group/export`) con filtro mese, sidebar con link "Registrazioni" + "Gruppo". Il manager sulla pagina personale si comporta come USER (solo propri record); la vista gruppo mostra/esporta i record di tutto il suo gruppo (compresi i propri). Suggestion 4 (filtro anno+mese) rimandata a Fase 13.
-- **Fase 12d — Ruolo ADMIN**: pagina principale senza card registrazione (tabella tutti i record), **export lasciato attivo per admin** (decisione utente), sidebar con link "Registrazioni", "Gestione Utenti" e "Gestione Lookup", CRUD utenti e CRUD lookup con protezioni.
-- **Fase 13 — Hardening**: ex Fase 14. Suggestion 4 (filtro anno+mese) e altre piccolezze rimandate qui. Controllo validazioni, backup, note PostgreSQL.
+- **Fase 12d — Ruolo ADMIN** ✅ completata (pannello amministrativo): l'admin al login atterra sulla **dashboard `/admin`**; `GET /` per admin redirige a `/admin`. Area admin con 4 voci di sidebar (Dashboard, Registrazioni, Gestione Utenti, Gestione Lookup). Pagine dedicate: `admin_dashboard.html` (benvenuto, statistiche future), `admin_records.html` (tabella di TUTTI i record + filtro mese + export `/admin/records/export` — niente card form), `admin_users.html` (CRUD utenti: crea, cambia password, cambia ruolo, elimina), `admin_lookup.html` (CRUD lookup clienti/gruppi/attività). Protezioni: niente auto-declassamento, niente auto-eliminazione, niente eliminazione ultimo admin, niente eliminazione lookup con record associati. Export per admin mantenuto attivo (decisione utente).
+- **Fase 13 — Hardening produzione**: ex Fase 14. Suggestion 4 (filtro anno+mese) e altre piccolezze/issue minori (399/500, XSS, security headers, test funzionali) rimandate qui. Controllo validazioni, backup, note PostgreSQL.
 
 ## Rischi / punti aperti
 - **`memory-bank/Issue-Suggestion.md`** traccia issue minori e suggerimenti raccolti dai test utente (priorità molto bassa). Attualmente: **Suggestion 1** (hamburger in login), **Suggestion 2** (incremento ore), **Suggestion 3** (menu su immagine utente), **Suggestion 4** (filtro anno+mese), **Suggestion 5** (evidenzia record modificato), **Suggestion 6** (checkbox ferie). Nessuna issue aperta (Issue 1 risolta in 0.13.1).

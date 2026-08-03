@@ -15,6 +15,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.config import APP_NAME, APP_VERSION, AUTH_ENABLED, TEMPLATES_DIR
+from app.core.permissions import is_admin
 from app.db import get_db
 from app.models import User
 from app.models.effort_entry import utcnow
@@ -84,6 +85,9 @@ async def login_submit(
 
     request.session["user_id"] = user.id
     logger.info("Login riuscito: username=%s (role=%s)", user.username, user.role)
+    # Fase 12d: l'admin atterra sulla dashboard /admin.
+    if is_admin(user):
+        return RedirectResponse("/admin", status_code=303)
     return RedirectResponse("/", status_code=303)
 
 
