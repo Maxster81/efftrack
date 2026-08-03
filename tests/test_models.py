@@ -70,6 +70,11 @@ class TestSchema(DatabaseTestCase):
         self.assertEqual(len(group_fks), 1)
         self.assertEqual(group_fks[0]["referred_table"], "groups")
 
+    def test_users_has_disabled_column(self) -> None:
+        """Fase 13a: la tabella users ha la colonna disabled."""
+        columns = {col["name"] for col in inspect(self.engine).get_columns("users")}
+        self.assertIn("disabled", columns)
+
     def test_effort_entries_has_no_user_text(self) -> None:
         """Fase 11: la colonna legacy user_text è stata rimossa."""
         columns = {col["name"] for col in inspect(self.engine).get_columns("effort_entries")}
@@ -362,6 +367,67 @@ class TestSidebar(DatabaseTestCase):
         group = self.db.execute(select(Group)).scalars().first()
         manager = User(username="giulia", password_hash="x", role="manager", group_id=group.id)
         self.assertTrue(_is_manager_view(manager))
+
+
+class TestDisabledUser(DatabaseTestCase):
+    """Test della disabilitazione utente (Fase 13a, Issue L).
+
+    Usa username unici (disp_test) per evitare collisioni con la fixture
+    condivisa (admin + mario/giulia/... creati da seed_test_users).
+    """
+
+    def test_user_defaults_to_not_disabled(self) -> None:
+        """Un nuovo utente non è disabilitato per default."""
+        u = User(username="disp_test_1", password_hash="x", role="user")
+        self.assertFalse(u.disabled)
+
+    def test_disabled_user_default_false_in_db(self) -> None:
+        """Inserendo un utente senza specificare disabled, resta False."""
+        u = User(username="disp_test_2", password_hash="x", role="user")
+        self.db.add(u)
+        self.db.commit()
+        saved = self.db.get(User, u.id)
+        self.assertIsNotNone(saved)
+        self.assertFalse(saved.disabled)
+
+    def test_can_toggle_disabled(self) -> None:
+        """Il flag disabled può essere aggiornato su un utente esistente."""
+        u = User(username="disp_test_3", password_hash="x", role="user")
+        self.db.add(u)
+        self.db.commit()
+        u.disabled = True
+        self.db.commit()
+        saved = self.db.get(User, u.id)
+        self.assertTrue(saved.disabled)
+
+
+class TestUserGroupAssignment(DatabaseTestCase):
+    """Test dell'assegnazione gruppo a un utente (Fase 13a, Issue K).
+
+    Usa username unici (grp_test_*) per evitare collisioni con la fixture.
+    """
+
+    def test_user_can_be_assigned_to_group(self) -> None:
+        """A un utente può essere assegnato group_id (dal lookup gruppi)."""
+        group = self.db.execute(select(Group)).scalars().first()
+        u = User(username="grp_test_1", password_hash="x", role="user", group_id=group.id)
+        self.db.add(u)
+        self.db.commit()
+        saved = self.db.get(User, u.id)
+        self.assertEqual(saved.group_id, group.id)
+        # La relazione group consente di leggere il nome.
+        self.assertEqual(saved.group.name, group.name)
+
+    def test_user_group_can_be_cleared(self) -> None:
+        """Assegnare group_id=None rimuove l'appartenenza al gruppo."""
+        group = self.db.execute(select(Group)).scalars().first()
+        u = User(username="grp_test_2", password_hash="x", role="user", group_id=group.id)
+        self.db.add(u)
+        self.db.commit()
+        u.group_id = None
+        self.db.commit()
+        saved = self.db.get(User, u.id)
+        self.assertIsNone(saved.group_id)
 
 
 class TestAdminSidebar(DatabaseTestCase):

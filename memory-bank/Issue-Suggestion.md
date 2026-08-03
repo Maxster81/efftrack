@@ -74,6 +74,18 @@ Aggiornare il suggerimento 3 senza rimuoverlo completamente, seguiranno ulterior
 
 ---
 
+## Suggestion 8 - Eliminazione definitiva utente dopo finestra temporale
+**Contesto:** pagina ADMIN Gestione Utenti.
+
+**Comportamento attuale:** l'utente può essere eliminato fisicamente in qualsiasi momento, anche subito dopo la disabilitazione.
+
+**Suggerimento:** prevedere una finestra temporale (es. 30-60 giorni) dopo la **disabilitazione**, trascorsa la quale l'admin potrà eliminare l'utente definitivamente insieme ai suoi record. Durante l'eliminazione mostrare messaggi/warning chiari, es:
+ - "L'utente è stato disabilitato il {data}. Sono trascorsi {n} giorni."
+ - "L'utente ha {X} record associati che verranno eliminati definitivamente. Sei sicuro?"
+ - "Eliminazione consentita dopo almeno 30 giorni dalla disabilitazione."
+
+---
+
 ## Issue da verificare (ereditate da progress.md disallineato)
 
 > Le seguenti voci provengono dalla vecchia sezione "Cosa Manca / Da Fare" di `progress.md`
@@ -128,15 +140,5 @@ Aggiornare il suggerimento 3 senza rimuoverlo completamente, seguiranno ulterior
  - pulsante **AGGIUNGI** disallineato rispetto al campo **NOME**
  - vorrei uno stile più tabellare (creare vari mokup)
 
-### Issue K - assegnazione gruppo di appartenenza - **Stato**: 🔴 da verificare
-- **Descrizione**: non è possibile assegnare i gruppi a nessun utente
- - durante l'aggiunta di un nuovo utente non è possibile assegnare il gruppo 
-- durante la modifica di un  utente esistente non è possibile assegnare il gruppo 
-
-### Issue L - Record orfani dopo eliminazione utente non mostrano il proprietario originale
-- **Stato**: 🔴 da verificare
-- **Descrizione**: Quando un admin elimina un utente che ha record, i record diventano orfani (user_id=NULL) e restano visibili all'admin ma con colonna "Utente" vuota. Non si sa più a chi appartenessero. Possibili soluzioni:
- - (a) bloccare l'eliminazione di utenti con record associati
- - (b) mantenere lo username originale in una colonna separata (es. `original_username`)
- - (c) soft-delete dell'utente invece di cancellazione fisica
-- **Suggerimento** In gestione Lookup si possono creare i gruppi, nella pagina degli utenti sarà possibile associare l'utente ad uno dei gruppi presi dal lookup
+<!-- Issue K risolta in Fase 13a (assegnazione gruppo utenti). -->
+<!-- Issue L risolta in Fase 13a (disabilita utente con flag disabled). -->

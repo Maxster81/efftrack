@@ -204,6 +204,7 @@ async def admin_users(
 ) -> HTMLResponse:
     """Pagina di gestione utenti (lista + form creazione)."""
     users = db.execute(select(User).order_by(User.username)).scalars().all()
+    groups = db.execute(select(Group).order_by(Group.name)).scalars().all()
     rows = [
         {
             "id": u.id,
@@ -211,26 +212,87 @@ async def admin_users(
             "role": u.role,
             "record_count": _user_stats(db, u.id),
             "last_login": _format_last_login(u.last_login),
+            "disabled": u.disabled,
+            "group_id": u.group_id,
+            "group_name": u.group.name if u.group is not None else "",
         }
         for u in users
     ]
     admin_count = sum(1 for u in users if u.role == "admin")
 
     ctx = _base_context(request, admin.username, "users")
-    ctx.update({"users": rows, "admin_count": admin_count, "ok": ok, "err": err})
+    ctx.update({
+        "users": rows,
+        "groups": groups,
+        "admin_count": admin_count,
+        "ok": ok,
+        "err": err,
+    })
     return templates.TemplateResponse(request=request, name="admin_users.html", context=ctx)
+
+
+@router.post("/users/{user_id}/disable", name="admin_users_disable")
+async def admin_users_disable(
+    request: Request,
+    user_id: int,
+    db: Session = Depends(get_db),
+    admin: User = Depends(require_admin),
+) -> RedirectResponse:
+    """Disabilita/abilita un utente (blocca il login, record intatti)."""
+    if user_id == admin.id:
+        logger.warning("Admin %s tenta di disabilitarsi", admin.username)
+        return RedirectResponse("/admin/users?err=Non puoi disabilitare te stesso", status_code=303)
+
+    target = db.get(User, user_id)
+    if target is None:
+        return RedirectResponse("/admin/users?err=Utente inesistente", status_code=303)
+
+    target.disabled = not target.disabled
+    db.commit()
+    stato = "disabilitato" if target.disabled else "riabilitato"
+    logger.info("Utente %s %s da admin %s", target.username, stato, admin.username)
+    return RedirectResponse(f"/admin/users?ok=Utente {stato}", status_code=303)
+
+
+@router.post("/users/{user_id}/group", name="admin_users_group")
+async def admin_users_group(
+    request: Request,
+    user_id: int,
+    group_id: Annotated[int | None, Form()] = None,
+    db: Session = Depends(get_db),
+    admin: User = Depends(require_admin),
+) -> RedirectResponse:
+    """Assegna il gruppo di appartenenza a un utente (Fase 13a, Issue K)."""
+    target = db.get(User, user_id)
+    if target is None:
+        return RedirectResponse("/admin/users?err=Utente inesistente", status_code=303)
+    if group_id is not None:
+        group = db.get(Group, group_id)
+        if group is None:
+            return RedirectResponse("/admin/users?err=Gruppo inesistente", status_code=303)
+    target.group_id = group_id
+    db.commit()
+    logger.info("Gruppo assegnato all'utente %s: %s", target.username, group_id)
+    return RedirectResponse("/admin/users?ok=Gruppo aggiornato", status_code=303)
 
 
 @router.post("/users/create", name="admin_users_create")
 async def admin_users_create(
     request: Request,
-    user: Annotated[UserCreate, Form()],
+    username: Annotated[str | None, Form()] = None,
+    password: Annotated[str | None, Form()] = None,
+    group_id: Annotated[int | None, Form()] = None,
     db: Session = Depends(get_db),
     admin: User = Depends(require_admin),
 ) -> RedirectResponse:
-    """Crea un nuovo utente (username + password, ruolo 'user')."""
+    """Crea un nuovo utente (username + password, ruolo 'user', gruppo opzionale).
+
+    Nota: usa campi Form() individuali (non Annotated[UserCreate, Form()])
+    perché FastAPI non supporta modelli Form() misti ad altri Form() separati
+    (stesso fix della Fase 5b). Il modello UserCreate viene costruito qui.
+    """
     try:
-        payload: UserCreate = UserCreate(**user.model_dump())
+        payload: UserCreate = UserCreate(username=username, password=password)
     except ValidationError as exc:
         logger.warning("Creazione utente non valida: %s", exc.errors())
         return RedirectResponse("/admin/users?err=Dati non validi", status_code=303)
@@ -242,15 +304,21 @@ async def admin_users_create(
         logger.warning("Tentativo di creare utente già esistente %s", payload.username)
         return RedirectResponse("/admin/users?err=Username già esistente", status_code=303)
 
+    if group_id is not None:
+        group = db.get(Group, group_id)
+        if group is None:
+            return RedirectResponse("/admin/users?err=Gruppo inesistente", status_code=303)
+
     db.add(
         User(
             username=payload.username,
             password_hash=bcrypt.hash(payload.password),
             role="user",
+            group_id=group_id,
         )
     )
     db.commit()
-    logger.info("Utente creato da admin: %s", payload.username)
+    logger.info("Utente creato da admin: %s (gruppo=%s)", payload.username, group_id)
     return RedirectResponse("/admin/users?ok=Utente creato", status_code=303)
 
 

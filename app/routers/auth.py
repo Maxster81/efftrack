@@ -79,6 +79,15 @@ async def login_submit(
             context=_login_context("Credenziali non valide."),
         )
 
+    # Fase 13a: account disabilitato → login bloccato.
+    if user.disabled:
+        logger.warning("Login rifiutato: account disabilitato per username=%s", username)
+        return templates.TemplateResponse(
+            request=request,
+            name="login.html",
+            context=_login_context("Account disabilitato. Contatta l'amministratore."),
+        )
+
     # Fase 12b: traccia l'ultimo accesso dell'utente.
     user.last_login = utcnow()
     db.commit()

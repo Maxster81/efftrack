@@ -708,3 +708,49 @@ a:hover { text-decoration: underline; }
   white-space: nowrap;
   border: 0;
 }
+
+/* ---------- Fase 13a: gestione utenti (disabilita, badge, stati) ---------- */
+.btn-sm {
+  min-width: auto;
+  padding: 2px 8px;
+  font-size: 0.78rem;
+}
+
+.badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+.badge-active {
+  background: #eaf7ec;
+  color: #1e8449;
+  border: 1px solid #27ae60;
+}
+.badge-disabled {
+  background: #fdecea;
+  color: #a93226;
+  border: 1px solid #e74c3c;
+}
+
+.records-table tbody tr.is-disabled {
+  opacity: 0.6;
+  background: var(--color-surface-alt);
+}
+.records-table tbody tr.is-disabled:hover {
+  background: var(--color-accent);
+}
+.records-table .admin-actions {
+  gap: 4px;
+}
+.admin-actions input[type="password"] {
+  max-width: 110px;
+}
+.admin-actions select {
+  font-size: 0.8rem;
+  padding: 2px 4px;
+}
+.admin-actions form {
+  gap: 3px;
+}

@@ -32,6 +32,8 @@ class User(Base):
         ForeignKey("groups.id"),
         nullable=True,
     )
+    # Fase 13a: utente disabilitato (bloccato al login ma record intatti).
+    disabled: Mapped[bool] = mapped_column(default=False, nullable=False)
 
     # Relazione verso il gruppo (per leggere il nome nel template).
     group: Mapped["Group | None"] = relationship()  # noqa: F821

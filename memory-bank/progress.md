@@ -2,12 +2,13 @@
 
 ## Stato globale
 - **Ultima fase completata**: Fase 11 ✅ completata il 2026-08-03 (multiutente e segregazione).
-- **Ultima sottofase completata**: Fase 12d ✅ completata il 2026-08-03 (ruolo ADMIN — pannello amministrativo).
-- **Fase in corso**: nessuna. Prossima: Fase 13 (hardening produzione).
+- **Ultima sottofase completata**: Fase 13a ✅ completata il 2026-08-03 (funzionalità admin: disabilita utente + assegnazione gruppo).
+- **Fase in corso**: nessuna. Prossima: Fase 13b (sicurezza e robustezza).
 - **Stato**: idle, pronto per nuovo task.
-- **Versione corrente**: `0.18.0`.
-- **Roadmap estesa**: aggiunte Fase 4b (sidebar hamburger), Fase 5b (copia su settimana), Fase 12 (Admin, scomposta in 12a/12b/12c/12d); l'hardening passa a **Fase 13**. La Fase 9 è stata **sdoppiata** su richiesta utente in **Fase 9** (backend) e **Fase 9b** (frontend toggle dark/light + dipendenze).
-- **Scomposizione Fase 12 (riorganizzata 2026-08-03)**: approccio "dal basso verso l'alto" per aggiunta di permessi. 12a infrastruttura ✅, 12b ruolo USER ✅, 12c ruolo MANAGER ✅, **12d ruolo ADMIN** ✅. La Fase 12 è integralmente completata. Hardening scalato a Fase 13.
+- **Versione corrente**: `0.19.0`.
+- **Roadmap estesa**: aggiunte Fase 4b (sidebar hamburger), Fase 5b (copia su settimana), Fase 12 (Admin, scomposta in 12a/12b/12c/12d); l'hardening passa a **Fase 13**, ora scomposta in 13a-13d. La Fase 9 è stata **sdoppiata** su richiesta utente in **Fase 9** (backend) e **Fase 9b** (frontend toggle dark/light + dipendenze).
+- **Scomposizione Fase 12 (riorganizzata 2026-08-03)**: approccio "dal basso verso l'alto". 12a-12d ✅ completate. Hardening = Fase 13.
+- **Scomposizione Fase 13 (riorganizzata 2026-08-03)**: 13a (ex 13b) funzionalità admin ✅, 13b (ex 13c) sicurezza, 13c (ex 13d) test+produzione, 13d (ex 13a) fix stilistici/UX (rinviata, richiede screenshot).
 - **DB di sviluppo**: rigenerato in Fase 12c con dataset multi-gruppo (2 gruppi SOC/NOC, 6 utenti di test con ~20 record ciascuno).
 
 > **⚠️ NOTA OPERATIVA — Issue e Suggerimenti:** le issue e i suggerimenti raccolti dai test utente sono tracciati **esclusivamente** in `memory-bank/Issue-Suggestion.md`. Prima di iniziare **ogni fase**, consultare quel file. Quando una voce viene risolta, va **rimossa** da lì nello stesso commit che la risolve. Prima di riportare in questo file eventuali checklist "da fare", verificare se esistono già in `Issue-Suggestion.md` per evitare duplicati o disallineamenti.
@@ -271,7 +272,13 @@ La Fase 12 è stata scomposta in sottofasi, riorganizzate "dal basso verso l'alt
 - **Fase 12b** — Ruolo USER: consolidamento + last_login + sidebar (✅ 2026-08-03)
 - **Fase 12c** — Ruolo MANAGER: group_id, vista gruppo, export (✅ 2026-08-03)
 - **Fase 12d** — Ruolo ADMIN: pannello amministrativo (CRUD utenti + lookup + records) (✅ 2026-08-03)
-- **Fase 13** — Hardening produzione (es Fase 14; vi confluiscono anche le piccolezze di UX/issue minori) (non iniziata)
+
+### Scomposizione Fase 13 (riorganizzata su richiesta utente 2026-08-03)
+La Fase 13 (hardening) è stata scomposta in 4 sottofasi; 13d rinviata per ultima perché richiede screenshot non supportati dal modello attuale.
+- **Fase 13a (ex 13b)** — Funzionalità admin: disabilita utente + assegnazione gruppo (✅ 2026-08-03)
+- **Fase 13b (ex 13c)** — Sicurezza e robustezza (404/500, ore 1-12, XSS, headers + S4 filtro anno+mese) (non iniziata)
+- **Fase 13c (ex 13d)** — Test, doc e preparazione produzione (non iniziata)
+- **Fase 13d (ex 13a)** — Fix stilistici e UX (rinviata, richiede screenshot) (non iniziata)
 
 ### Fase 12a — Infrastruttura ruoli e permessi
 - **Stato**: ✅ completata il 2026-08-03.
@@ -332,6 +339,27 @@ La Fase 12 è stata scomposta in sottofasi, riorganizzate "dal basso verso l'alt
 - **Versioning**: bump `VERSION` `0.17.0` → `0.18.0` (MINOR).
 - **Branch**: commit su `develop`, tag annotato `v0.18.0`. Niente `main`.
 - **Commit**: `feat(admin): phase 12d admin panel with user and lookup management`.
+
+### Fase 13a — Funzionalità admin (disabilita utente + assegnazione gruppo)
+- **Stato**: ✅ completata il 2026-08-03.
+- **Obiettivo**: gestire la dismissione di un lavoratore senza perdere i record. Invece di eliminare fisicamente un utente con record (creando orfani user_id=NULL), si introduce la **disabilitazione** (`disabled` flag): l'utente viene bloccato al login ma i suoi record restano intatti e visibili a manager e admin. Inoltre si completa la gestione del gruppo di appartenenza (Issue K).
+- **Cosa è stato fatto**:
+  - **`app/models/user.py`**: aggiunta colonna `disabled` (BOOLEAN, default False).
+  - **`app/core/migrations.py`**: migrazione `_migrate_users_disabled` (idempotente, `ALTER TABLE users ADD COLUMN disabled BOOLEAN NOT NULL DEFAULT 0`).
+  - **`app/routers/auth.py`**: al login, se `user.disabled` → blocco con messaggio "Account disabilitato. Contatta l'amministratore."
+  - **`app/routers/admin.py`**:
+    - `admin_users` passa anche `groups`, `disabled`, `group_id`, `group_name` alla tabella utenti.
+    - Endpoint `POST /users/{id}/disable` — toggle disabilita/abilita (blocca auto-disabilitazione).
+    - Endpoint `POST /users/{id}/group` — assegna/rimuove `group_id` a un utente (Issue K).
+    - `POST /users/create` ora accetta `group_id` opzionale; **fix**: campi Form individuali (non `Annotated[UserCreate, Form()]`) perché FastAPI non supporta modelli Form misti ad altri Form (stesso fix Fase 5b).
+  - **`app/templates/admin_users.html`**: form creazione con select Gruppo; tabella utenti con colonna Gruppo (select per assegnare), colonna Stato (badge Attivo/Disabilitato), toggle Disabilita/Abilita; pulsante Elimina visibile **solo** se l'utente è disabilitato (con avviso record) altrimenti "Disabilita prima" (Suggestion 8).
+  - **`app/static/style.css`**: `.btn-sm`, `.badge`, `.badge-active`, `.badge-disabled`, riga `is-disabled`, stili compact per `.admin-actions` (input/select).
+  - **`tests/test_models.py`**: test colonna `disabled` + `TestDisabledUser` (default False, persistito, toggle) + `TestUserGroupAssignment` (assegna gruppo, legge nome, svuota gruppo). Totale 41 test.
+- **Protezioni**: admin non può disabilitare sé stesso; eliminazione consentita solo dopo disabilitazione.
+- **Verifiche**: 41/41 test OK; migrazione applicata (`Colonna users.disabled aggiunta`); flusso curl: login admin → disabilita mario → mario.disabled=1 → login mario bloccato ("Account disabilitato") → mario ripristinato (disabled=0); creazione teseo con gruppo NOC ok; assegnazione gruppo a marco ok; disabilita+elimina teseo ok.
+- **Versioning**: bump `VERSION` `0.18.0` → `0.19.0` (MINOR).
+- **Branch**: commit su `develop`, tag annotato `v0.19.0`. Niente `main`.
+- **Commit**: `feat(admin): phase 13a user disable and group assignment`.
 
 ## Decisioni di versioning
 - **Strategia**: SemVer. Versione tracciata solo nel file `VERSION` (unico servizio, niente repliche in `__init__.py`).
