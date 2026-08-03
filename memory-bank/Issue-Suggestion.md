@@ -51,12 +51,26 @@ Aggiornare il suggerimento 3 senza rimuoverlo completamente, seguiranno ulterior
 
 **Suggerimento:** prevedere una checkbox o un radio button che, se selezionato, renda tutti i campi non obbligatori e non compilabili, ad eccezione della data. Alla pressione di **SALVA**, per quella data verrà creato un record con i campi vuoti e con la dicitura **FERIE** nel campo **NOTE**.
 
-## Suggestion 6 - Verificare la reale necessità di scegliere il gruppo nella registrazione
+## Suggestion 7 - Verificare la reale necessità di scegliere il gruppo nella registrazione
 **Contesto:** vista Registrazioni, sezione filtro.
 
 **Comportamento attuale:** l'utente deve scegliere il gruppo di appartenenza
 
-**Suggerimento:** ma se un utente fa già parte di un gruppo, che necessità c'è di sceglierlo di nuovo durante la registrazione dell'evento?
+**Suggerimento:** ma se un utente fa già parte di un gruppo, che necessità c'è di sceglierlo di nuovo durante la registrazione dell'evento? Un po' come il campo User
+
+## Suggestion 6 - Prevedere una checkbox o un radio button per il giorno di ferie
+**Contesto:** vista Registrazioni, sezione filtro.
+
+**Comportamento attuale:** non è presente alcuna opzione dedicata ai giorni di ferie.
+
+**Suggerimento:** prevedere una checkbox o un radio button che, se selezionato, renda tutti i campi non obbligatori e non compilabili, ad eccezione della data. Alla pressione di **SALVA**, per quella data verrà creato un record con i campi vuoti e con la dicitura **FERIE** nel campo **NOTE**.
+
+## Suggestion 7 - Verificare la reale utilità del campo Gruppo modificabile
+**Contesto:** vista Registrazioni, sezione filtro.
+
+**Comportamento attuale:** Il campo gruppo si può scegliere
+
+**Suggerimento:** quanto è utile scegliere il gruppo durante la registrazione di un evento se tanto un utente può far parte solo di un determinato gruppo? Un po' come il campo User, autopopolato
 
 ---
 
@@ -102,3 +116,27 @@ Aggiornare il suggerimento 3 senza rimuoverlo completamente, seguiranno ulterior
   - Route API
   - Autenticazione e permessi
   - Export CSV
+
+### Issue I - Verifica stilistica pagina ADMIN aggiunta utenti- **Stato**: 🔴 da verificare
+- **Descrizione**: lo stile della pagina è completamente sballato
+ - pulsanti **ruolo, pwd ed elimina** sono enormi rispetto al resto del testo (a che servono 2 pulsanti per lostesso concetto?)
+ - **dropdown** ruolo e campo testo **nuova password** piccoli rispetto ai pulsanti (uno dei due va rivisto)
+ - **Devo darti uno screenshot per questo issue**
+
+### Issue J - Verifica stilistica pagina ADMIN aggiunta lookup- **Stato**: 🔴 da verificare
+- **Descrizione**: lo stile della pagina è completamente sballato
+ - pulsante **AGGIUNGI** disallineato rispetto al campo **NOME**
+ - vorrei uno stile più tabellare (creare vari mokup)
+
+### Issue K - assegnazione gruppo di appartenenza - **Stato**: 🔴 da verificare
+- **Descrizione**: non è possibile assegnare i gruppi a nessun utente
+ - durante l'aggiunta di un nuovo utente non è possibile assegnare il gruppo 
+- durante la modifica di un  utente esistente non è possibile assegnare il gruppo 
+
+### Issue L - Record orfani dopo eliminazione utente non mostrano il proprietario originale
+- **Stato**: 🔴 da verificare
+- **Descrizione**: Quando un admin elimina un utente che ha record, i record diventano orfani (user_id=NULL) e restano visibili all'admin ma con colonna "Utente" vuota. Non si sa più a chi appartenessero. Possibili soluzioni:
+ - (a) bloccare l'eliminazione di utenti con record associati
+ - (b) mantenere lo username originale in una colonna separata (es. `original_username`)
+ - (c) soft-delete dell'utente invece di cancellazione fisica
+- **Suggerimento** In gestione Lookup si possono creare i gruppi, nella pagina degli utenti sarà possibile associare l'utente ad uno dei gruppi presi dal lookup
