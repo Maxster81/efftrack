@@ -1,12 +1,8 @@
 /* ------------------------------------------------------------
  * Effort Tracking — fogli di stile condivisi.
  *
- * Fase 2: layout statico stile effort tracking (form + tabella).
- * Le regole della welcome card delle Fasi 0/1 sono state rimosse.
- *
- * Palette: blu navy + grigi neutri (vedi memory-bank/projectbrief.md).
- * Variabili CSS in :root per consentire un futuro tema dark/light
- * senza refactoring.
+ * Layout stile effort tracking (form + tabella). Palette: blu navy +
+ * grigi neutri. Variabili CSS in :root per supportare tema dark/light.
  * ------------------------------------------------------------ */
 
 :root {
@@ -50,7 +46,7 @@
   --radius-lg: 12px;
 }
 
-/* Tema esplicito "light" (Fase 9b): replica :root per chiarezza.
+/* Tema esplicito "light": replica :root per chiarezza.
    La modalità dark è attivata da data-theme="dark" sull'elemento <html>. */
 [data-theme="light"] {
   --color-primary: #1e3a5f;
@@ -72,7 +68,7 @@
   --color-border-strong: #b6bdc6;
 }
 
-/* Predisposizione tema dark (toggle UI arriverà in Fase 9) */
+/* Tema dark, attivato da data-theme="dark" sull'elemento <html>. */
 [data-theme="dark"] {
   --color-primary: #4a78b8;
   --color-bg: #14181d;
@@ -210,7 +206,7 @@ a:hover { text-decoration: underline; }
 .app-header__user-name {
   font-weight: 600;
 }
-/* Menu a discesa utente (Fase 13c, S3): toggle + menu con Profilo/ESCI. */
+/* Menu a discesa utente: toggle + menu con Profilo/ESCI. */
 .user-dropdown {
   position: relative;
   display: inline-flex;
@@ -281,7 +277,7 @@ a:hover { text-decoration: underline; }
   opacity: 1;
 }
 
-/* ---------- Sidebar (menu hamburger, Fase 4b) ---------- */
+/* ---------- Sidebar (menu hamburger) ---------- */
 .sidebar-overlay {
   position: fixed;
   inset: 0;
@@ -625,7 +621,7 @@ a:hover { text-decoration: underline; }
 .records-table tbody tr.is-selected:hover {
   background: var(--color-accent-strong);
 }
-/* Fase 13c (S5): evidenzia il record appena modificato con una dissolvenza. */
+/* Evidenzia il record appena modificato con una dissolvenza. */
 .records-table tbody tr.is-highlighted {
   animation: highlight-record 6s ease-out;
 }
@@ -648,7 +644,7 @@ a:hover { text-decoration: underline; }
   font-style: italic;
 }
 
-/* ---------- Login (Fase 10) ---------- */
+/* ---------- Login ---------- */
 .login-card {
   max-width: 420px;
   margin: var(--space-xl) auto;
@@ -663,7 +659,7 @@ a:hover { text-decoration: underline; }
   gap: var(--space-md);
 }
 
-/* ---------- Form: stato nascosto, errori (Fase 3) ---------- */
+/* ---------- Form: stato nascosto, errori ---------- */
 .is-hidden {
   display: none !important;
 }
@@ -696,7 +692,7 @@ a:hover { text-decoration: underline; }
 }
 
 /* ------------------------------------------------------------
-   Fase 12d — Pannello Admin (dashboard, utenti, lookup).
+   Pannello Admin (dashboard, utenti, lookup).
    ------------------------------------------------------------ */
 .admin-hero {
   padding: var(--space-md) 0;
@@ -739,8 +735,8 @@ a:hover { text-decoration: underline; }
   border-bottom: 1px solid var(--color-border);
 }
 
-/* Fase 13c (Issue J): form di aggiunta lookup con input e bottone in linea,
-   allineati orizzontalmente (prima il bottone finiva su una riga separata). */
+/* Form di aggiunta lookup: input e bottone in linea, allineati
+   orizzontalmente. */
 .lookup-add-form {
   display: flex;
   gap: var(--space-sm);
@@ -821,7 +817,7 @@ a:hover { text-decoration: underline; }
   border: 0;
 }
 
-/* ---------- Fase 13a: gestione utenti (disabilita, badge, stati) ---------- */
+/* ---------- Gestione utenti (disabilita, badge, stati) ---------- */
 .btn-sm {
   min-width: auto;
   padding: 2px 8px;
@@ -950,7 +946,7 @@ a:hover { text-decoration: underline; }
   }
 }
 
-/* ---------- Fase 12d: Tab stile schedario per Gestione Lookup (S9) ---------- */
+/* ---------- Tab stile schedario per Gestione Lookup ---------- */
 
 /* Barra dei tab (linguette dello schedario) */
 .lookup-tabs {

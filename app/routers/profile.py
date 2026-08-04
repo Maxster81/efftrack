@@ -4,7 +4,7 @@ Consente all'utente loggato di visualizzare e modificare i propri dati
 anagrafici (nome, cognome, email) e di cambiare la password.
 
 Predispone `password_change_required` per un futuro flusso di cambio
-password obbligatorio al primo login (Future Feature S11).
+password obbligatorio al primo login.
 """
 from __future__ import annotations
 

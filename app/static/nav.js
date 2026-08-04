@@ -1,10 +1,10 @@
 /* ------------------------------------------------------------
- * Effort Tracking — logica sidebar navigazione (Fase 4b).
+ * Effort Tracking — logica sidebar navigazione.
  *
  * Gestisce l'apertura/chiusura del menu hamburger: click sul
  * pulsante hamburger, click sulla X di chiusura, click sull'overlay
  * e tasto ESC. JavaScript vanilla, nessuna dipendenza esterna.
- * Le voci del menu verranno popolate in base al ruolo nelle Fasi 12-13.
+ * Le voci del menu vengono popolate in base al ruolo dell'utente.
  * ------------------------------------------------------------ */
 (function () {
   "use strict";

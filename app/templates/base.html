@@ -6,7 +6,7 @@
    <title>{% block title %}{{ app_name }}{% endblock %}</title>
    <link rel="stylesheet" href="{{ url_for('static', path='style.css') }}" />
    <!-- Applica il tema salvato prima del rendering per evitare il flash
-        del tema chiaro all'avvio (Fase 9b). -->
+        del tema chiaro all'avvio. -->
    <script>
      (function () {
        var t = null;
@@ -19,8 +19,8 @@
   <header class="app-header" role="banner">
     <div class="app-header__inner">
       <div class="app-header__left">
-        <!-- Hamburger menu: apre la sidebar (Fase 4b). Nascosto nelle pagine
-             pubbliche (login, errori) tramite `hide_nav` (Fase 13c, Suggestion 1). -->
+        <!-- Hamburger menu: apre la sidebar. Nascosto nelle pagine
+             pubbliche (login, errori) tramite `hide_nav`. -->
         {% if not hide_nav|default(false) %}
         <button type="button" class="app-header__menu" id="nav-toggle"
                 aria-label="Apri menu di navigazione" aria-expanded="false" aria-controls="app-sidebar">
@@ -34,7 +34,7 @@
       </div>
       <h1 class="app-header__title">{{ app_name }}</h1>
       <div class="app-header__actions">
-        <span class="app-header__phase" aria-label="Fase corrente">{{ phase }}</span>
+        <span class="app-header__phase" aria-label="Sezione corrente">{{ phase }}</span>
         <button type="button" class="app-header__theme-toggle" id="theme-toggle"
                 aria-label="Passa al tema scuro" title="Tema chiaro attivo — passa allo scuro">
           <span class="app-header__theme-icon" id="theme-toggle-icon" aria-hidden="true">🌙</span>
@@ -73,7 +73,7 @@
   </header>
 
   <!-- Sidebar laterale (menu navigazione). Le voci sono popolate in base
-       al ruolo dell'utente loggato (Fase 12b+): ogni route passa la lista
+       al ruolo dell'utente loggato: ogni route passa la lista
        `sidebar_items` nel context del template. -->
   <div class="sidebar-overlay" id="sidebar-overlay" hidden></div>
   <nav class="sidebar" id="app-sidebar" aria-label="Menu di navigazione">

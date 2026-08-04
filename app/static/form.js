@@ -1,11 +1,10 @@
 /* ------------------------------------------------------------
- * Effort Tracking — logica form (Fase 3, aggiornata in Fase 4).
+ * Effort Tracking — logica form.
  *
  * Show/hide condizionale del campo "Descrizione attività" e
  * validazione client-side del form. JavaScript vanilla, niente
- * dipendenze esterne. La validazione server-side arriverà in Fase 5.
- * In Fase 4 il show/hide usa `data-requires-description` dell'attività
- * selezionata (popolata dal DB), non più un confronto su stringa fissa.
+ * dipendenze esterne. Il show/hide usa `data-requires-description`
+ * dell'attività selezionata (popolata dal DB).
  * ------------------------------------------------------------ */
 (function () {
   "use strict";
@@ -68,7 +67,7 @@
     }
   }
 
-  // --- Validazione ore (1 .. 12, multipli di 0.50, Fase 13b) ---
+  // --- Validazione ore (1 .. 12, multipli di 0.50) ---
   function isValidHours(raw) {
     if (raw.trim() === "") { return false; }
     var value = parseFloat(raw.replace(",", "."));
@@ -94,7 +93,7 @@
     }
 
     // User: obbligatorio solo se NON è readonly (quando loggato è precompilato
-    // dal server dalla sessione, quindi già valorizzato in Fase 10).
+    // dal server dalla sessione).
     var user = document.getElementById("effort-user");
     var ok = true;
     if (user && !user.readOnly) {
@@ -115,7 +114,7 @@
     mark(client, ok);
     valid = valid && ok;
 
-    // Gruppo: readonly dal DB (S7, 2026-08-04), non serve validazione client.
+    // Gruppo: readonly dal DB, non serve validazione client.
     // Il server forza il group_id della sessione.
 
     // Attività
@@ -188,7 +187,7 @@
     });
   }
 
-  // Espone helper riusabili da row-select.js (Fase 7).
+  // Espone helper riusabili da row-select.js.
   window.EffortTrack = window.EffortTrack || {};
   window.EffortTrack.syncDescriptionVisibility = syncDescriptionVisibility;
 

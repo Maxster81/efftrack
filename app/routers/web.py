@@ -1,14 +1,13 @@
 """Router web dell'applicazione Effort Tracking.
 
 Espone le pagine HTML renderizzate server-side con Jinja2 e gli endpoint
-di base (indice, health check). Dalla Fase 10 le route business sono
-protette: se l'autenticazione è attiva e non c'è una sessione valida,
-l'utente viene rediretto al login.
+di base (indice, health check). Le route business sono protette: se
+l'autenticazione è attiva e non c'è una sessione valida, l'utente viene
+rediretto al login.
 
-Fase 11: segregazione dati per utente. Ogni utente normale vede, crea,
-modifica ed esporta solo i propri record; l'admin (ruolo "admin") vede
-tutti i record come supervisore. `user_id` viene valorizzato su ogni
-nuovo record con l'utente della sessione.
+Ogni utente normale vede, crea, modifica ed esporta solo i propri record;
+l'admin (ruolo "admin") vede tutti i record come supervisore. `user_id`
+viene valorizzato su ogni nuovo record con l'utente della sessione.
 """
 from __future__ import annotations
 
@@ -47,7 +46,7 @@ _MESI_ITALIANI = [
     "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre",
 ]
 
-# Header del CSV di export (Fase 8), coerente con le colonne della tabella.
+# Header del CSV di export, coerente con le colonne della tabella.
 _CSV_HEADER = [
     "Data",
     "Cliente",
@@ -78,7 +77,7 @@ def _filter_by_user(stmt: Select, user: User) -> Select:
 
 
 def _with_month(base_url: str, month: str | None) -> str:
-    """Aggiunge il parametro month a un URL se presente (Issue 1: filtri)."""
+    """Aggiunge il parametro month a un URL se presente."""
     if month and month != "None":  # "None" (stringa) = mese non valido
         separator: str = "&" if "?" in base_url else "?"
         return f"{base_url}{separator}month={month}"
@@ -86,10 +85,10 @@ def _with_month(base_url: str, month: str | None) -> str:
 
 
 def _sidebar_items(user: User) -> list[dict[str, str]]:
-    """Voci della sidebar in base al ruolo dell'utente loggato (Fasi 12b/12c/12d).
+    """Voci della sidebar in base al ruolo dell'utente loggato.
 
     - USER: "Registrazioni" + "Profilo".
-    - MANAGER: "Registrazioni" + "Gruppo" (vista gruppo, Fase 12c) + "Profilo".
+    - MANAGER: "Registrazioni" + "Gruppo" (vista gruppo) + "Profilo".
     - ADMIN: Dashboard + Registrazioni + Gestione Utenti + Gestione Lookup
       (il Profilo è accessibile dal menu utente, non dalla sidebar admin).
     """
@@ -125,16 +124,16 @@ async def index(
         return redirect
     assert user is not None  # con auth attiva, dopo _require_auth l'utente c'è.
 
-    # Fase 12d: l'admin atterra sulla dashboard /admin, non sulla pagina
-    # di registrazione (che non può usare: niente card form, solo consultazione).
+    # L'admin atterra sulla dashboard /admin, non sulla pagina di
+    # registrazione (che non può usare: niente card form, solo consultazione).
     if is_admin(user):
         return RedirectResponse("/admin", status_code=303)
 
     clients = db.execute(select(Client).order_by(Client.name)).scalars().all()
     activities = db.execute(select(Activity).order_by(Activity.name)).scalars().all()
 
-    # Gruppo di appartenenza: non più un select, ma un campo readonly
-    # autopopolato come User (S7, 2026-08-04).
+    # Gruppo di appartenenza: non un select, ma un campo readonly
+    # autopopolato come User.
     current_group_name: str = ""
     current_group_id: int | None = None
     if user.group_id is not None:
@@ -143,7 +142,7 @@ async def index(
             current_group_name = group.name
             current_group_id = group.id
 
-    # Mesi distinti limitati ai record visibili all'utente (Fase 11).
+    # Mesi distinti limitati ai record visibili all'utente.
     month_stmt = (
         select(func.strftime("%Y-%m", EffortEntry.work_date).label("month"))
         .distinct()
@@ -188,7 +187,7 @@ async def index(
         context={
             "app_name": APP_NAME,
             "app_version": APP_VERSION,
-            "phase": "Fase 11 — Multiutente e segregazione",
+            "phase": "Registrazioni",
             "clients": clients,
             "activities": activities,
             "current_group_name": current_group_name,
@@ -203,7 +202,7 @@ async def index(
             "auth_enabled": AUTH_ENABLED,
             "is_admin": is_admin(user),
             "sidebar_items": _sidebar_items(user),
-            # Fase 13c (S5): id del record da evidenziare dopo l'aggiornamento.
+            # Id del record da evidenziare dopo l'aggiornamento.
             "highlight_id": highlight_id,
         },
     )
@@ -230,8 +229,8 @@ async def save_entry(
 
     Con auth attiva, il campo User viene forzato lato server allo username
     della sessione, indipendentemente da quanto inviato dal browser.
-    `month` preserva il filtro mese nel redirect (Issue-Suggestion.md Issue 1).
-    Fase 11: `user_id` viene valorizzato con l'utente della sessione.
+    `month` preserva il filtro mese nel redirect. `user_id` viene
+    valorizzato con l'utente della sessione.
     """
     redirect = _require_auth(current_user)
     if redirect is not None:
@@ -240,8 +239,8 @@ async def save_entry(
 
     # Con auth attiva, rispetta sempre l'utente della sessione (il campo
     # User è readonly lato client, ma qui se ne garantisce l'integrità).
-    # S7 (2026-08-04): anche il Gruppo viene forzato al gruppo di appartenenza
-    # dell'utente di sessione, ignorando il valore inviato dal browser.
+    # Anche il Gruppo viene forzato al gruppo di appartenenza dell'utente
+    # di sessione, ignorando il valore inviato dal browser.
     if AUTH_ENABLED:
         user = current_user.username
         group_id = current_user.group_id
@@ -290,10 +289,10 @@ def _delete_entry(
 ) -> RedirectResponse:
     """Elimina definitivamente un record di effort dal database.
 
-    Fase 11: ogni utente può eliminare SOLO i propri record. Nessuna
-    eccezione per admin/manager — la modifica o cancellazione di record
-    altrui non è mai consentita (regola aziendale: nessuno tocca i dati
-    degli altri, nemmeno con ruolo di supervisione).
+    Ogni utente può eliminare SOLO i propri record. Nessuna eccezione per
+    admin/manager — la modifica o cancellazione di record altrui non è mai
+    consentita (regola aziendale: nessuno tocca i dati degli altri, nemmeno
+    con ruolo di supervisione).
     """
     if record_id is None:
         logger.warning("Eliminazione senza record_id")
@@ -327,8 +326,8 @@ def _save_single(
 ) -> RedirectResponse:
     """Crea un nuovo record oppure aggiorna quello indicato da `record_id`.
 
-    Fase 11: il nuovo record viene associato all'utente corrente; su update
-    ogni utente può modificare SOLO i propri record (nessuna eccezione per
+    Il nuovo record viene associato all'utente corrente; su update ogni
+    utente può modificare SOLO i propri record (nessuna eccezione per
     admin/manager — regola aziendale).
     """
     if record_id is not None:
@@ -336,8 +335,8 @@ def _save_single(
         if entry is None:
             logger.warning("Update di record inesistente id=%s", record_id)
             return RedirectResponse(_with_month("/?error=validazione", month), status_code=303)
-        # Fase 11: ogni utente può aggiornare SOLO i propri record. Nessuna
-        # eccezione per admin/manager (regola aziendale).
+        # Ogni utente può aggiornare SOLO i propri record. Nessuna eccezione
+        # per admin/manager (regola aziendale).
         if entry.user_id != current_user.id:
             logger.warning(
                 "Utente %s tenta di aggiornare record altrui id=%s",
@@ -356,7 +355,7 @@ def _save_single(
         entry.description = payload.description
         db.commit()
         logger.info("Record aggiornato id=%s data=%s ore=%s", record_id, payload.date, payload.hours)
-        # Fase 13c (S5): passa l'id del record per evidenziarlo nella tabella.
+        # Passa l'id del record per evidenziarlo nella tabella.
         base = f"/?success=2&highlight_id={record_id}"
         return RedirectResponse(_with_month(base, month), status_code=303)
 
@@ -384,7 +383,7 @@ def _save_week(
 ) -> RedirectResponse:
     """Copia il form su tutti i giorni feriali della settimana della data.
 
-    Fase 11: tutti i record creati vengono associati all'utente corrente.
+    Tutti i record creati vengono associati all'utente corrente.
     """
     monday = payload.date - timedelta(days=payload.date.weekday())
     for offset in range(5):  # lun, mar, mer, gio, ven
@@ -445,8 +444,8 @@ async def export_csv(
 def _build_csv(records: list[EffortEntry]) -> str:
     """Costruisce il contenuto CSV (con BOM UTF-8) dai record di effort.
 
-    Fase 11: la colonna Utente mostra lo username reale dal JOIN su users;
-    per i record senza proprietario (legacy) mostra una stringa vuota.
+    La colonna Utente mostra lo username reale dal JOIN su users; per i
+    record senza proprietario (legacy) mostra una stringa vuota.
     """
     buffer = io.StringIO()
     buffer.write("\ufeff")  # BOM UTF-8 per compatibilità Excel/Windows.
@@ -476,8 +475,8 @@ def _is_manager_view(user: User | None) -> bool:
 def _records_in_group_statement(db: Session, group_id: int) -> Select:
     """Restituisce lo statement SQL dei record di tutti gli utenti del gruppo.
 
-    Fase 12c: la vista gruppo del manager mostra i record di tutti gli utenti
-    che hanno `group_id` uguale a quello del manager.
+    La vista gruppo del manager mostra i record di tutti gli utenti che
+    hanno `group_id` uguale a quello del manager.
     """
     user_ids = db.execute(select(User.id).where(User.group_id == group_id)).scalars().all()
     stmt: Select = (
@@ -532,7 +531,7 @@ async def group_view(
     user: User | None = Depends(get_current_user),
     month: str | None = None,
 ) -> HTMLResponse:
-    """Pagina del gruppo per il manager: solo visualizzazione/esportazione (Fase 12c).
+    """Pagina del gruppo per il manager: solo visualizzazione/esportazione.
 
     Il manager vede i record di tutti gli utenti del gruppo che gestisce,
     con filtro mese/anno. Non c'è il form di inserimento: la vista è read-only.
@@ -555,7 +554,7 @@ async def group_view(
         context={
             "app_name": APP_NAME,
             "app_version": APP_VERSION,
-            "phase": "Fase 12c — Vista gruppo (manager)",
+            "phase": "Vista gruppo (manager)",
             "group_name": group.name if group else "Gruppo",
             "records": records,
             "month_options": month_options,
@@ -575,7 +574,7 @@ async def group_export_csv(
     user: User | None = Depends(get_current_user),
     month: str | None = None,
 ) -> StreamingResponse:
-    """Esporta in CSV i record del gruppo gestito dal manager (Fase 12c)."""
+    """Esporta in CSV i record del gruppo gestito dal manager."""
     redirect = _require_auth(user)
     if redirect is not None:
         return redirect

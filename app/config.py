@@ -36,7 +36,7 @@ DATABASE_URL: str = os.environ.get(
 )
 
 
-# --- Sicurezza (auth attiva dalla Fase 10) -----------------------------------
+# --- Sicurezza (autenticazione) ---------------------------------------------
 
 # Placeholder esplicito: in produzione va sovrascritto con un valore robusto.
 SECRET_KEY: str = os.environ.get(
@@ -49,18 +49,18 @@ ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
 # Attivazione auth. Se False, il web server resta pubblico (utile in sviluppo/test).
 AUTH_ENABLED: bool = os.environ.get("EFFORT_TRACKING_AUTH_ENABLED", "true").lower() in ("1", "true", "yes", "on")
 
-# Credenziali del primo utente amministratore creato al bootstrap (Fase 10).
+# Credenziali del primo utente amministratore creato al bootstrap.
 # Usate solo se la tabella users è vuota. In produzione vanno sovrascritte via env.
 ADMIN_USERNAME: str = os.environ.get("EFFORT_TRACKING_ADMIN_USERNAME", "admin")
 ADMIN_PASSWORD: str = os.environ.get("EFFORT_TRACKING_ADMIN_PASSWORD", "admin")
 
-# Suggestion 8 (Fase 13d): giorni minimi di disabilitazione prima che un utente
-# possa essere eliminato definitivamente (insieme ai suoi record). Configurabile.
+# Giorni minimi di disabilitazione prima che un utente possa essere eliminato
+# definitivamente (insieme ai suoi record). Configurabile.
 USER_DELETE_GRACE_DAYS: int = int(
     os.environ.get("EFFORT_TRACKING_USER_DELETE_GRACE_DAYS", "30")
 )
 
-# Hardening Fase 13d: parametri di sicurezza del cookie di sessione.
+# Parametri di sicurezza del cookie di sessione.
 # `SameSite` del cookie: "lax" protegge dai CSRF cross-site (default Starlette).
 # `SECURE`: in produzione dietro TLS va impostato a "1" (cookie solo via HTTPS).
 SESSION_COOKIE_SAMESITE: str = os.environ.get(
@@ -70,9 +70,8 @@ SESSION_COOKIE_SECURE: bool = os.environ.get(
     "EFFORT_TRACKING_SESSION_SECURE", "false"
 ).lower() in ("1", "true", "yes", "on")
 
-# Issue L (Fase 14): limite massimo della dimensione del body delle
-# richieste in byte. Protegge da payload maliziosi o eccessivi.
-# Default 1 MiB (1_048_576 byte), più che sufficiente per i form.
+# Limite massimo della dimensione del body delle richieste in byte.
+# Protegge da payload maliziosi o eccessivi. Default 1 MiB (1_048_576 byte).
 MAX_BODY_BYTES: int = int(
     os.environ.get("EFFORT_TRACKING_MAX_BODY_BYTES", "1048576")
 )
@@ -97,7 +96,7 @@ LOG_FORMAT: str = "%(asctime)s %(levelname)s [%(name)s] %(message)s"
 # --- Costanti applicative -----------------------------------------------------
 
 APP_NAME: str = "Effort Tracking"
-APP_VERSION: str = "0.24.0"
+APP_VERSION: str = "0.24.1"
 
 
 # --- Path applicativi (templates, static) ------------------------------------

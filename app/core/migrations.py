@@ -1,10 +1,7 @@
-"""Migrazioni controllate dello schema (Fase 11).
+"""Migrazioni controllate dello schema.
 
-Gestisce l'evoluzione dello schema SQLite senza introdurre Alembic:
-- Fase 11: ricrea `effort_entries` per aggiungere la ForeignKey su `users.id`
-  e rimuovere la colonna `user_text`. Poiché l'utente ha deciso di eliminare
-  i dati di sviluppo, la tabella viene semplicemente DROPpata e ricreata
-  vuota con lo schema corrente (create_all idempotente).
+Gestisce l'evoluzione dello schema SQLite senza introdurre Alembic. Ogni
+migrazione è idempotente e viene applicata all'avvio.
 """
 from __future__ import annotations
 
@@ -19,11 +16,10 @@ logger: logging.Logger = logging.getLogger(__name__)
 
 
 def _migrate_effort_entries(engine: Engine) -> None:
-    """Migrazione Fase 11: ricrea `effort_entries` senza la colonna `user_text`.
+    """Ricrea `effort_entries` senza la colonna legacy `user_text`.
 
     La tabella viene DROPpata e ricreata se nel DB esiste ancora la colonna
-    legacy `user_text`. I dati di sviluppo vengono eliminati (decisione
-    utente Fase 11).
+    legacy. I dati esistenti vengono eliminati.
     """
     inspector = inspect(engine)
     if "effort_entries" not in inspector.get_table_names():
@@ -34,15 +30,15 @@ def _migrate_effort_entries(engine: Engine) -> None:
         logger.debug("Schema effort_entries già aggiornato, migrazione non necessaria")
         return
 
-    logger.info("Migrazione Fase 11: ricreazione effort_entries (dati di sviluppo eliminati)")
+    logger.info("Migrazione: ricreazione effort_entries (dati esistenti eliminati)")
     with engine.begin() as connection:
         connection.execute(text("DROP TABLE IF EXISTS effort_entries"))
     Base.metadata.create_all(bind=engine)
-    logger.info("Tabella effort_entries ricreata con lo schema Fase 11")
+    logger.info("Tabella effort_entries ricreata con lo schema corrente")
 
 
 def _migrate_users_last_login(engine: Engine) -> None:
-    """Migrazione Fase 12b: aggiunge la colonna `last_login` a `users`.
+    """Aggiunge la colonna `last_login` a `users`.
 
     Idempotente: se la colonna esiste già, non fa nulla. Usa ALTER TABLE
     (pattern già consolidato per le modifiche schema semplici in SQLite).
@@ -56,14 +52,14 @@ def _migrate_users_last_login(engine: Engine) -> None:
         logger.debug("Colonna users.last_login già presente, migrazione non necessaria")
         return
 
-    logger.info("Migrazione Fase 12b: aggiunta colonna users.last_login")
+    logger.info("Migrazione: aggiunta colonna users.last_login")
     with engine.begin() as connection:
         connection.execute(text("ALTER TABLE users ADD COLUMN last_login DATETIME"))
     logger.info("Colonna users.last_login aggiunta")
 
 
 def _migrate_users_group_id(engine: Engine) -> None:
-    """Migrazione Fase 12c: aggiunge la colonna `group_id` a `users`.
+    """Aggiunge la colonna `group_id` a `users`.
 
     Idempotente: se la colonna esiste già, non fa nulla. Usa ALTER TABLE
     con FK verso `groups.id` (nullable).
@@ -77,7 +73,7 @@ def _migrate_users_group_id(engine: Engine) -> None:
         logger.debug("Colonna users.group_id già presente, migrazione non necessaria")
         return
 
-    logger.info("Migrazione Fase 12c: aggiunta colonna users.group_id")
+    logger.info("Migrazione: aggiunta colonna users.group_id")
     with engine.begin() as connection:
         connection.execute(
             text("ALTER TABLE users ADD COLUMN group_id INTEGER REFERENCES groups(id)")
@@ -86,7 +82,7 @@ def _migrate_users_group_id(engine: Engine) -> None:
 
 
 def _migrate_users_disabled_at(engine: Engine) -> None:
-    """Migrazione Suggestion 8 (Fase 13d): aggiunge la colonna `disabled_at` a `users`.
+    """Aggiunge la colonna `disabled_at` a `users`.
 
     Idempotente: se la colonna esiste già, non fa nulla. Traccia la data di
     disabilitazione per calcolare la finestra minima prima dell'eliminazione.
@@ -100,14 +96,14 @@ def _migrate_users_disabled_at(engine: Engine) -> None:
         logger.debug("Colonna users.disabled_at già presente, migrazione non necessaria")
         return
 
-    logger.info("Migrazione Suggestion 8: aggiunta colonna users.disabled_at")
+    logger.info("Migrazione: aggiunta colonna users.disabled_at")
     with engine.begin() as connection:
         connection.execute(text("ALTER TABLE users ADD COLUMN disabled_at DATETIME"))
     logger.info("Colonna users.disabled_at aggiunta")
 
 
 def _migrate_users_disabled(engine: Engine) -> None:
-    """Migrazione Fase 13a: aggiunge la colonna `disabled` a `users`.
+    """Aggiunge la colonna `disabled` a `users`.
 
     Idempotente: se la colonna esiste già, non fa nulla. Il default è 0 (False).
     """
@@ -120,7 +116,7 @@ def _migrate_users_disabled(engine: Engine) -> None:
         logger.debug("Colonna users.disabled già presente, migrazione non necessaria")
         return
 
-    logger.info("Migrazione Fase 13a: aggiunta colonna users.disabled")
+    logger.info("Migrazione: aggiunta colonna users.disabled")
     with engine.begin() as connection:
         connection.execute(
             text("ALTER TABLE users ADD COLUMN disabled BOOLEAN NOT NULL DEFAULT 0")
@@ -161,15 +157,9 @@ def _migrate_users_profile(engine: Engine) -> None:
 def run_schema_migrations(engine: Engine) -> None:
     """Applica le migrazioni controllate dello schema all'avvio.
 
-    - Fase 11: rimozione di `effort_entries.user_text` e aggiunta della FK.
-    - Fase 12b: aggiunta della colonna `users.last_login`.
-    - Fase 12c: aggiunta della colonna `users.group_id` (FK verso groups).
-    - Fase 13a: aggiunta della colonna `users.disabled`.
-    - Suggestion 8 (Fase 13d): aggiunta della colonna `users.disabled_at`.
-    - Profilo utente: aggiunta colonne `first_name`, `last_name`, `email`,
-      `password_change_required`.
-
-    Idempotente: se lo schema è già allineato, non fa nulla.
+    Gestisce: rimozione legacy in `effort_entries` e aggiunta delle colonne
+    `last_login`, `group_id`, `disabled`, `disabled_at` e dei dati profilo
+    a `users`. Idempotente: se lo schema è già allineato, non fa nulla.
     """
     _migrate_effort_entries(engine)
     _migrate_users_last_login(engine)

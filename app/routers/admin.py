@@ -1,4 +1,4 @@
-"""Router amministrativo (Fase 12d).
+"""Router amministrativo.
 
 Router protetto da `require_admin`. Espone:
 - GET /admin            → dashboard di benvenuto (statistiche future)
@@ -49,7 +49,7 @@ _MESI_ITALIANI = [
 
 
 def _sidebar_items() -> list[dict[str, str]]:
-    """Voci della sidebar dell'area admin (Fase 12d)."""
+    """Voci della sidebar dell'area admin."""
     return [
         {"label": "Dashboard", "href": "/admin"},
         {"label": "Registrazioni", "href": "/admin/records"},
@@ -63,7 +63,7 @@ def _base_context(request: Request, current_username: str, active: str = "") -> 
     return {
         "app_name": APP_NAME,
         "app_version": APP_VERSION,
-        "phase": "Fase 12d — Pannello Admin",
+        "phase": "Pannello Admin",
         "current_username": current_username,
         "auth_enabled": AUTH_ENABLED,
         "is_admin": True,
@@ -211,7 +211,7 @@ def _can_delete_user(u: User) -> bool:
 
 
 def _delete_user_records(db: Session, user_id: int) -> int:
-    """Elimina definitivamente i record di effort dell'utente (Suggestion 8).
+    """Elimina definitivamente i record di effort dell'utente.
 
     Restituisce il numero di record eliminati.
     """
@@ -337,7 +337,7 @@ async def admin_users_disable(
         return RedirectResponse("/admin/users?err=Utente inesistente", status_code=303)
 
     target.disabled = not target.disabled
-    # Suggestion 8: traccia il momento della disabilitazione (azzerato in riabilitazione).
+    # Traccia il momento della disabilitazione (azzerato in riabilitazione).
     target.disabled_at = utcnow() if target.disabled else None
     db.commit()
     stato = "disabilitato" if target.disabled else "riabilitato"
@@ -361,8 +361,8 @@ async def admin_users_create(
     dalla pagina di modifica utente.
 
     Nota: usa campi Form() individuali (non Annotated[UserCreate, Form()])
-    perché FastAPI non supporta modelli Form() misti ad altri Form() separati
-    (stesso fix della Fase 5b). Il modello UserCreate viene costruito qui.
+    perché FastAPI non supporta modelli Form() misti ad altri Form() separati.
+    Il modello UserCreate viene costruito qui.
     """
     try:
         payload: UserCreate = UserCreate(username=username, password=password)
@@ -398,7 +398,7 @@ async def admin_users_group(
     db: Session = Depends(get_db),
     admin: User = Depends(require_admin),
 ) -> RedirectResponse:
-    """Assegna il gruppo di appartenenza a un utente (Fase 13a, Issue K).
+    """Assegna il gruppo di appartenenza a un utente.
 
     Dopo l'azione torna alla pagina di modifica dell'utente.
     """
@@ -521,7 +521,7 @@ async def admin_users_delete(
                 status_code=303,
             )
 
-    # Suggestion 8: finestra temporale minima dopo la disabilitazione.
+    # Finestra temporale minima dopo la disabilitazione.
     if not _can_delete_user(target):
         giorni = _days_since(target.disabled_at) or 0
         logger.warning(
@@ -536,7 +536,7 @@ async def admin_users_delete(
             status_code=303,
         )
 
-    # Elimina definitivamente anche i record dell'utente (Suggestion 8).
+    # Elimina definitivamente anche i record dell'utente.
     rimossi = _delete_user_records(db, target.id)
     db.delete(target)
     db.commit()

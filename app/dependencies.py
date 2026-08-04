@@ -1,4 +1,4 @@
-"""Dipendenze di autenticazione (Fase 10).
+"""Dipendenze di autenticazione.
 
 `get_current_user` è una dependency FastAPI che restituisce l'utente
 autenticato dalla sessione HTTP, oppure None. Non chiude la sessione DB:

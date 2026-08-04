@@ -1,4 +1,4 @@
-/* Menu a discesa utente (Fase 13c, Suggestion 3).
+/* Menu a discesa utente.
  *
  * Apre/chiude il menu al click sul toggle, lo chiude su click esterno e su
  * ESC. Le voci "Profilo" ed "Esci" sono link diretti.

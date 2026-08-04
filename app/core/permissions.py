@@ -1,4 +1,4 @@
-"""Ruoli, permessi e dependency di autorizzazione (Fase 12a).
+"""Ruoli, permessi e dependency di autorizzazione.
 
 Fonte di verità unica per i controlli di autorizzazione.
 """

@@ -1,4 +1,4 @@
-"""Middleware per l'aggiunta degli header di sicurezza HTTP (Fase 13b, Issue G).
+"""Middleware per l'aggiunta degli header di sicurezza HTTP.
 
 Aggiunge a ogni risposta HTTP gli header raccomandati per la sicurezza:
 - `X-Content-Type-Options: nosniff`  → impedisce il MIME-sniffing

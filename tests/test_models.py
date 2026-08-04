@@ -1,4 +1,4 @@
-"""Test di base per il modello dati e il seed della Fase 4.
+"""Test di base per il modello dati e il seed.
 
 Usa unittest (stdlib) e un SQLite in-memory dedicato, separato dal
 database di sviluppo `data/efftrack.db`.
@@ -63,12 +63,12 @@ class TestSchema(DatabaseTestCase):
             self.assertIn(table, table_names)
 
     def test_users_has_last_login_column(self) -> None:
-        """Fase 12b: la tabella users ha la colonna last_login."""
+        """La tabella users ha la colonna last_login."""
         columns = {col["name"] for col in inspect(self.engine).get_columns("users")}
         self.assertIn("last_login", columns)
 
     def test_users_has_group_id_column(self) -> None:
-        """Fase 12c: la tabella users ha la colonna group_id (FK verso groups)."""
+        """La tabella users ha la colonna group_id (FK verso groups)."""
         columns = {col["name"] for col in inspect(self.engine).get_columns("users")}
         self.assertIn("group_id", columns)
         fks = inspect(self.engine).get_foreign_keys("users")
@@ -77,22 +77,22 @@ class TestSchema(DatabaseTestCase):
         self.assertEqual(group_fks[0]["referred_table"], "groups")
 
     def test_users_has_disabled_column(self) -> None:
-        """Fase 13a: la tabella users ha la colonna disabled."""
+        """La tabella users ha la colonna disabled."""
         columns = {col["name"] for col in inspect(self.engine).get_columns("users")}
         self.assertIn("disabled", columns)
 
     def test_users_has_disabled_at_column(self) -> None:
-        """Suggestion 8: la tabella users ha la colonna disabled_at."""
+        """La tabella users ha la colonna disabled_at."""
         columns = {col["name"] for col in inspect(self.engine).get_columns("users")}
         self.assertIn("disabled_at", columns)
 
     def test_effort_entries_has_no_user_text(self) -> None:
-        """Fase 11: la colonna legacy user_text è stata rimossa."""
+        """La colonna legacy user_text è stata rimossa."""
         columns = {col["name"] for col in inspect(self.engine).get_columns("effort_entries")}
         self.assertNotIn("user_text", columns)
 
     def test_effort_entries_has_user_foreign_key(self) -> None:
-        """Fase 11: user_id è una FK verso users.id."""
+        """user_id è una FK verso users.id."""
         fks = inspect(self.engine).get_foreign_keys("effort_entries")
         user_fks = [fk for fk in fks if "user_id" in fk["constrained_columns"]]
         self.assertEqual(len(user_fks), 1)
@@ -123,7 +123,7 @@ class TestSeed(DatabaseTestCase):
 
 
 class TestAdminUser(DatabaseTestCase):
-    """Test di creazione dell'utente admin (Fase 10)."""
+    """Test di creazione dell'utente admin."""
 
     def test_admin_seed_creates_user(self) -> None:
         """Crea l'utente admin con password hashata e ruolo admin."""
@@ -150,7 +150,7 @@ class TestAdminUser(DatabaseTestCase):
 
 
 class TestExportCsv(DatabaseTestCase):
-    """Test della generazione del CSV di export (Fase 8/11)."""
+    """Test della generazione del CSV di export."""
 
     def _create_entry(self, db: Session, user: User | None = None) -> EffortEntry:
         """Crea un record di effort, opzionalmente associato a un utente."""
@@ -209,7 +209,7 @@ class TestExportCsv(DatabaseTestCase):
 
 class TestEffortEntry(DatabaseTestCase):
     def test_insert_entry(self) -> None:
-        """Fase 11: l'inserimento valorizza user_id (FK verso users)."""
+        """L'inserimento valorizza user_id (FK verso users)."""
         client = self.db.execute(select(Client)).scalars().first()
         group = self.db.execute(select(Group)).scalars().first()
         activity = self.db.execute(select(Activity)).scalars().first()
@@ -238,7 +238,7 @@ class TestEffortEntry(DatabaseTestCase):
         self.entry_user_id = user.id
 
     def test_update_entry(self) -> None:
-        """Aggiorna un record esistente senza cambiare il proprietario (Fase 7/11)."""
+        """Aggiorna un record esistente senza cambiare il proprietario."""
         self.test_insert_entry()
         entry = self.db.get(EffortEntry, self.entry_id)
         self.assertIsNotNone(entry)
@@ -264,7 +264,7 @@ class TestEffortEntry(DatabaseTestCase):
 
 
 class TestTestUsers(DatabaseTestCase):
-    """Test degli utenti di test (Fasi 11/12c)."""
+    """Test degli utenti di test."""
 
     def test_seed_creates_six_users(self) -> None:
         """Crea 2 manager (giulia, marco) e 4 user (mario, paolo, anna, elisa)."""
@@ -274,7 +274,7 @@ class TestTestUsers(DatabaseTestCase):
             self.assertIn(name, usernames)
 
     def test_seed_promotes_giulia_to_manager(self) -> None:
-        """Fase 12c: giulia è manager del GRUPPO SOC."""
+        """giulia è manager del GRUPPO SOC."""
         seed_test_users(self.db)
         giulia = self.db.execute(
             select(User).where(User.username == "giulia")
@@ -292,7 +292,7 @@ class TestTestUsers(DatabaseTestCase):
 
 
 class TestTestRecords(DatabaseTestCase):
-    """Test dei record di test per la segregazione (Fasi 11/12c)."""
+    """Test dei record di test per la segregazione."""
 
     @classmethod
     def setUpClass(cls) -> None:
@@ -340,7 +340,7 @@ def _count_total_records(engine) -> int:
 
 
 class TestSidebar(DatabaseTestCase):
-    """Test delle voci della sidebar in base al ruolo (Fasi 12b/12c)."""
+    """Test delle voci della sidebar in base al ruolo."""
 
     def test_user_sidebar_has_registrazioni_and_profile(self) -> None:
         """L'utente USER ha Registrazioni e Profilo nella sidebar."""
@@ -357,7 +357,7 @@ class TestSidebar(DatabaseTestCase):
         )
 
     def test_manager_sidebar_has_registrazioni_group_and_profile(self) -> None:
-        """Fase 12c: il manager ha Registrazioni, Gruppo e Profilo."""
+        """Il manager ha Registrazioni, Gruppo e Profilo."""
         from app.routers.web import _sidebar_items
 
         group = self.db.execute(select(Group)).scalars().first()
@@ -375,7 +375,7 @@ class TestSidebar(DatabaseTestCase):
         )
 
     def test_manager_view_requires_group(self) -> None:
-        """Fase 12c: un manager senza group_id non è abilitato alla vista gruppo."""
+        """Un manager senza group_id non è abilitato alla vista gruppo."""
         from app.routers.web import _is_manager_view
 
         manager_no_group = User(
@@ -391,7 +391,7 @@ class TestSidebar(DatabaseTestCase):
 
 
 class TestDisabledUser(DatabaseTestCase):
-    """Test della disabilitazione utente (Fase 13a, Issue L)."""
+    """Test della disabilitazione utente."""
 
     def test_user_defaults_to_not_disabled(self) -> None:
         """Un nuovo utente non è disabilitato per default."""
@@ -419,7 +419,7 @@ class TestDisabledUser(DatabaseTestCase):
 
 
 class TestUserGracePeriod(DatabaseTestCase):
-    """Test della finestra temporale di eliminazione (Suggestion 8)."""
+    """Test della finestra temporale di eliminazione."""
 
     def test_disabled_at_populated_on_disable(self) -> None:
         """Disabilitando un utente, `disabled_at` viene valorizzato."""
@@ -481,7 +481,7 @@ class TestUserGracePeriod(DatabaseTestCase):
 
 
 class TestUserGroupAssignment(DatabaseTestCase):
-    """Test dell'assegnazione gruppo a un utente (Fase 13a, Issue K)."""
+    """Test dell'assegnazione gruppo a un utente."""
 
     def test_user_can_be_assigned_to_group(self) -> None:
         """A un utente può essere assegnato group_id (dal lookup gruppi)."""
@@ -510,7 +510,7 @@ class TestUserGroupAssignment(DatabaseTestCase):
 
 
 class TestAdminSidebar(DatabaseTestCase):
-    """Test della sidebar del ruolo ADMIN (Fase 12d)."""
+    """Test della sidebar del ruolo ADMIN."""
 
     def test_admin_sidebar_has_four_items(self) -> None:
         from app.routers.web import _sidebar_items
@@ -524,7 +524,7 @@ class TestAdminSidebar(DatabaseTestCase):
         )
 
     def test_lookup_model_mapping(self) -> None:
-        """Fase 12d: il mapping dei tipi di lookup restituisce i modelli giusti."""
+        """Il mapping dei tipi di lookup restituisce i modelli giusti."""
         from app.routers.admin import _lookup_model
 
         self.assertIs(_lookup_model("client"), Client)
@@ -548,7 +548,7 @@ class TestAdminSidebar(DatabaseTestCase):
 
 
 class TestManagerGroup(DatabaseTestCase):
-    """Test del ruolo MANAGER e della vista gruppo (Fase 12c)."""
+    """Test del ruolo MANAGER e della vista gruppo."""
 
     def setUp(self) -> None:
         """Pulisce gli effort e gli utenti non-admin prima di ogni test."""
@@ -594,7 +594,7 @@ class TestManagerGroup(DatabaseTestCase):
         self.db.commit()
 
     def test_seed_promotes_giulia_to_manager(self) -> None:
-        """Fase 12c: giulia (creata/promossa) è manager del GRUPPO SOC."""
+        """giulia (creata/promossa) è manager del GRUPPO SOC."""
         seed_test_users(self.db)
         giulia = self.db.execute(
             select(User).where(User.username == "giulia")
@@ -643,7 +643,7 @@ class TestManagerGroup(DatabaseTestCase):
 
 
 class TestSegregation(DatabaseTestCase):
-    """Test della segregazione dati tra utenti (Fase 11)."""
+    """Test della segregazione dati tra utenti."""
 
     def setUp(self) -> None:
         """Pulisce gli effort e gli utenti non-admin prima di ogni test."""
@@ -782,7 +782,7 @@ class TestSegregation(DatabaseTestCase):
 
 
 class TestEffortEntryValidation(DatabaseTestCase):
-    """Test della validazione delle ore (Fase 13b)."""
+    """Test della validazione delle ore."""
 
     def _payload(self, hours: float) -> EffortEntryCreate:
         client = self.db.execute(select(Client)).scalars().first()
@@ -836,7 +836,7 @@ class TestEffortEntryValidation(DatabaseTestCase):
 
 
 class TestControlCharsSanitization(DatabaseTestCase):
-    """Test della sanificazione dei caratteri di controllo (Fase 13d, Issue F).
+    """Test della sanificazione dei caratteri di controllo.
 
     Verifica che i validatori Pydantic rimuovano i caratteri di controllo
     dai campi di testo prima della persistenza/rendering.

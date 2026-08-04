@@ -1,10 +1,9 @@
 """Middleware Starlette per la limitazione della dimensione del body.
 
 Applicato globalmente tramite `app.add_middleware`, rifiuta le richieste
-il cui corpo supera una soglia configurabile (Issue L, Fase 14). Il limite
-default è 1 MB, più che sufficiente per i form di effort tracking (pochi
-campi testuali e numerici). Protegge il server da richieste maliziose
-molto grandi (es. payload di dimensioni eccessive).
+il cui corpo supera una soglia configurabile. Il limite default è 1 MB,
+più che sufficiente per i form di effort tracking. Protegge il server da
+richieste maliziose molto grandi.
 """
 from __future__ import annotations
 

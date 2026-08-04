@@ -11,8 +11,8 @@ from datetime import date
 
 from pydantic import BaseModel, Field, field_validator
 
-# Caratteri di controllo da rimuovere dai campi testo (hardening Issue F):
-# teniamo tab, LF e CR (utili in note/descrizione), eliminiamo il resto.
+# Caratteri di controllo da rimuovere dai campi testo: teniamo tab, LF e CR
+# (utili in note/descrizione), eliminiamo il resto.
 _CONTROL_CHARS_RE = re.compile(r"[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]")
 
 
@@ -20,7 +20,7 @@ def _strip_control_chars(value: str) -> str:
     """Rimuove i caratteri di controllo non testuali da una stringa.
 
     Previene injection di sequenze di escape nei campi che poi vengono
-    renderizzati nei template o persistiti (hardening Fase 13d, Issue F).
+    renderizzati nei template o persistiti.
     """
     return _CONTROL_CHARS_RE.sub("", value)
 
@@ -29,7 +29,7 @@ class EffortEntryCreate(BaseModel):
     """Input del form di inserimento/aggiornamento del tool.
 
     I nomi dei campi corrispondono ai `name` dei controlli del form HTML.
-    `user` è un testo libero fino alla Fase 10 (quando arriverà l'auth).
+    `user` è il nome utente della sessione.
     Le foreign key devono essere id numerici esistenti.
     """
 
@@ -38,7 +38,7 @@ class EffortEntryCreate(BaseModel):
     client_id: int = Field(gt=0)
     group_id: int = Field(gt=0)
     activity_id: int = Field(gt=0)
-    # Fase 13b (Issue D): range 1-12, step 0.50 (assorbe Suggestion 2).
+    # Range 1-12, step 0.50.
     # Nessun vincolo speciale per Supporto Specialistico (possono esserci straordinari > 4).
     hours: float = Field(ge=1, le=12)
     notes: str | None = Field(default=None, max_length=2000)
@@ -56,7 +56,7 @@ class EffortEntryCreate(BaseModel):
     @field_validator("hours")
     @classmethod
     def hours_step_half(cls, value: float) -> float:
-        """Le ore devono essere multiple di 0.50 (Fase 13b, tolleranza floating point).
+        """Le ore devono essere multiple di 0.50 (tolleranza floating point).
 
         Il range (1-12) è già garantito dal Field; qui si verifica solo il passo.
         Elimina anche i valori non multipli di 0.50 (es. 7.25).
@@ -79,7 +79,7 @@ class EffortEntryCreate(BaseModel):
 
 
 class UserCreate(BaseModel):
-    """Input per la creazione di un utente da parte dell'admin (Fase 12d)."""
+    """Input per la creazione di un utente da parte dell'admin."""
 
     username: str = Field(min_length=1, max_length=64)
     password: str = Field(min_length=1, max_length=128)
@@ -94,13 +94,13 @@ class UserCreate(BaseModel):
 
 
 class PasswordChange(BaseModel):
-    """Input per il cambio password di un utente (Fase 12d)."""
+    """Input per il cambio password di un utente."""
 
     password: str = Field(min_length=1, max_length=128)
 
 
 class RoleChange(BaseModel):
-    """Input per il cambio ruolo di un utente (Fase 12d)."""
+    """Input per il cambio ruolo di un utente."""
 
     role: str = Field(min_length=1, max_length=20)
 
@@ -114,7 +114,7 @@ class RoleChange(BaseModel):
 
 
 class LookupCreate(BaseModel):
-    """Input per la creazione/aggiornamento di una voce lookup (Fase 12d).
+    """Input per la creazione/aggiornamento di una voce lookup.
 
     `type` indica la tabella: client, group, activity.
     """

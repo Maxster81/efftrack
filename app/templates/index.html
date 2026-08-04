@@ -4,7 +4,6 @@
 
 {% block content %}
       {# ------------------------------------------------------------
-         Fase 11 — Multiutente e segregazione.
          Form in alto, tabella elenco in basso. La tabella mostra i
          record dal DB con filtro per mese. Click su una riga popola il
          form con i dati del record (modalità modifica); il pulsante
@@ -12,9 +11,9 @@
          nuovo. Il pulsante "Copia su settimana" è nascosto in modifica.
          Pulsante "Esporta CSV" a destra del filtro mese: rispetta il
          filtro selezionato e scarica il CSV corrispondente.
-         Dalla Fase 11 la colonna Utente è visibile solo all'admin
-         (supervisore); gli utenti normali vedono solo i propri record,
-         quindi la colonna è ridondante e viene nascosta.
+         La colonna Utente è visibile solo all'admin (supervisore); gli
+         utenti normali vedono solo i propri record, quindi la colonna
+         è ridondante e viene nascosta.
          ------------------------------------------------------------ #}
 
   <section class="form-card" aria-labelledby="form-title">
@@ -35,12 +34,12 @@
 
     <form class="effort-form" method="post" action="/"
           aria-label="Form di inserimento effort" novalidate>
-      {# Elemento nascosto che traccia il record in modalità modifica (Fase 7).
+      {# Elemento nascosto che traccia il record in modalità modifica.
          Valorizzato da row-select.js al click su una riga della tabella.
          Deve stare dentro il <form> per essere incluso nella POST. #}
       <input type="hidden" id="record-id" name="record_id" value="" />
-      {# Persistenza filtro mese (Issue-Suggestion.md Issue 1): il valore del
-         mese selezionato viene inviato con la POST e preservato nel redirect. #}
+      {# Persistenza filtro mese: il valore del mese selezionato viene
+         inviato con la POST e preservato nel redirect. #}
       <input type="hidden" id="effort-month" name="month" value="{{ selected_month or '' }}" />
 
       <div class="form-row">
@@ -53,8 +52,8 @@
                  autocomplete="off" />
         </div>
 
-        {# S7 (2026-08-04): Gruppo autopopolato come User — campo readonly, valore
-           dal DB. L'hidden input `group_id` invia l'id reale al server, che lo
+        {# Gruppo autopopolato come User — campo readonly, valore dal DB.
+           L'hidden input `group_id` invia l'id reale al server, che lo
            forza al gruppo di sessione ignorando il valore del browser. #}
         <div class="form-group">
           <label for="effort-group">Gruppo</label>

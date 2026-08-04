@@ -21,10 +21,9 @@ utcnow: Callable[[], datetime] = _utcnow_naive
 class EffortEntry(Base):
     """Registrazione di ore lavorate per cliente/gruppo/attività.
 
-    Il mese non viene persistito: è derivato da `work_date` via service
-    helper (vedi memory-bank/systemPatterns.md).
-    Dalla Fase 11 `user_id` è una colonna con ForeignKey verso `users.id`:
-    ogni record appartiene all'utente che lo ha creato.
+    Il mese non viene persistito: è derivato da `work_date` via helper
+    del service. `user_id` è una ForeignKey verso `users.id`: ogni record
+    appartiene all'utente che lo ha creato.
     """
 
     __tablename__ = "effort_entries"
@@ -37,7 +36,7 @@ class EffortEntry(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
 
-    # Segregazione utente (Fase 11): FK verso users.id.
+    # Segregazione utente: FK verso users.id.
     # ON DELETE SET NULL: se un utente viene cancellato, i suoi record
     # restano nel DB ma senza proprietario (visibili solo all'admin).
     user_id: Mapped[int | None] = mapped_column(

@@ -1,4 +1,4 @@
-"""Router di autenticazione (Fase 10).
+"""Router di autenticazione.
 
 Espone login e logout basati su sessione HTTP (cookie firmato da
 SessionMiddleware). Le password sono verificate con bcrypt.
@@ -33,12 +33,12 @@ def _login_context(error: str = "") -> dict:
     return {
         "app_name": APP_NAME,
         "app_version": APP_VERSION,
-        "phase": "Fase 10 — Autenticazione",
+        "phase": "Autenticazione",
         "auth_enabled": AUTH_ENABLED,
         "current_username": "",
         "error": error,
         "sidebar_items": [],
-        # Fase 13c (S1): nasconde hamburger e sidebar nella pagina pubblica di login.
+        # Nasconde hamburger e sidebar nella pagina pubblica di login.
         "hide_nav": True,
     }
 
@@ -81,7 +81,7 @@ async def login_submit(
             context=_login_context("Credenziali non valide."),
         )
 
-    # Fase 13a: account disabilitato → login bloccato.
+    # Account disabilitato → login bloccato.
     if user.disabled:
         logger.warning("Login rifiutato: account disabilitato per username=%s", username)
         return templates.TemplateResponse(
@@ -90,14 +90,14 @@ async def login_submit(
             context=_login_context("Account disabilitato. Contatta l'amministratore."),
         )
 
-    # Fase 12b: traccia l'ultimo accesso dell'utente.
+    # Traccia l'ultimo accesso dell'utente.
     user.last_login = utcnow()
     db.commit()
 
     request.session["user_id"] = user.id
     request.session["username"] = user.username
     logger.info("Login riuscito: username=%s (role=%s)", user.username, user.role)
-    # Fase 12d: l'admin atterra sulla dashboard /admin.
+    # L'admin atterra sulla dashboard /admin.
     if is_admin(user):
         return RedirectResponse("/admin", status_code=303)
     return RedirectResponse("/", status_code=303)

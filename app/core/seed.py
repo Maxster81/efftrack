@@ -4,9 +4,9 @@ Popola clients, groups, activities, l'utente admin e (in sviluppo) utenti di
 test con i relativi record di effort. Eseguito a ogni startup (vedi
 `app/main.py` lifespan).
 
-Fase 9: logging di quali lookup sono state populate all'avvio.
-Fase 10: seed dell'utente admin (primo utente master) con password da config.
-Fase 11: seed utenti + record di test per la segregazione dati.
+Esegue il logging delle lookup popolate, crea l'utente admin (primo utente
+master) con password da config e, in sviluppo, gli utenti di test con i loro
+record di effort per la segregazione dei dati.
 """
 from __future__ import annotations
 
@@ -46,10 +46,10 @@ _ACTIVITIES: list[dict[str, object]] = [
     },
 ]
 
-# Utenti di test (Fasi 11/12c): per verificare segregazione e ruoli.
+# Utenti di test per verificare segregazione dati e ruoli.
 # La colonna `group` è il nome del gruppo di appartenenza (mappato a group_id
 # da seed_test_users); `group_none=True` lascia il group_id a None (es. admin).
-# Profilo utente (2026-08-04): aggiunti campi `first_name`, `last_name`, `email`.
+# Profilo utente: vengono colonne `first_name`, `last_name`, `email`.
 _TEST_USERS: list[dict[str, str | None]] = [
     # 2 MANAGER: uno per SOC, uno per NOC.
     {"username": "giulia", "password": "test", "role": "manager", "group": "GRUPPO SOC",
@@ -67,7 +67,7 @@ _TEST_USERS: list[dict[str, str | None]] = [
      "first_name": "Elisa", "last_name": "Marroni", "email": "elisa@efftrack.local"},
 ]
 
-# Record di test per ciascun utente di test (Fase 11).
+# Record di test per ciascun utente di test.
 _TEST_RECORDS_PER_USER: int = 20
 
 
@@ -128,7 +128,7 @@ def _username_list() -> list[str]:
 
 
 def seed_test_users(db: Session) -> None:
-    """Crea/aggiorna gli utenti di test (2 MANAGER + 4 USER su 2 gruppi, Fase 12c).
+    """Crea/aggiorna gli utenti di test (2 MANAGER + 4 USER su 2 gruppi).
 
     Idempotente per username. Ogni utente ha `role` e `group_id` derivati
     dalla configurazione `_TEST_USERS`, mappando il nome del gruppo al suo id.
@@ -196,7 +196,7 @@ def seed_test_users(db: Session) -> None:
 
 
 def seed_test_records(db: Session) -> None:
-    """Crea ~20 record di effort per ciascun utente di test (Fasi 11/12c).
+    """Crea ~20 record di effort per ciascun utente di test.
 
     Idempotente: se esistono già record con `user_id` associati agli utenti
     di test, non fa nulla. Ogni record usa il `group_id` del gruppo di

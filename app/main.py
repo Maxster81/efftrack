@@ -1,20 +1,7 @@
 """Entry point FastAPI dell'applicazione Effort Tracking.
 
-Fase 0–1: bootstrap + pagina HTML statica raggiungibile.
-Le route reali (form, salvataggio, elenco, export) sono state aggiunte
-nelle fasi successive a partire dalla Fase 2.
-
-Fase 9: logging integrato nel ciclo di vita (startup/shutdown) e uso
-della configurazione centralizzata (config.py, .env).
-
-Fase 10: sessione HTTP (SessionMiddleware) e seed dell'utente admin.
-Fase 11: migrazione schema (FK user_id, rimozione user_text) e seed
-utenti/record di test per la segregazione.
-
-Fase 13a: migrazione campo `disabled` e assegnazione gruppo (admin).
-
-Fase 13b: header di sicurezza HTTP (Issue G) e pagine errore 404/500
-(issue A) via exception_handlers.
+Configura l'app, il lifespan (init logging, migrazioni, seed), i middleware
+di sicurezza e i gestori di errore personalizzati.
 
 Architettura:
 - `app/routers/web.py` espone le pagine HTML (root) e l'health check.
@@ -71,7 +58,7 @@ import app.models  # noqa: F401,E402
 
 logger: logging.Logger = logging.getLogger(__name__)
 
-# Template engine per gli errori 404/500 (Fase 13b, Issue A).
+# Template engine per le pagine di errore.
 templates: Jinja2Templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
 
@@ -81,8 +68,7 @@ async def lifespan(app: FastAPI):
 
     Allo startup configura il logging (idempotente), crea la cartella
     data/ se assente e le tabelle (CREATE TABLE IF NOT EXISTS), poi
-    popola i lookup e l'utente admin. Fase 9-10: logging degli eventi
-    chiave del ciclo vita.
+    popola i lookup, l'utente admin e i dati di seed.
     """
     setup_logging()
     logger.info("Avvio %s v%s", APP_NAME, APP_VERSION)
@@ -91,9 +77,7 @@ async def lifespan(app: FastAPI):
     data_dir: Path = DATA_DIR
     data_dir.mkdir(parents=True, exist_ok=True)
 
-    # Migrazioni controllate (Fase 11): ricrea effort_entries senza user_text
-    # e con FK su users.id. Da eseguire PRIMA di create_all per gestire la
-    # versione legacy dello schema.
+    # Migrazioni controllate dello schema, da eseguire PRIMA di create_all.
     run_schema_migrations(engine)
 
     # Crea le tabelle se non esistono (idempotente).
@@ -118,9 +102,9 @@ app: FastAPI = FastAPI(
     lifespan=lifespan,
 )
 
-# Sessione HTTP firmata (Fase 10): abilita request.session.
-# Hardening Fase 13d: cookie con SameSite=Lax (anti-CSRF cross-site) e
-# Secure configurabile via env (da attivare in produzione dietro TLS).
+# Sessione HTTP firmata: abilita request.session.
+# Cookie con SameSite=Lax (anti-CSRF cross-site) e Secure configurabile
+# via env (da attivare in produzione dietro TLS).
 app.add_middleware(
     SessionMiddleware,
     secret_key=SECRET_KEY,
@@ -128,11 +112,10 @@ app.add_middleware(
     https_only=SESSION_COOKIE_SECURE,
 )
 
-# Header di sicurezza HTTP (Fase 13b, Issue G): applicati a ogni risposta.
+# Header di sicurezza HTTP: applicati a ogni risposta.
 app.add_middleware(SecurityHeadersMiddleware)
 
-# Limitazione dimensione body (Issue L, Fase 14): rifiuta richieste
-# con corpo oltre la soglia configurabile.
+# Limitazione dimensione body: rifiuta richieste con corpo oltre la soglia.
 app.add_middleware(RequestBodyLimitMiddleware, max_body_bytes=MAX_BODY_BYTES)
 
 
@@ -161,7 +144,7 @@ async def http_exception_handler(request: Request, exc: StarletteHTTPException) 
 
     - 404 → 404.html
     - 500 → 500.html
-    - altri codici (401, 403, 405, ...) → error.html generico (Fase 13b)
+    - altri codici (401, 403, 405, ...) → error.html generico
     """
     context = _error_context(request)
     if exc.status_code in (404, 500):
@@ -206,7 +189,7 @@ app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 # Registra i router applicativi.
 # `auth` espone login/logout (sessione).
 # `web` espone le pagine HTML (root) e l'health check.
-# `admin` espone le pagine e azioni di amministrazione (Fase 13a).
+# `admin` espone le pagine e azioni di amministrazione.
 # `api` è un prefisso riservato alle future API JSON.
 app.include_router(auth_router)
 app.include_router(web_router)
