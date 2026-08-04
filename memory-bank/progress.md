@@ -1,10 +1,10 @@
 # Progress — Effort Tracking
 
 ## Stato globale
-- **Ultimo task completato**: riorganizzazione `/admin/users` ✅ completata il 2026-08-04 (tabella read-only + pagina modifica dedicata per singolo utente).
+- **Ultimo task completato**: fix pagine errore ✅ completato il 2026-08-04 (rimosso "Vai alla dashboard" da 404/500/error.html, ora solo "Torna alla home").
 - **Fase in corso**: nessuna. Prossima: Fase 13d (hardening e sicurezza).
 - **Stato**: idle, pronto per nuovo task.
-- **Versione corrente**: `0.22.1`.
+- **Versione corrente**: `0.22.3`.
 - **Roadmap estesa**: aggiunte Fase 4b (sidebar hamburger), Fase 5b (copia su settimana), Fase 12 (Admin, scomposta in 12a/12b/12c/12d); l'hardening passa a **Fase 13**, ora scomposta in 13a-13d. La Fase 9 è stata **sdoppiata** su richiesta utente in **Fase 9** (backend) e **Fase 9b** (frontend toggle dark/light + dipendenze).
 - **Scomposizione Fase 12 (riorganizzata 2026-08-03)**: approccio "dal basso verso l'alto". 12a-12d ✅ completate. Hardening = Fase 13.
 - **Scomposizione Fase 13 (riorganizzata 2026-08-03)**: 13a (funzionalità admin ✅), 13b (sicurezza ✅), 13c (fix stilistici e UX ✅, 2026-08-03), 13d (hardening sicurezza — da fare), 14 (produzione/documentazione — SEMPRE ultima, da fare).

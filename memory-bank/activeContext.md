@@ -1,10 +1,10 @@
 # Active Context — Effort Tracking
 
 ## Stato corrente
-- **Ultimo task completato**: riorganizzazione `/admin/users` ✅ (2026-08-04) — tabella utenti di sola visualizzazione + nuova pagina di modifica dedicata `/admin/users/{id}/edit`.
+- **Ultimo task completato**: fix pagine errore ✅ (2026-08-04) — rimosso pulsante "Vai alla dashboard" (admin-only) dalle pagine 404/500/error: ora tutte le pagine di errore mostrano solo "Torna alla home", uguale per ogni ruolo.
 - **Fase in corso**: nessuna. Prossima: Fase 13d (hardening e sicurezza).
 - **Stato**: idle, pronto per nuovo task.
-- **Versione corrente**: `0.22.1`.
+- **Versione corrente**: `0.22.3`.
 - **Scomposizione Fase 12**: completata integralmente (12a-12d). Hardening = Fase 13, ora riorganizzata.
 - **Scomposizione Fase 13 (riorganizzata 2026-08-03, aggiornata 2026-08-03)**: 13a (funzionalità admin ✅), 13b (sicurezza headers/errori/ore ✅), 13c (fix stilistici e UX ✅), 13d (hardening sicurezza — da fare), 14 (produzione/documentazione — SEMPRE ultima, da fare). S4 spostata in "Future Features".
 - **DB di sviluppo**: rigenerato con dataset multi-gruppo (Fase 12c). 2 gruppi (SOC, NOC), 6 utenti di test con ~20 record ciascuno, password `test`. Admin resta utente di sola gestione (group_id NULL).
@@ -220,6 +220,12 @@
 - **Suggestion 8 — Eliminazione definitiva utente** ✅ risolta (2026-08-04): colonna `disabled_at` (traccia la disabilitazione), `USER_DELETE_GRACE_DAYS` (default 30, env `EFFORT_TRACKING_USER_DELETE_GRACE_DAYS`), blocco eliminazione fino a grazia trascorsa, eliminazione con rimozione dei record collegati, riabilitazione azzera `disabled_at`.
 - **Fase 13d — Hardening e sicurezza** (da fare): Issue F (XSS/audit), verifica ulteriore sicurezza. **Penultima**.
 - **Fase 14 — Produzione e documentazione** (da fare, SEMPRE ultima): test funzionali (Issue H), review systemd, README deploy, note PostgreSQL. (Issue C sul posizionamento Export verificata risolta il 2026-08-04.)
+
+## Fix sessioni e pagine errore (2026-08-04)
+- **Bug 1**: `_error_context()` in `main.py` leggeva `request.session.get("username")` ma la sessione conteneva solo `user_id` → pagine errore con "Accedi" invece del nome utente.
+  - **Fix**: `app/routers/auth.py` — `request.session["username"] = user.username` dopo il login. Versione `0.22.2`.
+- **Bug 2**: le pagine errore (404/500/error) mostravano "Vai alla dashboard" a qualunque utente loggato, ma `/admin` è accessibile solo agli admin.
+  - **Fix**: rimosso il pulsante da tutti e tre i template. Ora solo "Torna alla home". Versione `0.22.3`.
 
 ## Riorganizzazione /admin/users (2026-08-04)
 - **`app/routers/admin.py`**: nuova route `GET /admin/users/{id}/edit` (`admin_users_edit`, template `admin_user_edit.html`); redirect dei `POST /users/{id}/*` ora a `/admin/users/{id}/edit?ok/err=...`; `GET /users` semplificato (sola visualizzazione, rimossi `disabled_at`, `days_since_disabled`, `can_delete`, `group_id` dalla lista).
