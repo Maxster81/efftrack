@@ -3,9 +3,9 @@
 ## Stato globale
 - **Fase in corso**: nessuna. Prossima: Fase 14 (produzione/documentazione — sempre ultima).
 - **Stato**: idle, pronto per nuovo task.
-- **Versione corrente**: `0.24.0` (bump MINOR per Issue L+M, non ancora taggata).
+- **Versione corrente**: `0.24.2` (bump PATCH per Issue H — test funzionali).
 - **Fasi complete**: 0–13d tutte completate. Vedi `activeContext.md` per la cronologia compatta versione/commit.
-- **Issue I/M/L chiuse** (Fase 14, 2026-08-04): vedi "Dettagli di fasi chiave" e Issue-Suggestion.md.
+- **Issue I/J/K/L/M chiuse** (Fase 14, 2026-08-04); **Issue H chiusa** (Fase 14, v0.24.2). Vedi "Dettagli di fasi chiave" e Issue-Suggestion.md.
 
 > **⚠️ NOTA OPERATIVA — Issue e Suggerimenti:** le issue/suggestion sono tracciate **esclusivamente** in `memory-bank/Issue-Suggestion.md`. Consultarlo a inizio ogni fase; le voci risolte vanno **rimosse** lì nello stesso commit che le risolve.
 
@@ -47,7 +47,7 @@ Jinja2 autoescape attivo (nessun `|safe`); `hours` 1-12 step 0.50; header sicure
   - **Issue K**: timeout export valutato — l'app usa Uvicorn (nessun timeout request) e l'export CSV è uno `StreamingResponse`: nessuna azione necessaria. Documentazione in `techContext.md`.
   - **Issue L**: nuovo middleware `RequestBodyLimitMiddleware` (`app/core/body_limit.py`) registrato in `main.py`, soglia `EFFORT_TRACKING_MAX_BODY_BYTES` (default 1 MiB) in `config.py`/`.env.example`.
   - **Issue M**: nuovo script opzionale `deploy.sh` (crea utente/dir/venv, copia codice, genera `/etc/efftrack.env`, installa servizio systemd). Allineato al path `.venv` del service.
-  - Resta aperta **Issue H** (test funzionali pytest+HTTPX) in `Issue-Suggestion.md`.
+  - **Issue H** (v0.24.2, 2026-08-04): nuova suite `tests/test_functional.py` (26 test) + `tests/conftest.py` con DB SQLite su file dedicato ai test (isolato da `data/efftrack.db`). Dipendenza dev `httpx` aggiunta a `requirements-dev.txt`. Copertura: `/health` pubblico, auth login/logout/account disabilitato, redirect anonimi, CRUD record via form (crea/aggiorna/elimina), regola aziendale (niente update/delete su record altrui), export CSV segregato per utente e filtro mese, permessi di ruolo (USER/MANAGER/ADMIN sull'area admin), vista gruppo manager e relativo export, profilo e cambio password. **104 test totali verdi.** **Issue H chiusa.**
 
 ## Cose note / limitazioni accettate
 - Auth attiva (route business protette, `/health` pubblico).

@@ -5,10 +5,6 @@
 
 ## Issue aperte
 
-### Issue H — Test funzionali base con pytest
-- **Stato**: 🔴 da fare (Fase 14)
-- **Descrizione**: test end-to-end con `pytest` + `HTTPX` sulle route: GET `/`, POST `/` (insert/update/delete), export, auth, permessi, segregazione export.
-
 ## Future Features (non assegnate alle fasi correnti)
 
 ### S10 — Self-creation utente
@@ -40,5 +36,6 @@ Affinare lo stile tabellare della pagina Lookup (ex Issue J).
 - **S2** (ore step 0.50) → Fase 13b.
 - **S3** (menu utente a discesa) → Fase 13c.
 - **S5** (evidenzia record modificato) → Fase 13c.
+- **Issue H** (test funzionali pytest+HTTPX) → Fase 14, v0.24.2 (2026-08-04).
 - **S7** (gruppo autopopolato, campo readonly) → 2026-08-04.
 - **S8** (finestra eliminazione utente) → 2026-08-04.

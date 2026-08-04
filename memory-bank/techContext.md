@@ -78,11 +78,15 @@ Poi:
 - Campi numerici vincolati a range consentiti.
 
 ## Test
-- **Framework**: `pytest` (dalla Fase 9), in `requirements-dev.txt` (dipendenza solo di sviluppo).
+- **Framework**: `pytest` (dalla Fase 9) e `httpx` (per TestClient), in `requirements-dev.txt` (solo sviluppo).
 - **Installazione**: `.venv/bin/pip install -r requirements-dev.txt`
 - **Esecuzione**: `.venv/bin/python -m pytest tests/ -v`
-- **DB di test**: SQLite in-memory isolato (`tests/test_models.py`), separato dal DB di sviluppo `data/efftrack.db`.
-- `pytest` non è in `requirements.txt` (produzione pulita).
+- **DB di test isolato**:
+  - `tests/test_models.py` usa un SQLite **in-memory** dedicato (fixture `DatabaseTestCase`).
+  - `tests/conftest.py` (Issue H) configura un SQLite **su file** temporaneo per i test funzionali, impostando `EFFORT_TRACKING_DB_URL` PRIMA di importare i moduli app.*. Serve un file (non `:memory:`) perché `TestClient` esegue il server in un thread separato e le connessioni in-memory non sono condivise.
+  - Entrambi sono isolati dal DB di sviluppo `data/efftrack.db`.
+- **Nota `expire_on_commit=False`**: nei test funzionali, prima di rileggere un oggetto modificato dal thread del TestClient va chiamato `db_session.expire_all()`, altrimenti l'identity map restituisce valori in cache (vedi `tests/test_functional.py`).
+- `pytest` e `httpx` NON sono in `requirements.txt` (produzione pulita).
 
 ## Rigenerazione DB di sviluppo
 - Il DB `data/efftrack.db` è **gitignored** e viene creato/seeded automaticamente al primo avvio (lifespan di `app/main.py`).
