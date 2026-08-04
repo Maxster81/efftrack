@@ -230,7 +230,7 @@
 - **Issue M chiusa** (2026-08-04): con la tabella semplificata la card "Nuovo utente" ha maggiore respiro e `form-row--three` risulta adeguato.
 
 ## Rischi / punti aperti
-- **`memory-bank/Issue-Suggestion.md`** traccia le voci ancora aperte. Restano: **Issue F** (XSS→Fase 13d), **Issue H** (test funzionali→Fase 14). **Issue B, C e M rimosse** (risolte); **Suggestion 6 e 7 spostate in Future Features**; **Suggestion 8 risolta il 2026-08-04** (finestra eliminazione utente). La colonna `users.disabled_at` traccia il momento della disabilitazione.
+- **`memory-bank/Issue-Suggestion.md`** traccia le voci ancora aperte. Restano: **Issue F** (XSS→Fase 13d), **Issue H** (test funzionali→Fase 14). **Issue B, C e M rimosse** (risolte); **Suggestion 6 e 7 spostate in Future Features**; **Issue J riassegnata il 2026-08-04 come S9** (refine grafico stile tabellare lookup, in Future Features); **Suggestion 8 risolta il 2026-08-04** (finestra eliminazione utente). La colonna `users.disabled_at` traccia il momento della disabilitazione.
 - Password admin di default `admin/admin`: va cambiata subito in produzione via env var (Sicurezza Fase 14).
 - La sessione HTTP firmata richiede `SECRET_KEY` robusta in produzione (placeholder in sviluppo).
 - `pydantic-core` pinnato a 2.46.4 per compatibilità con pydantic 2.13.4; quando pydantic sarà aggiornato, andrà aggiornato insieme.

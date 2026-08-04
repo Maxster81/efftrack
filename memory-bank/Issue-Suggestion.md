@@ -4,32 +4,6 @@
 > Quando una voce viene risolta, va **rimossa** nello stesso commit che la risolve,
 > così che il file resti sempre aggiornato e non si accumulino voci già chiuse.
 
-## Suggestion 1 - Visibilità del menu hamburger nella login
-**Contesto:** Pagina di login.
-
-**Comportamento attuale:** il menu hamburger è visibile anche nella pagina di login.
-
-**Suggerimento:** nascondere il menu hamburger nella login, poiché potrebbe contenere sezioni riservate a specifiche tipologie di utenti o gruppi di appartenenza.
-
-## Suggestion 3 - Menu a discesa sull'immagine utente
-**Contesto:** tutte le pagine, ad eccezione della pagina di login.
-
-**Comportamento attuale:** non è presente alcun menu associato all'immagine o al nome utente.
-
-**Suggerimento:** ripristinare l'immagine utente accanto al nome utente e prevedere, al click sul nome e/o sull'immagine, un menu a discesa con le opzioni disponibili. In questo modo, la voce **ESCI** non dovrebbe più essere mostrata accanto al nome profilo.
-
-**Voci previste del menu:**  
-- Profilo  
-- ESCI
-Aggiornare il suggerimento 3 senza rimuoverlo completamente, seguiranno ulteriori azioni
-
-## Suggestione 5: Illuminare il record modificato
-**Contesto:** vista Registrazioni, filtro
-
-**Comportamento attuale:** alla pressione del pulsante Salva, compare regsitrazione effettuata
-
-**Suggerimento:** oltre a quanto già accade, si può far risaltare nel filtro il record modificato? E' solo una scelta stilistica, di comodità visiva
-
 ## Issue da verificare (ereditate da progress.md disallineato)
 
 > Le seguenti voci provengono dalla vecchia sezione "Cosa Manca / Da Fare" di `progress.md`
@@ -49,15 +23,15 @@ Aggiornare il suggerimento 3 senza rimuoverlo completamente, seguiranno ulterior
   - Autenticazione e permessi
   - Export CSV
 
-### Issue J - Verifica stilistica pagina ADMIN aggiunta lookup- **Stato**: 🔴 da verificare
-- **Descrizione**: lo stile della pagina è completamente sballato
- - pulsante **AGGIUNGI** disallineato rispetto al campo **NOME**
- - vorrei uno stile più tabellare (creare vari mokup)
-
 ## Future Features
 
 > Voci di sviluppo futuro, non assegnate alle fasi correnti. Vengono riportate
 > qui quando si decide di non gestirle nella roadmap attiva.
+
+### S9 — Stile tabellare per la pagina ADMIN lookup
+**Contesto:** pagina ADMIN Gestione Lookup.
+
+**Descrizione:** refine grafico (non applicativo): la parte di allineamento del pulsante AGGIUNGI al campo NOME è già risolta in Fase 13c, ma restano da migliorare lo stile 'tabellare' della pagina (creare vari mockup). Riassegnata come Suggestion in quanto intervento esclusivamente grafico.
 
 ### S4 — Filtro per anno e mese separati
 **Contesto:** vista Registrazioni, filtro.
@@ -89,3 +63,4 @@ Aggiornare il suggerimento 3 senza rimuoverlo completamente, seguiranno ulterior
 <!-- Issue K risolta in Fase 13a (assegnazione gruppo utenti). -->
 <!-- Issue L risolta in Fase 13a (disabilita utente con flag disabled). -->
 <!-- Issue M risolta il 2026-08-04 (riorganizzazione /admin/users: tabella read-only + pagina modifica dedicata). -->
+<!-- Issue J riassegnata il 2026-08-04 come S9 (refine grafico stile tabellare lookup, in Future Features). -->

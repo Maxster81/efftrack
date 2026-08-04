@@ -278,6 +278,7 @@ La Fase 13 (hardening) è stata scomposta in sottofasi. Fase 14 (produzione/docu
 - **Fase 13b** — Sicurezza e robustezza (404/500 + error.html, ore 1-12, headers) (✅ 2026-08-03)
 - **Fase 13c** — Fix stilistici e UX: S1 hamburger login, S3 menu utente, S5 highlight record, Issue J lookup (✅ 2026-08-03)
 - **Suggestion 8** — Eliminazione definitiva utente dopo finestra temporale (✅ 2026-08-04)
+- **Riassegnazione Issue J → S9** (2026-08-04): l'allineamento del pulsante AGGIUNGI è risolto in 13c; lo stile tabellare residua è un refine grafico → spostato in Future Features come S9.
 - **Riorganizzazione /admin/users** — Tabella read-only + pagina modifica dedicata per singolo utente (✅ 2026-08-04, Issue M chiusa)
 - **Fase 13d** — Hardening e sicurezza: XSS (Issue F), audit (da fare — penultima)
 - **Fase 14** — Produzione e documentazione: test funzionali (Issue H), Issue C export (verificata risolta), systemd, README (da fare — SEMPRE ultima)
