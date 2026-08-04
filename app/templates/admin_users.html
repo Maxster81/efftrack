@@ -6,7 +6,7 @@
   <section class="form-card" aria-labelledby="create-user-title">
     <h2 id="create-user-title" class="card-title">Nuovo utente</h2>
     <form class="effort-form" method="post" action="/admin/users/create">
-      <div class="form-row">
+      <div class="form-row form-row--three">
         <div class="form-group">
           <label for="new-username">Username</label>
           <input type="text" id="new-username" name="username" autocomplete="off" required />
@@ -62,73 +62,18 @@
             <tr class="records-table__row{% if u.disabled %} is-disabled{% endif %}">
               <td>{{ u.username }}</td>
               <td>{{ u.role }}</td>
-              <td>
-                <form method="post" action="/admin/users/{{ u.id }}/group">
-                  <label class="visually-hidden" for="group-{{ u.id }}">Gruppo</label>
-                  <select id="group-{{ u.id }}" name="group_id">
-                    <option value="">Nessuno</option>
-                    {% for g in groups %}
-                      <option value="{{ g.id }}" {% if g.id == u.group_id %}selected{% endif %}>{{ g.name }}</option>
-                    {% endfor %}
-                  </select>
-                  <button type="submit" class="btn-secondary btn-sm">Ok</button>
-                </form>
-              </td>
+              <td>{{ u.group_name or "—" }}</td>
               <td class="col-hours">{{ u.record_count }}</td>
               <td>{{ u.last_login }}</td>
               <td>
                 {% if u.disabled %}
                   <span class="badge badge-disabled">Disabilitato</span>
-                  <span class="text-muted">{{ u.disabled_at }}{% if u.days_since_disabled is not none %} ({{ u.days_since_disabled }}g){% endif %}</span>
                 {% else %}
                   <span class="badge badge-active">Attivo</span>
                 {% endif %}
               </td>
               <td>
-                <div class="admin-actions">
-                  <!-- Cambio ruolo -->
-                  <form method="post" action="/admin/users/{{ u.id }}/role">
-                    <label for="role-{{ u.id }}" class="visually-hidden">Ruolo</label>
-                    <select id="role-{{ u.id }}" name="role"
-                            {% if u.username == current_username %}disabled{% endif %}>
-                      <option value="user" {% if u.role == 'user' %}selected{% endif %}>user</option>
-                      <option value="manager" {% if u.role == 'manager' %}selected{% endif %}>manager</option>
-                      <option value="admin" {% if u.role == 'admin' %}selected{% endif %}>admin</option>
-                    </select>
-                    <button type="submit" class="btn-secondary btn-sm" {% if u.username == current_username %}disabled{% endif %}>Ruolo</button>
-                  </form>
-                  <!-- Cambio password -->
-                  <form method="post" action="/admin/users/{{ u.id }}/password">
-                    <label for="pw-{{ u.id }}" class="visually-hidden">Nuova password</label>
-                    <input type="password" id="pw-{{ u.id }}" name="password" placeholder="Nuova password" />
-                    <button type="submit" class="btn-secondary btn-sm">Pw</button>
-                  </form>
-                  <!-- Disabilita/abilita -->
-                  {% if u.username == current_username %}
-                    <span class="text-muted" title="Non puoi disabilitare te stesso">Sé stessi</span>
-                  {% else %}
-                    <form method="post" action="/admin/users/{{ u.id }}/disable">
-                      <button type="submit" class="btn-tertiary btn-sm">
-                        {% if u.disabled %}Abilita{% else %}Disabilita{% endif %}
-                      </button>
-                    </form>
-                  {% endif %}
-                  <!-- Elimina -->
-                  {% if u.role == 'admin' and admin_count <= 1 %}
-                    <span class="text-muted" title="Ultimo admin non eliminabile">Admin protetto</span>
-                  {% elif u.disabled and u.can_delete %}
-                    <form method="post" action="/admin/users/{{ u.id }}/delete"
-                          onsubmit="return confirm('Eliminare definitivamente l&#39;utente {{ u.username }} con {{ u.record_count }} record? I record associati verranno eliminati definitivamente.')">
-                      <button type="submit" class="btn-danger btn-sm">
-                        {% if u.record_count > 0 %}Elimina ({{ u.record_count }}){% else %}Elimina{% endif %}
-                      </button>
-                    </form>
-                  {% elif u.disabled %}
-                    <span class="text-muted" title="Eliminazione consentita dopo il periodo di grazia">In grazia</span>
-                  {% else %}
-                    <span class="text-muted" title="Disabilita prima per eliminare">Disabilita prima</span>
-                  {% endif %}
-                </div>
+                <a class="btn-secondary btn-sm" href="/admin/users/{{ u.id }}/edit">Modifica</a>
               </td>
             </tr>
           {% endfor %}

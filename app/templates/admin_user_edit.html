@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+
+{% block title %}{{ app_name }} &mdash; Modifica utente: {{ user.username }}{% endblock %}
+
+{% block content %}
+  <p>
+    <a class="user-edit-back" href="/admin/users">&larr; Torna alla lista</a>
+  </p>
+
+  {% if ok %}
+    <div class="form-success" role="status">{{ ok }}</div>
+  {% endif %}
+  {% if err %}
+    <div class="form-error" role="alert">{{ err }}</div>
+  {% endif %}
+
+  <section class="form-card" aria-labelledby="user-detail-title">
+    <h2 id="user-detail-title" class="card-title">Dettaglio utente</h2>
+    <dl class="user-detail">
+      <div class="user-detail__row">
+        <dt>Username</dt>
+        <dd>{{ user.username }}</dd>
+      </div>
+      <div class="user-detail__row">
+        <dt>Ruolo</dt>
+        <dd>{{ user.role }}</dd>
+      </div>
+      <div class="user-detail__row">
+        <dt>Gruppo</dt>
+        <dd>{{ user.group_name or "Nessun gruppo" }}</dd>
+      </div>
+      <div class="user-detail__row">
+        <dt>Stato</dt>
+        <dd>
+          {% if user.disabled %}
+            <span class="badge badge-disabled">Disabilitato</span>
+            <span class="text-muted">dal {{ user.disabled_at }}{% if user.days_since_disabled is not none %} ({{ user.days_since_disabled }}g){% endif %}</span>
+          {% else %}
+            <span class="badge badge-active">Attivo</span>
+          {% endif %}
+        </dd>
+      </div>
+      <div class="user-detail__row">
+        <dt>Record</dt>
+        <dd>{{ user.record_count }}</dd>
+      </div>
+      <div class="user-detail__row">
+        <dt>Ultimo login</dt>
+        <dd>{{ user.last_login }}</dd>
+      </div>
+    </dl>
+  </section>
+
+  <section class="form-card" aria-labelledby="group-edit-title">
+    <h2 id="group-edit-title" class="card-title">Modifica gruppo</h2>
+    <form class="user-edit-form" method="post" action="/admin/users/{{ user.id }}/group">
+      <div class="form-group">
+        <label for="edit-group">Gruppo di appartenenza</label>
+        <select id="edit-group" name="group_id">
+          <option value="">Nessun gruppo</option>
+          {% for g in groups %}
+            <option value="{{ g.id }}" {% if g.id == user.group_id %}selected{% endif %}>{{ g.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-actions">
+        <button type="submit" class="btn-secondary">Salva gruppo</button>
+      </div>
+    </form>
+  </section>
+
+  <section class="form-card" aria-labelledby="role-edit-title">
+    <h2 id="role-edit-title" class="card-title">Cambia ruolo</h2>
+    <form class="user-edit-form" method="post" action="/admin/users/{{ user.id }}/role">
+      <div class="form-group">
+        <label for="edit-role">Ruolo</label>
+        <select id="edit-role" name="role" {% if is_self %}disabled{% endif %}>
+          <option value="user" {% if user.role == 'user' %}selected{% endif %}>user</option>
+          <option value="manager" {% if user.role == 'manager' %}selected{% endif %}>manager</option>
+          <option value="admin" {% if user.role == 'admin' %}selected{% endif %}>admin</option>
+        </select>
+        {% if is_self %}
+          <p class="text-muted">Non puoi cambiare il tuo ruolo.</p>
+        {% endif %}
+      </div>
+      <div class="form-actions">
+        <button type="submit" class="btn-secondary" {% if is_self %}disabled{% endif %}>Cambia ruolo</button>
+      </div>
+    </form>
+  </section>
+
+  <section class="form-card" aria-labelledby="password-edit-title">
+    <h2 id="password-edit-title" class="card-title">Reset password</h2>
+    <form class="user-edit-form" method="post" action="/admin/users/{{ user.id }}/password">
+      <div class="form-group">
+        <label for="edit-password">Nuova password</label>
+        <input type="password" id="edit-password" name="password" autocomplete="new-password" required />
+      </div>
+      <div class="form-actions">
+        <button type="submit" class="btn-secondary">Aggiorna password</button>
+      </div>
+    </form>
+  </section>
+
+  <section class="form-card" aria-labelledby="status-edit-title">
+    <h2 id="status-edit-title" class="card-title">Stato account</h2>
+    {% if is_self %}
+      <p class="text-muted">Non puoi disabilitare te stesso.</p>
+    {% else %}
+      <form class="user-edit-form" method="post" action="/admin/users/{{ user.id }}/disable">
+        <p>
+          {% if user.disabled %}
+            L'utente è attualmente <strong>disabilitato</strong>: non può accedere al sistema.
+            I suoi record restano intatti.
+          {% else %}
+            L'utente è attualmente <strong>attivo</strong>. Disabilitandolo non potrà più
+            accedere, ma i suoi record resteranno intatti.
+          {% endif %}
+        </p>
+        <div class="form-actions">
+          <button type="submit" class="btn-tertiary">
+            {% if user.disabled %}Abilita{% else %}Disabilita{% endif %}
+          </button>
+        </div>
+      </form>
+    {% endif %}
+  </section>
+
+  <section class="form-card" aria-labelledby="delete-edit-title">
+    <h2 id="delete-edit-title" class="card-title">Elimina utente</h2>
+    {% if is_self %}
+      <p class="text-muted">Non puoi eliminare te stesso.</p>
+    {% elif user.role == 'admin' and admin_count <= 1 %}
+      <p class="text-muted">Non puoi eliminare l'ultimo admin.</p>
+    {% elif user.disabled and user.can_delete %}
+      <p class="text-muted">
+        L'eliminazione è definitiva: verranno rimossi anche i {{ user.record_count }} record
+        associati all'utente.
+      </p>
+      <form class="user-edit-form" method="post" action="/admin/users/{{ user.id }}/delete"
+            onsubmit="return confirm('Eliminare definitivamente l&#39;utente {{ user.username }} con {{ user.record_count }} record? I record associati verranno eliminati definitivamente.')">
+        <div class="form-actions">
+          <button type="submit" class="btn-danger">
+            {% if user.record_count > 0 %}Elimina ({{ user.record_count }}){% else %}Elimina{% endif %}
+          </button>
+        </div>
+      </form>
+    {% elif user.disabled %}
+      <p class="text-muted">
+        In attesa del periodo di grazia: l'eliminazione è consentita solo dopo il periodo configurato
+        dalla disabilitazione.
+      </p>
+    {% else %}
+      <p class="text-muted">Disabilita prima l'utente per poterne consentire l'eliminazione.</p>
+    {% endif %}
+  </section>
+{% endblock %}

@@ -397,6 +397,15 @@ a:hover { text-decoration: underline; }
     grid-template-columns: 1fr 1fr;
   }
 }
+/* Variante a 3 colonne per il form "Nuovo utente" (admin). */
+.form-row--three {
+  grid-template-columns: 1fr;
+}
+@media (min-width: 720px) {
+  .form-row--three {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+}
 .form-group--full {
   grid-column: 1 / -1;
 }
@@ -837,4 +846,87 @@ a:hover { text-decoration: underline; }
 }
 .admin-actions form {
   gap: 3px;
+}
+
+/* ---------- Fase: pagina di modifica utente (admin_user_edit.html) ---------- */
+/* Link "Torna alla lista": comporta da pulsante outline ma senza larghezza fissa. */
+.user-edit-back {
+  display: inline-flex;
+  align-items: center;
+  margin-bottom: var(--space-md);
+  min-width: auto;
+  padding: var(--space-sm) var(--space-lg);
+  font-family: var(--font-sans);
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  background: transparent;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  text-decoration: none;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.user-edit-back:hover {
+  background: var(--color-surface-alt);
+  border-color: var(--color-text-muted);
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+/* Griglia dati utente (dl) nella card di dettaglio. */
+.user-detail {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-sm);
+  margin: 0;
+}
+@media (min-width: 720px) {
+  .user-detail {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+.user-detail__row {
+  display: flex;
+  gap: var(--space-sm);
+  align-items: baseline;
+  padding: var(--space-xs) 0;
+  border-bottom: 1px solid var(--color-border);
+}
+.user-detail__row dt {
+  min-width: 120px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+.user-detail__row dd {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+/* Form compatti a riga singola per le card di modifica utente. */
+.user-edit-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+  align-items: flex-end;
+}
+.user-edit-form .form-group {
+  flex: 1 1 auto;
+  max-width: 320px;
+}
+.user-edit-form .form-actions {
+  flex: 0 0 auto;
+  margin: 0;
+  grid-column: auto;
+}
+@media (max-width: 480px) {
+  .user-edit-form {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .user-edit-form .form-group,
+  .user-edit-form .form-actions {
+    max-width: none;
+    width: 100%;
+  }
 }

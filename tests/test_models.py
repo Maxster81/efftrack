@@ -528,6 +528,15 @@ class TestAdminSidebar(DatabaseTestCase):
         with self.assertRaises(ValueError):
             _lookup_model("bogus")
 
+    def test_admin_users_edit_route_registered(self) -> None:
+        """La route di modifica utente GET /admin/users/{id}/edit è registrata."""
+        from app.routers.admin import router
+
+        paths = {route.path for route in router.routes}
+        names = {getattr(route, "name", None) for route in router.routes}
+        self.assertIn("/admin/users/{user_id}/edit", paths)
+        self.assertIn("admin_users_edit", names)
+
 
 class TestManagerGroup(DatabaseTestCase):
     """Test del ruolo MANAGER e della vista gruppo (Fase 12c)."""

@@ -4,7 +4,8 @@ Router protetto da `require_admin`. Espone:
 - GET /admin            → dashboard di benvenuto (statistiche future)
 - GET /admin/records    → tabella di TUTTI i record (no form, con export)
 - GET /admin/records/export → export CSV di tutti i record
-- GET /admin/users      → gestione utenti (CRUD)
+- GET /admin/users      → lista utenti (sola visualizzazione)
+- GET /admin/users/{id}/edit → pagina di modifica per singolo utente
 - GET /admin/lookup     → gestione lookup (clienti, gruppi, attività)
 
 Protezioni:
@@ -231,7 +232,11 @@ async def admin_users(
     ok: str | None = None,
     err: str | None = None,
 ) -> HTMLResponse:
-    """Pagina di gestione utenti (lista + form creazione)."""
+    """Pagina di gestione utenti (lista + form creazione).
+
+    La tabella è di sola visualizzazione: ogni riga ha un pulsante "Modifica"
+    che porta alla pagina dedicata `/admin/users/{id}/edit`.
+    """
     users = db.execute(select(User).order_by(User.username)).scalars().all()
     groups = db.execute(select(Group).order_by(Group.name)).scalars().all()
     rows = [
@@ -242,11 +247,6 @@ async def admin_users(
             "record_count": _user_stats(db, u.id),
             "last_login": _format_last_login(u.last_login),
             "disabled": u.disabled,
-            # Suggestion 8: informazioni sulla finestra di eliminazione.
-            "disabled_at": _format_last_login(u.disabled_at),
-            "days_since_disabled": _days_since(u.disabled_at),
-            "can_delete": _can_delete_user(u),
-            "group_id": u.group_id,
             "group_name": u.group.name if u.group is not None else "",
         }
         for u in users
@@ -264,6 +264,56 @@ async def admin_users(
     return templates.TemplateResponse(request=request, name="admin_users.html", context=ctx)
 
 
+@router.get("/users/{user_id}/edit", response_class=HTMLResponse, name="admin_users_edit")
+async def admin_users_edit(
+    request: Request,
+    user_id: int,
+    db: Session = Depends(get_db),
+    admin: User = Depends(require_admin),
+    ok: str | None = None,
+    err: str | None = None,
+) -> HTMLResponse:
+    """Pagina di modifica dedicata per un singolo utente.
+
+    Mostra i dati dell'utente e tutte le azioni di gestione (gruppo, ruolo,
+    password, disabilita/abilita, eliminazione) separate dalla lista utenti.
+    """
+    target = db.get(User, user_id)
+    if target is None:
+        return RedirectResponse("/admin/users?err=Utente inesistente", status_code=303)
+
+    groups = db.execute(select(Group).order_by(Group.name)).scalars().all()
+    admin_count = db.execute(
+        select(func.count()).select_from(User).where(User.role == "admin")
+    ).scalar() or 0
+    record_count = _user_stats(db, target.id)
+
+    user_data = {
+        "id": target.id,
+        "username": target.username,
+        "role": target.role,
+        "disabled": target.disabled,
+        "disabled_at": _format_last_login(target.disabled_at),
+        "days_since_disabled": _days_since(target.disabled_at),
+        "can_delete": _can_delete_user(target),
+        "record_count": record_count,
+        "last_login": _format_last_login(target.last_login),
+        "group_id": target.group_id,
+        "group_name": target.group.name if target.group is not None else "",
+    }
+
+    ctx = _base_context(request, admin.username, "users")
+    ctx.update({
+        "user": user_data,
+        "groups": groups,
+        "admin_count": admin_count,
+        "is_self": target.id == admin.id,
+        "ok": ok,
+        "err": err,
+    })
+    return templates.TemplateResponse(request=request, name="admin_user_edit.html", context=ctx)
+
+
 @router.post("/users/{user_id}/disable", name="admin_users_disable")
 async def admin_users_disable(
     request: Request,
@@ -271,10 +321,16 @@ async def admin_users_disable(
     db: Session = Depends(get_db),
     admin: User = Depends(require_admin),
 ) -> RedirectResponse:
-    """Disabilita/abilita un utente (blocca il login, record intatti)."""
+    """Disabilita/abilita un utente (blocca il login, record intatti).
+
+    Dopo l'azione torna alla pagina di modifica dell'utente.
+    """
     if user_id == admin.id:
         logger.warning("Admin %s tenta di disabilitarsi", admin.username)
-        return RedirectResponse("/admin/users?err=Non puoi disabilitare te stesso", status_code=303)
+        return RedirectResponse(
+            f"/admin/users/{user_id}/edit?err=Non puoi disabilitare te stesso",
+            status_code=303,
+        )
 
     target = db.get(User, user_id)
     if target is None:
@@ -286,29 +342,9 @@ async def admin_users_disable(
     db.commit()
     stato = "disabilitato" if target.disabled else "riabilitato"
     logger.info("Utente %s %s da admin %s", target.username, stato, admin.username)
-    return RedirectResponse(f"/admin/users?ok=Utente {stato}", status_code=303)
-
-
-@router.post("/users/{user_id}/group", name="admin_users_group")
-async def admin_users_group(
-    request: Request,
-    user_id: int,
-    group_id: Annotated[int | None, Form()] = None,
-    db: Session = Depends(get_db),
-    admin: User = Depends(require_admin),
-) -> RedirectResponse:
-    """Assegna il gruppo di appartenenza a un utente (Fase 13a, Issue K)."""
-    target = db.get(User, user_id)
-    if target is None:
-        return RedirectResponse("/admin/users?err=Utente inesistente", status_code=303)
-    if group_id is not None:
-        group = db.get(Group, group_id)
-        if group is None:
-            return RedirectResponse("/admin/users?err=Gruppo inesistente", status_code=303)
-    target.group_id = group_id
-    db.commit()
-    logger.info("Gruppo assegnato all'utente %s: %s", target.username, group_id)
-    return RedirectResponse("/admin/users?ok=Gruppo aggiornato", status_code=303)
+    return RedirectResponse(
+        f"/admin/users/{user_id}/edit?ok=Utente {stato}", status_code=303
+    )
 
 
 @router.post("/users/create", name="admin_users_create")
@@ -357,6 +393,35 @@ async def admin_users_create(
     return RedirectResponse("/admin/users?ok=Utente creato", status_code=303)
 
 
+@router.post("/users/{user_id}/group", name="admin_users_group")
+async def admin_users_group(
+    request: Request,
+    user_id: int,
+    group_id: Annotated[int | None, Form()] = None,
+    db: Session = Depends(get_db),
+    admin: User = Depends(require_admin),
+) -> RedirectResponse:
+    """Assegna il gruppo di appartenenza a un utente (Fase 13a, Issue K).
+
+    Dopo l'azione torna alla pagina di modifica dell'utente.
+    """
+    target = db.get(User, user_id)
+    if target is None:
+        return RedirectResponse("/admin/users?err=Utente inesistente", status_code=303)
+    if group_id is not None:
+        group = db.get(Group, group_id)
+        if group is None:
+            return RedirectResponse(
+                f"/admin/users/{user_id}/edit?err=Gruppo inesistente", status_code=303
+            )
+    target.group_id = group_id
+    db.commit()
+    logger.info("Gruppo assegnato all'utente %s: %s", target.username, group_id)
+    return RedirectResponse(
+        f"/admin/users/{user_id}/edit?ok=Gruppo aggiornato", status_code=303
+    )
+
+
 @router.post("/users/{user_id}/password", name="admin_users_password")
 async def admin_users_password(
     request: Request,
@@ -365,12 +430,17 @@ async def admin_users_password(
     db: Session = Depends(get_db),
     admin: User = Depends(require_admin),
 ) -> RedirectResponse:
-    """Cambia la password di un utente."""
+    """Cambia la password di un utente.
+
+    Dopo l'azione torna alla pagina di modifica dell'utente.
+    """
     try:
         payload: PasswordChange = PasswordChange(**password.model_dump())
     except ValidationError as exc:
         logger.warning("Cambio password non valido: %s", exc.errors())
-        return RedirectResponse("/admin/users?err=Password non valida", status_code=303)
+        return RedirectResponse(
+            f"/admin/users/{user_id}/edit?err=Password non valida", status_code=303
+        )
 
     target = db.get(User, user_id)
     if target is None:
@@ -378,7 +448,9 @@ async def admin_users_password(
     target.password_hash = bcrypt.hash(payload.password)
     db.commit()
     logger.info("Password cambiata per %s da admin", target.username)
-    return RedirectResponse("/admin/users?ok=Password aggiornata", status_code=303)
+    return RedirectResponse(
+        f"/admin/users/{user_id}/edit?ok=Password aggiornata", status_code=303
+    )
 
 
 @router.post("/users/{user_id}/role", name="admin_users_role")
@@ -389,16 +461,24 @@ async def admin_users_role(
     db: Session = Depends(get_db),
     admin: User = Depends(require_admin),
 ) -> RedirectResponse:
-    """Cambia il ruolo di un utente (blocca l'auto-declassamento)."""
+    """Cambia il ruolo di un utente (blocca l'auto-declassamento).
+
+    Dopo l'azione torna alla pagina di modifica dell'utente.
+    """
     try:
         payload: RoleChange = RoleChange(**role.model_dump())
     except ValidationError as exc:
         logger.warning("Cambio ruolo non valido: %s", exc.errors())
-        return RedirectResponse("/admin/users?err=Ruolo non valido", status_code=303)
+        return RedirectResponse(
+            f"/admin/users/{user_id}/edit?err=Ruolo non valido", status_code=303
+        )
 
     if user_id == admin.id:
         logger.warning("Admin %s tenta di auto-declassarsi", admin.username)
-        return RedirectResponse("/admin/users?err=Non puoi cambiare il tuo ruolo", status_code=303)
+        return RedirectResponse(
+            f"/admin/users/{user_id}/edit?err=Non puoi cambiare il tuo ruolo",
+            status_code=303,
+        )
 
     target = db.get(User, user_id)
     if target is None:
@@ -406,7 +486,9 @@ async def admin_users_role(
     target.role = payload.role
     db.commit()
     logger.info("Ruolo di %s cambiato in %s", target.username, payload.role)
-    return RedirectResponse("/admin/users?ok=Ruolo aggiornato", status_code=303)
+    return RedirectResponse(
+        f"/admin/users/{user_id}/edit?ok=Ruolo aggiornato", status_code=303
+    )
 
 
 @router.post("/users/{user_id}/delete", name="admin_users_delete")
@@ -416,10 +498,16 @@ async def admin_users_delete(
     db: Session = Depends(get_db),
     admin: User = Depends(require_admin),
 ) -> RedirectResponse:
-    """Elimina un utente (blocca auto-eliminazione e ultimo admin)."""
+    """Elimina un utente (blocca auto-eliminazione e ultimo admin).
+
+    Dopo l'eliminazione riuscita torna alla lista utenti (l'utente non esiste
+    più); negli errori bloccanti resta sulla pagina di modifica dell'utente.
+    """
     if user_id == admin.id:
         logger.warning("Admin %s tenta di auto-eliminarsi", admin.username)
-        return RedirectResponse("/admin/users?err=Non puoi eliminare te stesso", status_code=303)
+        return RedirectResponse(
+            f"/admin/users/{user_id}/edit?err=Non puoi eliminare te stesso", status_code=303
+        )
 
     target = db.get(User, user_id)
     if target is None:
@@ -431,7 +519,10 @@ async def admin_users_delete(
         ).scalar() or 0
         if admin_count <= 1:
             logger.warning("Tentativo di eliminare l'ultimo admin (%s)", target.username)
-            return RedirectResponse("/admin/users?err=Non puoi eliminare l'ultimo admin", status_code=303)
+            return RedirectResponse(
+                f"/admin/users/{user_id}/edit?err=Non puoi eliminare l'ultimo admin",
+                status_code=303,
+            )
 
     # Suggestion 8: finestra temporale minima dopo la disabilitazione.
     if not _can_delete_user(target):
@@ -443,8 +534,8 @@ async def admin_users_delete(
             USER_DELETE_GRACE_DAYS,
         )
         return RedirectResponse(
-            f"/admin/users?err=Eliminazione consentita dopo almeno {USER_DELETE_GRACE_DAYS} "
-            f"giorni dalla disabilitazione (trascorsi {giorni})",
+            f"/admin/users/{user_id}/edit?err=Eliminazione consentita dopo almeno "
+            f"{USER_DELETE_GRACE_DAYS} giorni dalla disabilitazione (trascorsi {giorni})",
             status_code=303,
         )
 

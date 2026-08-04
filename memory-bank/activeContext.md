@@ -1,10 +1,10 @@
 # Active Context — Effort Tracking
 
 ## Stato corrente
-- **Ultima sottofase completata**: Suggestion 8 ✅ (2026-08-04) — finestra temporale per eliminazione definitiva utente (30 giorni configurabili, riga di attesa; elimina insieme i record).
+- **Ultimo task completato**: riorganizzazione `/admin/users` ✅ (2026-08-04) — tabella utenti di sola visualizzazione + nuova pagina di modifica dedicata `/admin/users/{id}/edit`.
 - **Fase in corso**: nessuna. Prossima: Fase 13d (hardening e sicurezza).
 - **Stato**: idle, pronto per nuovo task.
-- **Versione corrente**: `0.22.0`.
+- **Versione corrente**: `0.22.1`.
 - **Scomposizione Fase 12**: completata integralmente (12a-12d). Hardening = Fase 13, ora riorganizzata.
 - **Scomposizione Fase 13 (riorganizzata 2026-08-03, aggiornata 2026-08-03)**: 13a (funzionalità admin ✅), 13b (sicurezza headers/errori/ore ✅), 13c (fix stilistici e UX ✅), 13d (hardening sicurezza — da fare), 14 (produzione/documentazione — SEMPRE ultima, da fare). S4 spostata in "Future Features".
 - **DB di sviluppo**: rigenerato con dataset multi-gruppo (Fase 12c). 2 gruppi (SOC, NOC), 6 utenti di test con ~20 record ciascuno, password `test`. Admin resta utente di sola gestione (group_id NULL).
@@ -221,8 +221,16 @@
 - **Fase 13d — Hardening e sicurezza** (da fare): Issue F (XSS/audit), verifica ulteriore sicurezza. **Penultima**.
 - **Fase 14 — Produzione e documentazione** (da fare, SEMPRE ultima): test funzionali (Issue H), review systemd, README deploy, note PostgreSQL. (Issue C sul posizionamento Export verificata risolta il 2026-08-04.)
 
+## Riorganizzazione /admin/users (2026-08-04)
+- **`app/routers/admin.py`**: nuova route `GET /admin/users/{id}/edit` (`admin_users_edit`, template `admin_user_edit.html`); redirect dei `POST /users/{id}/*` ora a `/admin/users/{id}/edit?ok/err=...`; `GET /users` semplificato (sola visualizzazione, rimossi `disabled_at`, `days_since_disabled`, `can_delete`, `group_id` dalla lista).
+- **`app/templates/admin_users.html`**: tabella semplificata — colonne Username, Ruolo, Gruppo (solo nome), Record, Ultimo login, Stato (badge) + pulsante "Modifica" che porta alla pagina dedicata. Rimossi tutti i form inline (gruppo, ruolo, password, disable, delete).
+- **`app/templates/admin_user_edit.html`** (NUOVO): pagina di modifica per singolo utente con card separate: Dettaglio utente, Modifica gruppo, Cambia ruolo, Reset password, Stato account (disabilita/abilita), Elimina utente (con finestra di grazia). Pulsante "Torna alla lista".
+- **`app/static/style.css`**: nuove classi `.user-edit-back`, `.user-detail`, `.user-detail__row`, `.user-edit-form` (responsive).
+- **`tests/test_models.py`**: nuovo test `test_admin_users_edit_route_registered` (route e nome presenti nel router). Totale 53 test.
+- **Issue M chiusa** (2026-08-04): con la tabella semplificata la card "Nuovo utente" ha maggiore respiro e `form-row--three` risulta adeguato.
+
 ## Rischi / punti aperti
-- **`memory-bank/Issue-Suggestion.md`** traccia le voci ancora aperte. Restano: **Issue F** (XSS→Fase 13d), **Issue H** (test funzionali→Fase 14). **Issue B e C rimosse** (risolte); **Suggestion 6 e 7 spostate in Future Features**; **Suggestion 8 risolta il 2026-08-04** (finestra eliminazione utente). La colonna `users.disabled_at` traccia il momento della disabilitazione.
+- **`memory-bank/Issue-Suggestion.md`** traccia le voci ancora aperte. Restano: **Issue F** (XSS→Fase 13d), **Issue H** (test funzionali→Fase 14). **Issue B, C e M rimosse** (risolte); **Suggestion 6 e 7 spostate in Future Features**; **Suggestion 8 risolta il 2026-08-04** (finestra eliminazione utente). La colonna `users.disabled_at` traccia il momento della disabilitazione.
 - Password admin di default `admin/admin`: va cambiata subito in produzione via env var (Sicurezza Fase 14).
 - La sessione HTTP firmata richiede `SECRET_KEY` robusta in produzione (placeholder in sviluppo).
 - `pydantic-core` pinnato a 2.46.4 per compatibilità con pydantic 2.13.4; quando pydantic sarà aggiornato, andrà aggiornato insieme.

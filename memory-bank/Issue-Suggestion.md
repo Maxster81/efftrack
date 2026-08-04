@@ -54,8 +54,6 @@ Aggiornare il suggerimento 3 senza rimuoverlo completamente, seguiranno ulterior
  - pulsante **AGGIUNGI** disallineato rispetto al campo **NOME**
  - vorrei uno stile più tabellare (creare vari mokup)
 
----
-
 ## Future Features
 
 > Voci di sviluppo futuro, non assegnate alle fasi correnti. Vengono riportate
@@ -90,3 +88,4 @@ Aggiornare il suggerimento 3 senza rimuoverlo completamente, seguiranno ulterior
 <!-- Issue I risolta in Fase 13c (stile admin utenti ok). -->
 <!-- Issue K risolta in Fase 13a (assegnazione gruppo utenti). -->
 <!-- Issue L risolta in Fase 13a (disabilita utente con flag disabled). -->
+<!-- Issue M risolta il 2026-08-04 (riorganizzazione /admin/users: tabella read-only + pagina modifica dedicata). -->
