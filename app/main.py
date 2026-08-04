@@ -32,6 +32,7 @@ from app.config import (
     SECRET_KEY,
     SESSION_COOKIE_SAMESITE,
     SESSION_COOKIE_SECURE,
+    SESSION_MAX_AGE_SECONDS,
     STATIC_DIR,
     TEMPLATES_DIR,
 )
@@ -105,11 +106,15 @@ app: FastAPI = FastAPI(
 # Sessione HTTP firmata: abilita request.session.
 # Cookie con SameSite=Lax (anti-CSRF cross-site) e Secure configurabile
 # via env (da attivare in produzione dietro TLS).
+# `max_age` limita la durata della sessione (default 30 minuti, env var):
+# se l'utente chiude il browser senza logout, la sessione scade e al
+# prossimo accesso viene richiesto il login.
 app.add_middleware(
     SessionMiddleware,
     secret_key=SECRET_KEY,
     same_site=SESSION_COOKIE_SAMESITE,
     https_only=SESSION_COOKIE_SECURE,
+    max_age=SESSION_MAX_AGE_SECONDS,
 )
 
 # Header di sicurezza HTTP: applicati a ogni risposta.

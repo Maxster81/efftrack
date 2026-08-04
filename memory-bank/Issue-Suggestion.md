@@ -37,5 +37,6 @@ Affinare lo stile tabellare della pagina Lookup (ex Issue J).
 - **S3** (menu utente a discesa) → Fase 13c.
 - **S5** (evidenzia record modificato) → Fase 13c.
 - **Issue H** (test funzionali pytest+HTTPX) → Fase 14, v0.24.2 (2026-08-04).
+- **Issue N** (sessione senza scadenza: login persistente oltre il riavvio) → Fase 14, v1.0.1 (2026-08-04): `SessionMiddleware` con `max_age` 30 min (env `EFFORT_TRACKING_SESSION_MAX_AGE_SECONDS`).
 - **S7** (gruppo autopopolato, campo readonly) → 2026-08-04.
 - **S8** (finestra eliminazione utente) → 2026-08-04.

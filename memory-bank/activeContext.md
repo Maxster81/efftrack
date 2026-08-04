@@ -3,9 +3,9 @@
 ## Stato corrente
 - **Fase in corso**: nessuna. **Progetto completo alla v1.0.0** (versione stabile pronta per produzione).
 - **Stato**: idle, pronto per eventuali evoluzioni future.
-- **Versione corrente**: `1.0.0` (bump MAJOR per rilascio finale, Fase 14 chiusa).
+- **Versione corrente**: `1.0.1` (bump PATCH — fix sicurezza sessione, Issue N).
 - **Fasi complete**: 0–13d e 14 tutte completate. Hardening (13d) e audit di documentazione sono ora su richiesta (vedi `.clinerules/09-post-change.md`).
-- **Issue chiuse in Fase 14**: I (systemd già corretto), J (health pubblico), K (timeout — nessuna azione), L (middleware body limit), M (deploy.sh), H (test funzionali pytest+HTTPX).
+- **Issue chiuse in Fase 14**: I (systemd già corretto), J (health pubblico), K (timeout — nessuna azione), L (middleware body limit), M (deploy.sh), H (test funzionali pytest+HTTPX), N (sessione senza scadenza — fix max_age 30 min).
 - **DB di sviluppo**: dataset multi-gruppo (2 gruppi SOC/NOC, 6 utenti di test, ~20 record ciascuno, password `test`). Admin utente di sola gestione (group_id NULL).
 - **Merge su `main`**: autorizzato solo in Fasi 9 e 9b (v0.12.0). Tutte le fasi 10+ sono solo su `develop`.
 - **Ambiente**: Ubuntu in WSL, Python 3.12.3, venv ricreato. Dipendenze: fastapi 0.141.1, uvicorn 0.52.1, sqlalchemy 2.0.51, pydantic 2.13.4 (pydantic-core 2.46.4), jinja2 3.1.6, python-multipart 0.0.32, python-dotenv 1.2.2, pytest 9.1.1 (dev), httpx 0.28.1 (dev). `pydantic-core` 2.47.0 NON adottato (incompatibile).
@@ -67,7 +67,8 @@
 - **Issue L**: nuovo `RequestBodyLimitMiddleware` (`app/core/body_limit.py`), registrato in `main.py`. Soglia `EFFORT_TRACKING_MAX_BODY_BYTES` (default 1 MiB) in `config.py` + `.env.example`.
 - **Issue M**: nuovo `deploy.sh` opzionale (venv, copia codice, `/etc/efftrack.env`, servizio systemd). Allineato al path `.venv`.
 - **Issue H**: nuova suite `tests/test_functional.py` (26 test) + `tests/conftest.py`; dipendenza dev `httpx` in `requirements-dev.txt`. Copertura: `/health` pubblico, auth (login/logout/account disabilitato/redirect anonimi), CRUD record via form, regola aziendale (niente update/delete su record altrui), export CSV segregato per utente + filtro mese, permessi di ruolo (USER/MANAGER/ADMIN), vista gruppo manager e relativo export, profilo e cambio password. **104 test totali verdi.**
-- **Chiusura Fase 14 (v1.0.0)**: README riscritto per intero (stato v1.0.0, funzionalità, config, deploy `deploy.sh` e manuale, note PostgreSQL, test). Bump MAJOR a `1.0.0` (VERSION + `config.py`). Memory bank allineato.
+  - **Chiusura Fase 14 (v1.0.0)**: README riscritto per intero (stato v1.0.0, funzionalità, config, deploy `deploy.sh` e manuale, note PostgreSQL, test). Bump MAJOR a `1.0.0` (VERSION + `config.py`). Memory bank allineato.
+  - **Issue N (v1.0.1, 2026-08-04)**: bug di sicurezza — sessione senza scadenza (`SessionMiddleware` default 14 giorni) manteneva il login oltre riavvii/chiusura browser. Aggiunto `max_age` (env `EFFORT_TRACKING_SESSION_MAX_AGE_SECONDS`, default 1800 s = 30 min) in `config.py`, `main.py`, `.env.example`. **Issue N chiusa.**
 
 ## Rischi / punti aperti
 - `Issue-Suggestion.md`: non restano issue aperte in Fase 14. Future Features (backlog): S10 (self-creation), S11 (password obbligatoria al primo login), S4 (filtro anno+mese), S6 (giorno ferie), S9 (refine lookup tabellare).

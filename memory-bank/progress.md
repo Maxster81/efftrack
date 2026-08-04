@@ -3,7 +3,7 @@
 ## Stato globale
 - **Fase in corso**: nessuna. **Progetto completo alla v1.0.0** (versione stabile pronta per produzione).
 - **Stato**: idle, pronto per eventuali evoluzioni future.
-- **Versione corrente**: `1.0.0` (bump MAJOR per rilascio finale).
+- **Versione corrente**: `1.0.1` (bump PATCH — fix sicurezza sessione, Issue N).
 - **Fasi complete**: 0–13d e 14 tutte completate. Vedi `activeContext.md` per la cronologia compatta versione/commit.
 - **Fase 14 chiusa** (2026-08-04): produzione e documentazione conclusa. Vedi sotto e Issue-Suggestion.md.
 
@@ -49,6 +49,7 @@ Jinja2 autoescape attivo (nessun `|safe`); `hours` 1-12 step 0.50; header sicure
   - **Issue M**: nuovo script opzionale `deploy.sh` (crea utente/dir/venv, copia codice, genera `/etc/efftrack.env`, installa servizio systemd). Allineato al path `.venv` del service.
   - **Issue H** (v0.24.2, 2026-08-04): nuova suite `tests/test_functional.py` (26 test) + `tests/conftest.py` con DB SQLite su file dedicato ai test (isolato da `data/efftrack.db`). Dipendenza dev `httpx` aggiunta a `requirements-dev.txt`. Copertura: `/health` pubblico, auth login/logout/account disabilitato, redirect anonimi, CRUD record via form (crea/aggiorna/elimina), regola aziendale (niente update/delete su record altrui), export CSV segregato per utente e filtro mese, permessi di ruolo (USER/MANAGER/ADMIN sull'area admin), vista gruppo manager e relativo export, profilo e cambio password. **104 test totali verdi.** **Issue H chiusa.**
   - **Chiusura (2026-08-04, v1.0.0)**: README riscritto per intero (stato v1.0.0, funzionalità, config, deploy con `deploy.sh` e manuale, note PostgreSQL, test). Memory bank allineato. Bump MAJOR a `1.0.0` (VERSION + `config.py`). **Fase 14 completata.**
+  - **Issue N (2026-08-04, v1.0.1)**: bug di sicurezza — sessione senza scadenza (SessionMiddleware default 14 giorni) manteneva il login oltre riavvii/chiusura browser. Aggiunto `max_age` a `SessionMiddleware` con env var `EFFORT_TRACKING_SESSION_MAX_AGE_SECONDS` (default 1800 s = 30 min). Aggiornati `config.py`, `main.py`, `.env.example`. **Issue N chiusa.**
 
 ## Cose note / limitazioni accettate
 - Auth attiva (route business protette, `/health` pubblico).

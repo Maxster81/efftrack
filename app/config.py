@@ -69,6 +69,11 @@ SESSION_COOKIE_SAMESITE: str = os.environ.get(
 SESSION_COOKIE_SECURE: bool = os.environ.get(
     "EFFORT_TRACKING_SESSION_SECURE", "false"
 ).lower() in ("1", "true", "yes", "on")
+# Durata massima della sessione in secondi. Default 30 minuti: se un utente
+# chiude il browser senza logout, la sessione scade e rientra al login.
+SESSION_MAX_AGE_SECONDS: int = int(
+    os.environ.get("EFFORT_TRACKING_SESSION_MAX_AGE_SECONDS", "1800")
+)
 
 # Limite massimo della dimensione del body delle richieste in byte.
 # Protegge da payload maliziosi o eccessivi. Default 1 MiB (1_048_576 byte).
@@ -96,7 +101,7 @@ LOG_FORMAT: str = "%(asctime)s %(levelname)s [%(name)s] %(message)s"
 # --- Costanti applicative -----------------------------------------------------
 
 APP_NAME: str = "Effort Tracking"
-APP_VERSION: str = "1.0.0"
+APP_VERSION: str = "1.0.1"
 
 
 # --- Path applicativi (templates, static) ------------------------------------
