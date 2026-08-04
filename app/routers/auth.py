@@ -95,6 +95,7 @@ async def login_submit(
     db.commit()
 
     request.session["user_id"] = user.id
+    request.session["username"] = user.username
     logger.info("Login riuscito: username=%s (role=%s)", user.username, user.role)
     # Fase 12d: l'admin atterra sulla dashboard /admin.
     if is_admin(user):
