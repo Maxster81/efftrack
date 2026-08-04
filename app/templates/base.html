@@ -24,51 +24,51 @@
         {% if not hide_nav|default(false) %}
         <button type="button" class="app-header__menu" id="nav-toggle"
                 aria-label="Apri menu di navigazione" aria-expanded="false" aria-controls="app-sidebar">
-          <svg class="app-header__menu-icon" width="22" height="22" viewBox="0 0 24 24"
+          <svg class="app-header__menu-icon" width="26" height="26" viewBox="0 0 24 24"
                fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
             <path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" stroke-width="2"
                   stroke-linecap="round" />
           </svg>
         </button>
         {% endif %}
-        <h1 class="app-header__title">{{ app_name }}</h1>
       </div>
-       <div class="app-header__actions">
-         <span class="app-header__phase" aria-label="Fase corrente">{{ phase }}</span>
-         <button type="button" class="app-header__theme-toggle" id="theme-toggle"
-                 aria-label="Passa al tema scuro" title="Tema chiaro attivo — passa allo scuro">
-           <span class="app-header__theme-icon" id="theme-toggle-icon" aria-hidden="true">🌙</span>
-         </button>
-         {% if auth_enabled and current_username %}
-            <div class="user-dropdown" data-user-menu>
-              <button type="button" class="user-dropdown__toggle" id="user-menu-toggle"
-                      aria-haspopup="true" aria-expanded="false"
-                      aria-label="Menu utente">
-                <span class="app-header__user-name">{{ current_username }}</span>
-                <svg class="user-dropdown__caret" width="12" height="12" viewBox="0 0 24 24"
-                     fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-                  <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2"
-                        stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-              </button>
-              <div class="user-dropdown__menu" id="user-menu">
-                <a class="user-dropdown__item" href="/profile">Profilo</a>
-                <a class="user-dropdown__item" href="/logout">Esci</a>
-              </div>
-            </div>
-          {% elif auth_enabled %}
-           <a class="app-header__login" href="/login">Accedi</a>
-         {% else %}
-           <button type="button" class="app-header__user" aria-label="Utente (auth disattiva)" title="Utente">
-             <svg class="app-header__user-icon" width="22" height="22" viewBox="0 0 24 24" fill="none"
-                  xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-               <circle cx="12" cy="8" r="4" fill="currentColor" />
-               <path d="M4 20c0-3.3 3.6-6 8-6s8 2.7 8 6" stroke="currentColor" stroke-width="2"
-                     stroke-linecap="round" fill="none" />
-             </svg>
-           </button>
-         {% endif %}
-       </div>
+      <h1 class="app-header__title">{{ app_name }}</h1>
+      <div class="app-header__actions">
+        <span class="app-header__phase" aria-label="Fase corrente">{{ phase }}</span>
+        <button type="button" class="app-header__theme-toggle" id="theme-toggle"
+                aria-label="Passa al tema scuro" title="Tema chiaro attivo — passa allo scuro">
+          <span class="app-header__theme-icon" id="theme-toggle-icon" aria-hidden="true">🌙</span>
+        </button>
+        {% if auth_enabled and current_username %}
+           <div class="user-dropdown" data-user-menu>
+             <button type="button" class="user-dropdown__toggle" id="user-menu-toggle"
+                     aria-haspopup="true" aria-expanded="false"
+                     aria-label="Menu utente">
+               <span class="app-header__user-name">{{ current_username }}</span>
+               <svg class="user-dropdown__caret" width="12" height="12" viewBox="0 0 24 24"
+                    fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+                 <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2"
+                       stroke-linecap="round" stroke-linejoin="round"/>
+               </svg>
+             </button>
+             <div class="user-dropdown__menu" id="user-menu">
+               <a class="user-dropdown__item" href="/profile">Profilo</a>
+               <a class="user-dropdown__item" href="/logout">Esci</a>
+             </div>
+           </div>
+         {% elif auth_enabled %}
+          <a class="app-header__login" href="/login">Accedi</a>
+        {% else %}
+          <button type="button" class="app-header__user" aria-label="Utente (auth disattiva)" title="Utente">
+            <svg class="app-header__user-icon" width="26" height="26" viewBox="0 0 24 24" fill="none"
+                 xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+              <circle cx="12" cy="8" r="4" fill="currentColor" />
+              <path d="M4 20c0-3.3 3.6-6 8-6s8 2.7 8 6" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" fill="none" />
+            </svg>
+          </button>
+        {% endif %}
+      </div>
     </div>
   </header>
 

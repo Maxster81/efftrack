@@ -1,10 +1,11 @@
 # Active Context — Effort Tracking
 
 ## Stato corrente
-- **Ultimo task completato**: S7 — Campo Gruppo autopopolato ✅ (2026-08-04) — il campo Gruppo nella card "Nuova registrazione" è ora readonly e autopopolato come User, con il valore preso dal `group_id` dell'utente di sessione. Non è più un `<select>` ma un `<input readonly>` con hidden input per l'id. Forzato lato server (stesso pattern di User). Layout form aggiornato: Riga 1: User + Gruppo, Riga 2: Data + Cliente, Riga 3: Attività + Ore. Rimosso da Future Features.
+- **Ultimo task completato**: Restyle grafico header ✅ (2026-08-04) — header con hamburger all'estrema sinistra della pagina, titolo "EFFORT TRACKING" centrato nella barra, azioni (fase, toggle tema, menù utente) allineate a destra. Griglia CSS `grid-template-columns: 1fr auto 1fr` su `.app-header__inner` a larghezza piena. Ingranditi pulsanti hamburger (45px) e menù utente/icona utente (+25%). Nessun commit richiesto finché l'utente non conferma il risultato (poi autorizzato).
+- **Task precedente**: S7 — Campo Gruppo autopopolato ✅ (2026-08-04) — il campo Gruppo nella card "Nuova registrazione" è ora readonly e autopopolato come User, con il valore preso dal `group_id` dell'utente di sessione. Non è più un `<select>` ma un `<input readonly>` con hidden input per l'id. Forzato lato server (stesso pattern di User). Layout form aggiornato: Riga 1: User + Gruppo, Riga 2: Data + Cliente, Riga 3: Attività + Ore. Rimosso da Future Features.
 - **Fase in corso**: nessuna. Prossima: Fase 13d (hardening e sicurezza).
 - **Stato**: idle, pronto per nuovo task.
-- **Versione corrente**: `0.23.1`.
+- **Versione corrente**: `0.23.2` (bump in corso con commit restyle).
 - **Scomposizione Fase 12**: completata integralmente (12a-12d). Hardening = Fase 13, ora riorganizzata.
 - **Scomposizione Fase 13 (riorganizzata 2026-08-03, aggiornata 2026-08-03)**: 13a (funzionalità admin ✅), 13b (sicurezza headers/errori/ore ✅), 13c (fix stilistici e UX ✅), 13d (hardening sicurezza — da fare), 14 (produzione/documentazione — SEMPRE ultima, da fare). S4 spostata in "Future Features".
 - **DB di sviluppo**: rigenerato con dataset multi-gruppo (Fase 12c). 2 gruppi (SOC, NOC), 6 utenti di test con ~20 record ciascuno, password `test`. Admin resta utente di sola gestione (group_id NULL).
