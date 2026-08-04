@@ -782,6 +782,13 @@ a:hover { text-decoration: underline; }
   border-bottom: none;
 }
 
+/* Rendi compatti i pulsanti dentro la lista lookup (Rinomina, Elimina) */
+.lookup-item .admin-actions .btn-secondary,
+.lookup-item .admin-actions .btn-danger {
+  min-width: auto;
+  white-space: nowrap;
+}
+
 .lookup-name {
   font-weight: 600;
 }
