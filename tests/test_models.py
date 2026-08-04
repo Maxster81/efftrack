@@ -77,6 +77,11 @@ class TestSchema(DatabaseTestCase):
         columns = {col["name"] for col in inspect(self.engine).get_columns("users")}
         self.assertIn("disabled", columns)
 
+    def test_users_has_disabled_at_column(self) -> None:
+        """Suggestion 8: la tabella users ha la colonna disabled_at."""
+        columns = {col["name"] for col in inspect(self.engine).get_columns("users")}
+        self.assertIn("disabled_at", columns)
+
     def test_effort_entries_has_no_user_text(self) -> None:
         """Fase 11: la colonna legacy user_text è stata rimossa."""
         columns = {col["name"] for col in inspect(self.engine).get_columns("effort_entries")}
@@ -401,6 +406,69 @@ class TestDisabledUser(DatabaseTestCase):
         self.db.commit()
         saved = self.db.get(User, u.id)
         self.assertTrue(saved.disabled)
+
+
+class TestUserGracePeriod(DatabaseTestCase):
+    """Test della finestra temporale di eliminazione (Suggestion 8).
+
+    Verifica che la colonna `disabled_at` venga popolata/azzerata e che la
+    logica `_can_delete_user` rispetti `USER_DELETE_GRACE_DAYS`.
+    """
+
+    def test_disabled_at_populated_on_disable(self) -> None:
+        """Disabilitando un utente, `disabled_at` viene valorizzato."""
+        from app.models.effort_entry import utcnow
+
+        u = User(username="grace_test_1", password_hash="x", role="user")
+        self.db.add(u)
+        self.db.commit()
+        u.disabled = True
+        u.disabled_at = utcnow()
+        self.db.commit()
+        saved = self.db.get(User, u.id)
+        self.assertTrue(saved.disabled)
+        self.assertIsNotNone(saved.disabled_at)
+
+    def test_disabled_at_cleared_on_reenable(self) -> None:
+        """Riabilitando un utente, `disabled_at` viene azzerato."""
+        from app.models.effort_entry import utcnow
+
+        u = User(username="grace_test_2", password_hash="x", role="user")
+        self.db.add(u)
+        self.db.commit()
+        u.disabled = True
+        u.disabled_at = utcnow()
+        self.db.commit()
+        u.disabled = False
+        u.disabled_at = None
+        self.db.commit()
+        saved = self.db.get(User, u.id)
+        self.assertFalse(saved.disabled)
+        self.assertIsNone(saved.disabled_at)
+
+    def test_cannot_delete_user_before_grace_period(self) -> None:
+        """Un utente non può essere eliminato prima del periodo di grazia."""
+        from datetime import timedelta
+
+        from app.models.effort_entry import utcnow
+        from app.routers.admin import _can_delete_user
+
+        u = User(username="grace_test_3", password_hash="x", role="user", disabled=True)
+        # Disabilitato da pochi secondi -> non eliminabile.
+        u.disabled_at = utcnow() - timedelta(seconds=30)
+        self.assertFalse(_can_delete_user(u))
+
+    def test_can_delete_user_after_grace_period(self) -> None:
+        """Un utente può essere eliminato dopo il periodo di grazia."""
+        from datetime import timedelta
+
+        from app.config import USER_DELETE_GRACE_DAYS
+        from app.models.effort_entry import utcnow
+        from app.routers.admin import _can_delete_user
+
+        u = User(username="grace_test_4", password_hash="x", role="user", disabled=True)
+        u.disabled_at = utcnow() - timedelta(days=USER_DELETE_GRACE_DAYS + 1)
+        self.assertTrue(_can_delete_user(u))
 
 
 class TestUserGroupAssignment(DatabaseTestCase):

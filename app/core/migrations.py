@@ -85,6 +85,27 @@ def _migrate_users_group_id(engine: Engine) -> None:
     logger.info("Colonna users.group_id aggiunta")
 
 
+def _migrate_users_disabled_at(engine: Engine) -> None:
+    """Migrazione Suggestion 8 (Fase 13d): aggiunge la colonna `disabled_at` a `users`.
+
+    Idempotente: se la colonna esiste già, non fa nulla. Traccia la data di
+    disabilitazione per calcolare la finestra minima prima dell'eliminazione.
+    """
+    inspector = inspect(engine)
+    if "users" not in inspector.get_table_names():
+        return
+
+    columns = {col["name"] for col in inspector.get_columns("users")}
+    if "disabled_at" in columns:
+        logger.debug("Colonna users.disabled_at già presente, migrazione non necessaria")
+        return
+
+    logger.info("Migrazione Suggestion 8: aggiunta colonna users.disabled_at")
+    with engine.begin() as connection:
+        connection.execute(text("ALTER TABLE users ADD COLUMN disabled_at DATETIME"))
+    logger.info("Colonna users.disabled_at aggiunta")
+
+
 def _migrate_users_disabled(engine: Engine) -> None:
     """Migrazione Fase 13a: aggiunge la colonna `disabled` a `users`.
 
@@ -114,10 +135,12 @@ def run_schema_migrations(engine: Engine) -> None:
     - Fase 12b: aggiunta della colonna `users.last_login`.
     - Fase 12c: aggiunta della colonna `users.group_id` (FK verso groups).
     - Fase 13a: aggiunta della colonna `users.disabled`.
+    - Suggestion 8 (Fase 13d): aggiunta della colonna `users.disabled_at`.
 
     Idempotente: se lo schema è già allineato, non fa nulla.
     """
     _migrate_effort_entries(engine)
     _migrate_users_last_login(engine)
     _migrate_users_group_id(engine)
+    _migrate_users_disabled_at(engine)
     _migrate_users_disabled(engine)

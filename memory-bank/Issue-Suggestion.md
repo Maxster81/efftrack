@@ -30,62 +30,12 @@ Aggiornare il suggerimento 3 senza rimuoverlo completamente, seguiranno ulterior
 
 **Suggerimento:** oltre a quanto già accade, si può far risaltare nel filtro il record modificato? E' solo una scelta stilistica, di comodità visiva
 
-## Suggestion 6 - Prevedere una checkbox o un radio button per il giorno di ferie
-**Contesto:** vista Registrazioni, sezione filtro.
-
-**Comportamento attuale:** non è presente alcuna opzione dedicata ai giorni di ferie.
-
-**Suggerimento:** prevedere una checkbox o un radio button che, se selezionato, renda tutti i campi non obbligatori e non compilabili, ad eccezione della data. Alla pressione di **SALVA**, per quella data verrà creato un record con i campi vuoti e con la dicitura **FERIE** nel campo **NOTE**.
-
-## Suggestion 7 - Verificare la reale necessità di scegliere il gruppo nella registrazione
-**Contesto:** vista Registrazioni, sezione filtro.
-
-**Comportamento attuale:** l'utente deve scegliere il gruppo di appartenenza
-
-**Suggerimento:** ma se un utente fa già parte di un gruppo, che necessità c'è di sceglierlo di nuovo durante la registrazione dell'evento? Un po' come il campo User
-
-## Suggestion 6 - Prevedere una checkbox o un radio button per il giorno di ferie
-**Contesto:** vista Registrazioni, sezione filtro.
-
-**Comportamento attuale:** non è presente alcuna opzione dedicata ai giorni di ferie.
-
-**Suggerimento:** prevedere una checkbox o un radio button che, se selezionato, renda tutti i campi non obbligatori e non compilabili, ad eccezione della data. Alla pressione di **SALVA**, per quella data verrà creato un record con i campi vuoti e con la dicitura **FERIE** nel campo **NOTE**.
-
-## Suggestion 7 - Verificare la reale utilità del campo Gruppo modificabile
-**Contesto:** vista Registrazioni, sezione filtro.
-
-**Comportamento attuale:** Il campo gruppo si può scegliere
-
-**Suggerimento:** quanto è utile scegliere il gruppo durante la registrazione di un evento se tanto un utente può far parte solo di un determinato gruppo? Un po' come il campo User, autopopolato
-
----
-
-## Suggestion 8 - Eliminazione definitiva utente dopo finestra temporale
-**Contesto:** pagina ADMIN Gestione Utenti.
-
-**Comportamento attuale:** l'utente può essere eliminato fisicamente in qualsiasi momento, anche subito dopo la disabilitazione.
-
-**Suggerimento:** prevedere una finestra temporale (es. 30-60 giorni) dopo la **disabilitazione**, trascorsa la quale l'admin potrà eliminare l'utente definitivamente insieme ai suoi record. Durante l'eliminazione mostrare messaggi/warning chiari, es:
- - "L'utente è stato disabilitato il {data}. Sono trascorsi {n} giorni."
- - "L'utente ha {X} record associati che verranno eliminati definitivamente. Sei sicuro?"
- - "Eliminazione consentita dopo almeno 30 giorni dalla disabilitazione."
-
----
-
 ## Issue da verificare (ereditate da progress.md disallineato)
 
 > Le seguenti voci provengono dalla vecchia sezione "Cosa Manca / Da Fare" di `progress.md`
 > (numerazione precedente allo sdoppiamento della Fase 12). NON è confermato se siano già
 > state risolte: vanno verificate prima di essere considerate chiuse o da fare.
 > Quando una voce viene verificata e risolta, va **rimossa** da qui.
-
-### Issue B — Navbar: link "Esporta" non funzionante
-- **Stato**: 🔴 da verificare
-- **Descrizione**: Il link "Esporta" nella navbar non è funzionante. Va rimosso o reso operativo.
-
-### Issue C — Bottone "Esporta" nella pagina principale è fuori contesto
-- **Stato**: 🔴 da verificare
-- **Descrizione**: Il pulsante "Esporta CSV" è posizionato nella barra filtri ma non è chiaramente un'azione di export. Valutare se spostarlo in un menu contestuale o in una toolbar dedicata.
 
 ### Issue F — Sanificazione input e protezione XSS base
 - **Stato**: 🔴 da verificare
@@ -116,12 +66,23 @@ Aggiornare il suggerimento 3 senza rimuoverlo completamente, seguiranno ulterior
 
 **Descrizione:** separare il filtro mensile (che include l'anno) in due dropdown distinti (Anno + Mese), così la lista dei mesi resta "bloccata" ai 12 valori e non cresce nel tempo.
 
+### S6 — Giorno di ferie
+**Contesto:** vista Registrazioni, sezione filtro.
+
+**Descrizione:** prevedere una checkbox o un radio button che, se selezionato, renda tutti i campi non obbligatori e non compilabili, ad eccezione della data. Alla pressione di **SALVA**, per quella data verrà creato un record con i campi vuoti e con la dicitura **FERIE** nel campo **NOTE**.
+
+### S7 — Campo Gruppo autopopolato
+**Contesto:** vista Registrazioni, sezione filtro.
+
+**Descrizione:** valutare l'utilità del campo Gruppo modificabile nella registrazione, dato che un utente appartiene già a un gruppo: considerare di renderlo autopopolato come il campo User.
+
 ---
 
 <!-- Suggestion 1 risolta in Fase 13c (hamburger nascosto in login). -->
 <!-- Suggestion 2 risolta in Fase 13b (ore step 0.50). -->
 <!-- Suggestion 5 risolta in Fase 13c (evidenzia record modificato). -->
 <!-- Suggestion 3 risolta in Fase 13c (menu utente a discesa). -->
+<!-- Suggestion 8 risolta il 2026-08-04 (finestra temporale eliminazione utente). -->
 <!-- Issue A risolta in Fase 13b (pagine errore 404/500). -->
 <!-- Issue D risolta in Fase 13b (validazione ore 1-12, step 0.50). -->
 <!-- Issue E risolta in Fase 12b (campo last_login). -->

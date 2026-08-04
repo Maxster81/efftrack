@@ -54,6 +54,12 @@ AUTH_ENABLED: bool = os.environ.get("EFFORT_TRACKING_AUTH_ENABLED", "true").lowe
 ADMIN_USERNAME: str = os.environ.get("EFFORT_TRACKING_ADMIN_USERNAME", "admin")
 ADMIN_PASSWORD: str = os.environ.get("EFFORT_TRACKING_ADMIN_PASSWORD", "admin")
 
+# Suggestion 8 (Fase 13d): giorni minimi di disabilitazione prima che un utente
+# possa essere eliminato definitivamente (insieme ai suoi record). Configurabile.
+USER_DELETE_GRACE_DAYS: int = int(
+    os.environ.get("EFFORT_TRACKING_USER_DELETE_GRACE_DAYS", "30")
+)
+
 
 # --- Server -------------------------------------------------------------------
 
@@ -74,7 +80,7 @@ LOG_FORMAT: str = "%(asctime)s %(levelname)s [%(name)s] %(message)s"
 # --- Costanti applicative -----------------------------------------------------
 
 APP_NAME: str = "Effort Tracking"
-APP_VERSION: str = "0.21.0"
+APP_VERSION: str = "0.22.0"
 
 
 # --- Path applicativi (templates, static) ------------------------------------

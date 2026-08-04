@@ -4,7 +4,7 @@
 - **Ultima sottofase completata**: Fase 13c ✅ completata il 2026-08-03 (fix stilistici e UX: S1 hamburger login, S3 menu utente, S5 highlight record, Issue J lookup).
 - **Fase in corso**: nessuna. Prossima: Fase 13d (hardening e sicurezza).
 - **Stato**: idle, pronto per nuovo task.
-- **Versione corrente**: `0.21.0`.
+- **Versione corrente**: `0.22.0`.
 - **Roadmap estesa**: aggiunte Fase 4b (sidebar hamburger), Fase 5b (copia su settimana), Fase 12 (Admin, scomposta in 12a/12b/12c/12d); l'hardening passa a **Fase 13**, ora scomposta in 13a-13d. La Fase 9 è stata **sdoppiata** su richiesta utente in **Fase 9** (backend) e **Fase 9b** (frontend toggle dark/light + dipendenze).
 - **Scomposizione Fase 12 (riorganizzata 2026-08-03)**: approccio "dal basso verso l'alto". 12a-12d ✅ completate. Hardening = Fase 13.
 - **Scomposizione Fase 13 (riorganizzata 2026-08-03)**: 13a (funzionalità admin ✅), 13b (sicurezza ✅), 13c (fix stilistici e UX ✅, 2026-08-03), 13d (hardening sicurezza — da fare), 14 (produzione/documentazione — SEMPRE ultima, da fare).
@@ -277,8 +277,9 @@ La Fase 13 (hardening) è stata scomposta in sottofasi. Fase 14 (produzione/docu
 - **Fase 13a** — Funzionalità admin: disabilita utente + assegnazione gruppo (✅ 2026-08-03)
 - **Fase 13b** — Sicurezza e robustezza (404/500 + error.html, ore 1-12, headers) (✅ 2026-08-03)
 - **Fase 13c** — Fix stilistici e UX: S1 hamburger login, S3 menu utente, S5 highlight record, Issue J lookup (✅ 2026-08-03)
+- **Suggestion 8** — Eliminazione definitiva utente dopo finestra temporale (✅ 2026-08-04)
 - **Fase 13d** — Hardening e sicurezza: XSS (Issue F), audit (da fare — penultima)
-- **Fase 14** — Produzione e documentazione: test funzionali (Issue H), Issue C export, systemd, README (da fare — SEMPRE ultima)
+- **Fase 14** — Produzione e documentazione: test funzionali (Issue H), Issue C export (verificata risolta), systemd, README (da fare — SEMPRE ultima)
 
 ### Fase 12a — Infrastruttura ruoli e permessi
 - **Stato**: ✅ completata il 2026-08-03.

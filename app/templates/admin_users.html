@@ -79,6 +79,7 @@
               <td>
                 {% if u.disabled %}
                   <span class="badge badge-disabled">Disabilitato</span>
+                  <span class="text-muted">{{ u.disabled_at }}{% if u.days_since_disabled is not none %} ({{ u.days_since_disabled }}g){% endif %}</span>
                 {% else %}
                   <span class="badge badge-active">Attivo</span>
                 {% endif %}
@@ -115,13 +116,15 @@
                   <!-- Elimina -->
                   {% if u.role == 'admin' and admin_count <= 1 %}
                     <span class="text-muted" title="Ultimo admin non eliminabile">Admin protetto</span>
-                  {% elif u.disabled %}
+                  {% elif u.disabled and u.can_delete %}
                     <form method="post" action="/admin/users/{{ u.id }}/delete"
-                          onsubmit="return confirm('Eliminare definitivamente l&#39;utente {{ u.username }} con {{ u.record_count }} record?')">
+                          onsubmit="return confirm('Eliminare definitivamente l&#39;utente {{ u.username }} con {{ u.record_count }} record? I record associati verranno eliminati definitivamente.')">
                       <button type="submit" class="btn-danger btn-sm">
                         {% if u.record_count > 0 %}Elimina ({{ u.record_count }}){% else %}Elimina{% endif %}
                       </button>
                     </form>
+                  {% elif u.disabled %}
+                    <span class="text-muted" title="Eliminazione consentita dopo il periodo di grazia">In grazia</span>
                   {% else %}
                     <span class="text-muted" title="Disabilita prima per eliminare">Disabilita prima</span>
                   {% endif %}

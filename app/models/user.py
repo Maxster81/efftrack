@@ -34,6 +34,9 @@ class User(Base):
     )
     # Fase 13a: utente disabilitato (bloccato al login ma record intatti).
     disabled: Mapped[bool] = mapped_column(default=False, nullable=False)
+    # Suggestion 8 (Fase 13d): momento della disabilitazione, per calcolare la
+    # finestra temporale minima prima di poter eliminare definitivamente l'utente.
+    disabled_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     # Relazione verso il gruppo (per leggere il nome nel template).
     group: Mapped["Group | None"] = relationship()  # noqa: F821

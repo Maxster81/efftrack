@@ -25,10 +25,11 @@ from pydantic import ValidationError
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
-from app.config import APP_NAME, APP_VERSION, AUTH_ENABLED, TEMPLATES_DIR
+from app.config import APP_NAME, APP_VERSION, AUTH_ENABLED, TEMPLATES_DIR, USER_DELETE_GRACE_DAYS
 from app.core.permissions import require_admin
 from app.db import get_db
 from app.models import Activity, Client, EffortEntry, Group, User
+from app.models.effort_entry import utcnow
 from app.schemas.effort import LookupCreate, PasswordChange, RoleChange, UserCreate
 from fastapi.templating import Jinja2Templates
 from passlib.hash import bcrypt
@@ -194,6 +195,34 @@ def _user_stats(db: Session, user_id: int) -> int:
     ).scalar() or 0
 
 
+def _days_since(value: datetime | None) -> int | None:
+    """Giorni trascorsi da un timestamp (None se assente)."""
+    if value is None:
+        return None
+    return (utcnow() - value).days
+
+
+def _can_delete_user(u: User) -> bool:
+    """True se l'utente è disabilitato da almeno `USER_DELETE_GRACE_DAYS` giorni."""
+    if not u.disabled or u.disabled_at is None:
+        return False
+    return _days_since(u.disabled_at) >= USER_DELETE_GRACE_DAYS
+
+
+def _delete_user_records(db: Session, user_id: int) -> int:
+    """Elimina definitivamente i record di effort dell'utente (Suggestion 8).
+
+    Restituisce il numero di record eliminati.
+    """
+    records = db.execute(
+        select(EffortEntry).where(EffortEntry.user_id == user_id)
+    ).scalars().all()
+    count = len(records)
+    for r in records:
+        db.delete(r)
+    return count
+
+
 @router.get("/users", response_class=HTMLResponse, name="admin_users")
 async def admin_users(
     request: Request,
@@ -213,6 +242,10 @@ async def admin_users(
             "record_count": _user_stats(db, u.id),
             "last_login": _format_last_login(u.last_login),
             "disabled": u.disabled,
+            # Suggestion 8: informazioni sulla finestra di eliminazione.
+            "disabled_at": _format_last_login(u.disabled_at),
+            "days_since_disabled": _days_since(u.disabled_at),
+            "can_delete": _can_delete_user(u),
             "group_id": u.group_id,
             "group_name": u.group.name if u.group is not None else "",
         }
@@ -248,6 +281,8 @@ async def admin_users_disable(
         return RedirectResponse("/admin/users?err=Utente inesistente", status_code=303)
 
     target.disabled = not target.disabled
+    # Suggestion 8: traccia il momento della disabilitazione (azzerato in riabilitazione).
+    target.disabled_at = utcnow() if target.disabled else None
     db.commit()
     stato = "disabilitato" if target.disabled else "riabilitato"
     logger.info("Utente %s %s da admin %s", target.username, stato, admin.username)
@@ -398,10 +433,31 @@ async def admin_users_delete(
             logger.warning("Tentativo di eliminare l'ultimo admin (%s)", target.username)
             return RedirectResponse("/admin/users?err=Non puoi eliminare l'ultimo admin", status_code=303)
 
+    # Suggestion 8: finestra temporale minima dopo la disabilitazione.
+    if not _can_delete_user(target):
+        giorni = _days_since(target.disabled_at) or 0
+        logger.warning(
+            "Eliminazione utente %s bloccata: disabilitato da %d/%d giorni",
+            target.username,
+            giorni,
+            USER_DELETE_GRACE_DAYS,
+        )
+        return RedirectResponse(
+            f"/admin/users?err=Eliminazione consentita dopo almeno {USER_DELETE_GRACE_DAYS} "
+            f"giorni dalla disabilitazione (trascorsi {giorni})",
+            status_code=303,
+        )
+
+    # Elimina definitivamente anche i record dell'utente (Suggestion 8).
+    rimossi = _delete_user_records(db, target.id)
     db.delete(target)
     db.commit()
-    logger.info("Utente eliminato da admin: %s", target.username)
-    return RedirectResponse("/admin/users?ok=Utente eliminato", status_code=303)
+    logger.info(
+        "Utente eliminato da admin: %s (record eliminati: %d)",
+        target.username,
+        rimossi,
+    )
+    return RedirectResponse(f"/admin/users?ok=Utente eliminato ({rimossi} record rimossi)", status_code=303)
 
 
 # --------------------------------------------------------------------------
