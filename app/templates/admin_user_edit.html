@@ -138,7 +138,8 @@
         associati all'utente.
       </p>
       <form class="user-edit-form" method="post" action="/admin/users/{{ user.id }}/delete"
-            onsubmit="return confirm('Eliminare definitivamente l&#39;utente {{ user.username }} con {{ user.record_count }} record? I record associati verranno eliminati definitivamente.')">
+            id="user-delete-form"
+            data-username="{{ user.username }}" data-record-count="{{ user.record_count }}">
         <div class="form-actions">
           <button type="submit" class="btn-danger">
             {% if user.record_count > 0 %}Elimina ({{ user.record_count }}){% else %}Elimina{% endif %}
@@ -154,4 +155,25 @@
       <p class="text-muted">Disabilita prima l'utente per poterne consentire l'eliminazione.</p>
     {% endif %}
   </section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Conferma eliminazione utente leggendo i valori dagli attributi data-*
+  // (contesto HTML escapato da Jinja2, evita XSS da handler onsubmit).
+  (function () {
+    var form = document.getElementById("user-delete-form");
+    if (!form) { return; }
+    form.addEventListener("submit", function (event) {
+      var username = form.getAttribute("data-username") || "";
+      var recordCount = form.getAttribute("data-record-count") || "0";
+      var message = "Eliminare definitivamente l'utente " + username +
+                    " con " + recordCount +
+                    " record? I record associati verranno eliminati definitivamente.";
+      if (!window.confirm(message)) {
+        event.preventDefault();
+      }
+    });
+  })();
+</script>
 {% endblock %}

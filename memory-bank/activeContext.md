@@ -1,13 +1,13 @@
 # Active Context — Effort Tracking
 
 ## Stato corrente
-- **Ultimo task completato**: Restyle grafico header ✅ (2026-08-04) — header con hamburger all'estrema sinistra della pagina, titolo "EFFORT TRACKING" centrato nella barra, azioni (fase, toggle tema, menù utente) allineate a destra. Griglia CSS `grid-template-columns: 1fr auto 1fr` su `.app-header__inner` a larghezza piena. Ingranditi pulsanti hamburger (45px) e menù utente/icona utente (+25%). Nessun commit richiesto finché l'utente non conferma il risultato (poi autorizzato).
-- **Task precedente**: S7 — Campo Gruppo autopopolato ✅ (2026-08-04) — il campo Gruppo nella card "Nuova registrazione" è ora readonly e autopopolato come User, con il valore preso dal `group_id` dell'utente di sessione. Non è più un `<select>` ma un `<input readonly>` con hidden input per l'id. Forzato lato server (stesso pattern di User). Layout form aggiornato: Riga 1: User + Gruppo, Riga 2: Data + Cliente, Riga 3: Attività + Ore. Rimosso da Future Features.
-- **Fase in corso**: nessuna. Prossima: Fase 13d (hardening e sicurezza).
+- **Ultimo task completato**: Fase 13d — Hardening e sicurezza ✅ (2026-08-04) — XSS da `onsubmit` in `admin_user_edit.html` corretto (data-attributes + JS sicuro), sanificazione caratteri di controllo negli schemi Pydantic (Issue F), cookie di sessione con SameSite configurabile + Secure opzionale, log cambio password senza dettagli di validazione. 6 nuovi test di sanificazione (78 totali OK). **Issue F chiusa.**
+- **Task precedente**: Restyle grafico header ✅ (2026-08-04) — header a griglia full-width (`1fr auto 1fr`), hamburger a sinistra, titolo centrato, azioni a destra, pulsanti +25%.
+- **Fase in corso**: nessuna. Prossima: Fase 14 (produzione/documentazione — sempre ultima).
 - **Stato**: idle, pronto per nuovo task.
-- **Versione corrente**: `0.23.2` (bump in corso con commit restyle).
+- **Versione corrente**: `0.23.3` (bump in corso con commit Fase 13d).
 - **Scomposizione Fase 12**: completata integralmente (12a-12d). Hardening = Fase 13, ora riorganizzata.
-- **Scomposizione Fase 13 (riorganizzata 2026-08-03, aggiornata 2026-08-03)**: 13a (funzionalità admin ✅), 13b (sicurezza headers/errori/ore ✅), 13c (fix stilistici e UX ✅), 13d (hardening sicurezza — da fare), 14 (produzione/documentazione — SEMPRE ultima, da fare). S4 spostata in "Future Features".
+- **Scomposizione Fase 13 (riorganizzata 2026-08-03, aggiornata 2026-08-04)**: 13a (funzionalità admin ✅), 13b (sicurezza headers/errori/ore ✅), 13c (fix stilistici e UX ✅), 13d (hardening sicurezza ✅ 2026-08-04), 14 (produzione/documentazione — SEMPRE ultima, da fare). S4 spostata in "Future Features".
 - **DB di sviluppo**: rigenerato con dataset multi-gruppo (Fase 12c). 2 gruppi (SOC, NOC), 6 utenti di test con ~20 record ciascuno, password `test`. Admin resta utente di sola gestione (group_id NULL).
 - **Roadmap estesa**: aggiunte Fase 4b (sidebar hamburger), Fase 5b (copia su settimana), Fase 12 (Admin), Fase 13 (Manager); hardening slitta a Fase 14. La Fase 9 è stata **sdoppiata** su richiesta utente: **Fase 9** (refactoring, logging, .env, systemd — solo backend) e **Fase 9b** (toggle dark/light, aggiornamento dipendenze — solo frontend). Vedi `progress.md`/`projectbrief.md`.
 - **Nota**: la tabella `effort_entries` **non ha più** la colonna `user_text` (rimossa in Fase 11). `user_id` è ora una FK verso `users.id` (ON DELETE SET NULL). DB di sviluppo (Fase 12c): 2 gruppi (SOC, NOC), 6 utenti di test + admin, 120 record. **Merge su `main` autorizzato in Fase 9 (due volte) e Fase 9b**: `main` include le fasi 1–9b, v0.12.0. Le fasi 10+ sono solo su `develop`.
@@ -219,7 +219,7 @@
 - **Fase 13b — Sicurezza e robustezza** ✅ completata (2026-08-03): 404/500 + error.html generico (401/403/405), validazione ore 1-12 step 0.50, header di sicurezza HTTP.
 - **Fase 13c — Fix stilistici e UX** ✅ completata (2026-08-03): S1 (hamburger nascosto in login), S3 (menu utente a discesa con Profilo placeholder + ESCI), S5 (evidenzia record modificato), Issue J (form aggiunta lookup allineato), Issue I verificata ok, Issue E chiusa (last_login da 12b), S4 spostata in Future Features.
 - **Suggestion 8 — Eliminazione definitiva utente** ✅ risolta (2026-08-04): colonna `disabled_at` (traccia la disabilitazione), `USER_DELETE_GRACE_DAYS` (default 30, env `EFFORT_TRACKING_USER_DELETE_GRACE_DAYS`), blocco eliminazione fino a grazia trascorsa, eliminazione con rimozione dei record collegati, riabilitazione azzera `disabled_at`.
-- **Fase 13d — Hardening e sicurezza** (da fare): Issue F (XSS/audit), verifica ulteriore sicurezza. **Penultima**.
+- **Fase 13d — Hardening e sicurezza** ✅ completata (2026-08-04): Issue F (XSS/sanificazione input) risolta. **Penultima**.
 - **Fase 14 — Produzione e documentazione** (da fare, SEMPRE ultima): test funzionali (Issue H), review systemd, README deploy, note PostgreSQL. (Issue C sul posizionamento Export verificata risolta il 2026-08-04.)
 
 ## Fix sessioni e pagine errore (2026-08-04)
@@ -237,7 +237,7 @@
 - **Issue M chiusa** (2026-08-04): con la tabella semplificata la card "Nuovo utente" ha maggiore respiro e `form-row--three` risulta adeguato.
 
 ## Rischi / punti aperti
-- **`memory-bank/Issue-Suggestion.md`** traccia le voci ancora aperte. Restano: **Issue F** (XSS→Fase 13d), **Issue H** (test funzionali→Fase 14). **Issue B, C e M rimosse** (risolte); **Suggestion 6 e 7 spostate in Future Features**; **Issue J riassegnata il 2026-08-04 come S9** (refine grafico stile tabellare lookup, in Future Features); **Suggestion 8 risolta il 2026-08-04** (finestra eliminazione utente). La colonna `users.disabled_at` traccia il momento della disabilitazione.
+- **`memory-bank/Issue-Suggestion.md`** traccia le voci ancora aperte. Resta: **Issue H** (test funzionali→Fase 14). **Issue F risolta il 2026-08-04** (Fase 13d); **Issue B, C e M rimosse** (risolte); **Suggestion 6 e 7 spostate in Future Features**; **Issue J riassegnata il 2026-08-04 come S9** (refine grafico stile tabellare lookup, in Future Features); **Suggestion 8 risolta il 2026-08-04** (finestra eliminazione utente). La colonna `users.disabled_at` traccia il momento della disabilitazione.
 - Password admin di default `admin/admin`: va cambiata subito in produzione via env var (Sicurezza Fase 14).
 - La sessione HTTP firmata richiede `SECRET_KEY` robusta in produzione (placeholder in sviluppo).
 - `pydantic-core` pinnato a 2.46.4 per compatibilità con pydantic 2.13.4; quando pydantic sarà aggiornato, andrà aggiornato insieme.

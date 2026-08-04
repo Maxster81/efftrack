@@ -1,13 +1,13 @@
 # Progress — Effort Tracking
 
 ## Stato globale
-- **Ultimo task completato**: Restyle grafico header ✅ completato il 2026-08-04 — header a griglia full-width (`1fr auto 1fr`): hamburger all'estrema sinistra della pagina, titolo "EFFORT TRACKING" centrato nella barra, azioni (fase, toggle tema, menù utente) allineate a destra. Ingranditi hamburger (45px) e menù utente/icona utente (+25%).
-- **Fase in corso**: nessuna. Prossima: Fase 13d (hardening e sicurezza).
+- **Ultimo task completato**: Fase 13d — Hardening e sicurezza ✅ (2026-08-04) — Issue F chiusa: XSS da `onsubmit` in admin_user_edit.html corretto, sanificazione caratteri di controllo negli schemi Pydantic, cookie di sessione SameSite/Secure configurabili, log password prudente. 78 test OK.
+- **Fase in corso**: nessuna. Prossima: Fase 14 (produzione/documentazione — sempre ultima).
 - **Stato**: idle, pronto per nuovo task.
-- **Versione corrente**: `0.23.2` (bump con commit restyle).
+- **Versione corrente**: `0.23.3` (bump con commit Fase 13d).
 - **Roadmap estesa**: aggiunte Fase 4b (sidebar hamburger), Fase 5b (copia su settimana), Fase 12 (Admin, scomposta in 12a/12b/12c/12d); l'hardening passa a **Fase 13**, ora scomposta in 13a-13d. La Fase 9 è stata **sdoppiata** su richiesta utente in **Fase 9** (backend) e **Fase 9b** (frontend toggle dark/light + dipendenze).
 - **Scomposizione Fase 12 (riorganizzata 2026-08-03)**: approccio "dal basso verso l'alto". 12a-12d ✅ completate. Hardening = Fase 13.
-- **Scomposizione Fase 13 (riorganizzata 2026-08-03)**: 13a (funzionalità admin ✅), 13b (sicurezza ✅), 13c (fix stilistici e UX ✅, 2026-08-03), 13d (hardening sicurezza — da fare), 14 (produzione/documentazione — SEMPRE ultima, da fare).
+- **Scomposizione Fase 13 (riorganizzata 2026-08-03, aggiornata 2026-08-04)**: 13a (funzionalità admin ✅), 13b (sicurezza ✅), 13c (fix stilistici e UX ✅, 2026-08-03), 13d (hardening sicurezza ✅ 2026-08-04), 14 (produzione/documentazione — SEMPRE ultima, da fare).
 - **DB di sviluppo**: rigenerato in Fase 12c con dataset multi-gruppo (2 gruppi SOC/NOC, 6 utenti di test con ~20 record ciascuno).
 
 > **⚠️ NOTA OPERATIVA — Issue e Suggerimenti:** le issue e i suggerimenti raccolti dai test utente sono tracciati **esclusivamente** in `memory-bank/Issue-Suggestion.md`. Prima di iniziare **ogni fase**, consultare quel file. Quando una voce viene risolta, va **rimossa** da lì nello stesso commit che la risolve. Prima di riportare in questo file eventuali checklist "da fare", verificare se esistono già in `Issue-Suggestion.md` per evitare duplicati o disallineamenti.
@@ -280,7 +280,7 @@ La Fase 13 (hardening) è stata scomposta in sottofasi. Fase 14 (produzione/docu
 - **Suggestion 8** — Eliminazione definitiva utente dopo finestra temporale (✅ 2026-08-04)
 - **Riassegnazione Issue J → S9** (2026-08-04): l'allineamento del pulsante AGGIUNGI è risolto in 13c; lo stile tabellare residua è un refine grafico → spostato in Future Features come S9.
 - **Riorganizzazione /admin/users** — Tabella read-only + pagina modifica dedicata per singolo utente (✅ 2026-08-04, Issue M chiusa)
-- **Fase 13d** — Hardening e sicurezza: XSS (Issue F), audit (da fare — penultima)
+- **Fase 13d** — Hardening e sicurezza: XSS (Issue F) risolta, audit, sanificazione input (✅ 2026-08-04 — penultima)
 - **Fase 14** — Produzione e documentazione: test funzionali (Issue H), Issue C export (verificata risolta), systemd, README (da fare — SEMPRE ultima)
 
 ### Fase 12a — Infrastruttura ruoli e permessi

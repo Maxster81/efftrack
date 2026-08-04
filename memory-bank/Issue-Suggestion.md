@@ -13,10 +13,6 @@
 > state risolte: vanno verificate prima di essere considerate chiuse o da fare.
 > Quando una voce viene verificata e risolta, va **rimossa** da qui.
 
-### Issue F — Sanificazione input e protezione XSS base
-- **Stato**: 🔴 da verificare
-- **Descrizione**: Verificare che tutti gli input utente siano sanificati contro XSS. Jinja2 auto-escape è attivo di default, ma verificare note, descrizione e campi testuali.
-
 ### Issue H — Test funzionali base con pytest
 - **Stato**: 🔴 da verificare
 - **Descrizione**: I test attuali coprono solo i modelli. Mancano test per:
@@ -65,3 +61,4 @@
 <!-- Issue L risolta in Fase 13a (disabilita utente con flag disabled). -->
 <!-- Issue M risolta il 2026-08-04 (riorganizzazione /admin/users: tabella read-only + pagina modifica dedicata). -->
 <!-- Issue J riassegnata il 2026-08-04 come S9 (refine grafico stile tabellare lookup, in Future Features). -->
+<!-- Issue F risolta il 2026-08-04 (Fase 13d: sanificazione caratteri di controllo negli schemi, XSS da onsubmit in admin_user_edit.html corretto). -->

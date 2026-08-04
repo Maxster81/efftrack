@@ -835,6 +835,67 @@ class TestEffortEntryValidation(DatabaseTestCase):
 # ─── Nuovi test: profilo utente ───────────────────────────────────────────
 
 
+class TestControlCharsSanitization(DatabaseTestCase):
+    """Test della sanificazione dei caratteri di controllo (Fase 13d, Issue F).
+
+    Verifica che i validatori Pydantic rimuovano i caratteri di controllo
+    dai campi di testo prima della persistenza/rendering.
+    """
+
+    def test_effort_notes_sanitized(self) -> None:
+        entry = EffortEntryCreate(
+            user="Mario",
+            date=date(2026, 8, 4),
+            client_id=1,
+            group_id=1,
+            activity_id=1,
+            hours=7.5,
+            notes="Nota con \x07 carattere di controllo",
+            description=None,
+        )
+        self.assertEqual(entry.notes, "Nota con  carattere di controllo")
+
+    def test_effort_description_sanitized(self) -> None:
+        entry = EffortEntryCreate(
+            user="Mario",
+            date=date(2026, 8, 4),
+            client_id=1,
+            group_id=1,
+            activity_id=1,
+            hours=7.5,
+            notes=None,
+            description="Desc \x1f controllo",
+        )
+        self.assertEqual(entry.description, "Desc  controllo")
+
+    def test_user_sanitized(self) -> None:
+        entry = EffortEntryCreate(
+            user="Mario\x00",
+            date=date(2026, 8, 4),
+            client_id=1,
+            group_id=1,
+            activity_id=1,
+            hours=7.5,
+        )
+        self.assertEqual(entry.user, "Mario")
+
+    def test_username_sanitized(self) -> None:
+        from app.schemas.effort import UserCreate
+
+        user = UserCreate(username="mario\x07", password="secret")
+        self.assertEqual(user.username, "mario")
+
+    def test_lookup_name_sanitized(self) -> None:
+        from app.schemas.effort import LookupCreate
+
+        lookup = LookupCreate(type="client", name="INAIL\x0E")
+        self.assertEqual(lookup.name, "INAIL")
+
+    def test_profile_name_sanitized(self) -> None:
+        profile = ProfileUpdate(first_name="Mario\x01", last_name=None, email=None)
+        self.assertEqual(profile.first_name, "Mario")
+
+
 class TestProfileColumns(DatabaseTestCase):
     """Test delle colonne profilo utente (nome, cognome, email, pwd_change_required)."""
 

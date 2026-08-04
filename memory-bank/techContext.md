@@ -55,6 +55,8 @@ Poi:
 - `EFFORT_TRACKING_HOST` — default `0.0.0.0` in dev.
 - `EFFORT_TRACKING_PORT` — default `8000`.
 - `EFFORT_TRACKING_LOG_LEVEL` — default `INFO` (DEBUG, INFO, WARNING, ERROR).
+- `EFFORT_TRACKING_SESSION_SAMESITE` — SameSite del cookie di sessione, default `lax` (anti-CSRF cross-site).
+- `EFFORT_TRACKING_SESSION_SECURE` — default `false`; impostare a `true` in produzione dietro TLS (cookie solo HTTPS).
 
 ### File `.env`
 - Il file `.env` (gitignored) viene caricato automaticamente da `config.py` via `load_dotenv()`.

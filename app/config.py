@@ -60,6 +60,16 @@ USER_DELETE_GRACE_DAYS: int = int(
     os.environ.get("EFFORT_TRACKING_USER_DELETE_GRACE_DAYS", "30")
 )
 
+# Hardening Fase 13d: parametri di sicurezza del cookie di sessione.
+# `SameSite` del cookie: "lax" protegge dai CSRF cross-site (default Starlette).
+# `SECURE`: in produzione dietro TLS va impostato a "1" (cookie solo via HTTPS).
+SESSION_COOKIE_SAMESITE: str = os.environ.get(
+    "EFFORT_TRACKING_SESSION_SAMESITE", "lax"
+).lower()
+SESSION_COOKIE_SECURE: bool = os.environ.get(
+    "EFFORT_TRACKING_SESSION_SECURE", "false"
+).lower() in ("1", "true", "yes", "on")
+
 
 # --- Server -------------------------------------------------------------------
 
@@ -80,7 +90,7 @@ LOG_FORMAT: str = "%(asctime)s %(levelname)s [%(name)s] %(message)s"
 # --- Costanti applicative -----------------------------------------------------
 
 APP_NAME: str = "Effort Tracking"
-APP_VERSION: str = "0.22.1"
+APP_VERSION: str = "0.23.3"
 
 
 # --- Path applicativi (templates, static) ------------------------------------

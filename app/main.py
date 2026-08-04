@@ -37,7 +37,16 @@ from fastapi.templating import Jinja2Templates
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.sessions import SessionMiddleware
 
-from app.config import APP_NAME, APP_VERSION, DATA_DIR, SECRET_KEY, STATIC_DIR, TEMPLATES_DIR
+from app.config import (
+    APP_NAME,
+    APP_VERSION,
+    DATA_DIR,
+    SECRET_KEY,
+    SESSION_COOKIE_SAMESITE,
+    SESSION_COOKIE_SECURE,
+    STATIC_DIR,
+    TEMPLATES_DIR,
+)
 from app.core.logging_config import setup_logging
 from app.core.migrations import run_schema_migrations
 from app.core.security_headers import SecurityHeadersMiddleware
@@ -108,7 +117,14 @@ app: FastAPI = FastAPI(
 )
 
 # Sessione HTTP firmata (Fase 10): abilita request.session.
-app.add_middleware(SessionMiddleware, secret_key=SECRET_KEY)
+# Hardening Fase 13d: cookie con SameSite=Lax (anti-CSRF cross-site) e
+# Secure configurabile via env (da attivare in produzione dietro TLS).
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=SECRET_KEY,
+    same_site=SESSION_COOKIE_SAMESITE,
+    https_only=SESSION_COOKIE_SECURE,
+)
 
 # Header di sicurezza HTTP (Fase 13b, Issue G): applicati a ogni risposta.
 app.add_middleware(SecurityHeadersMiddleware)

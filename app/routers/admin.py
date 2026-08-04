@@ -434,7 +434,7 @@ async def admin_users_password(
     try:
         payload: PasswordChange = PasswordChange(**password.model_dump())
     except ValidationError as exc:
-        logger.warning("Cambio password non valido: %s", exc.errors())
+        logger.warning("Cambio password non valido per utente id=%s", user_id)
         return RedirectResponse(
             f"/admin/users/{user_id}/edit?err=Password non valida", status_code=303
         )

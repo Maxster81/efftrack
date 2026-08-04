@@ -6,9 +6,23 @@ dipende dal DB e viene eseguita nella route (dove la sessione è disponibile).
 """
 from __future__ import annotations
 
+import re
 from datetime import date
 
 from pydantic import BaseModel, Field, field_validator
+
+# Caratteri di controllo da rimuovere dai campi testo (hardening Issue F):
+# teniamo tab, LF e CR (utili in note/descrizione), eliminiamo il resto.
+_CONTROL_CHARS_RE = re.compile(r"[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]")
+
+
+def _strip_control_chars(value: str) -> str:
+    """Rimuove i caratteri di controllo non testuali da una stringa.
+
+    Previene injection di sequenze di escape nei campi che poi vengono
+    renderizzati nei template o persistiti (hardening Fase 13d, Issue F).
+    """
+    return _CONTROL_CHARS_RE.sub("", value)
 
 
 class EffortEntryCreate(BaseModel):
@@ -37,7 +51,7 @@ class EffortEntryCreate(BaseModel):
         stripped = value.strip()
         if not stripped:
             raise ValueError("Il campo User è obbligatorio.")
-        return stripped
+        return _strip_control_chars(stripped)
 
     @field_validator("hours")
     @classmethod
@@ -59,7 +73,9 @@ class EffortEntryCreate(BaseModel):
         if value is None:
             return None
         stripped = value.strip()
-        return stripped or None
+        if not stripped:
+            return None
+        return _strip_control_chars(stripped)
 
 
 class UserCreate(BaseModel):
@@ -74,7 +90,7 @@ class UserCreate(BaseModel):
         stripped = value.strip()
         if not stripped:
             raise ValueError("Il campo username è obbligatorio.")
-        return stripped
+        return _strip_control_chars(stripped)
 
 
 class PasswordChange(BaseModel):
@@ -120,7 +136,7 @@ class LookupCreate(BaseModel):
         stripped = value.strip()
         if not stripped:
             raise ValueError("Il campo nome è obbligatorio.")
-        return stripped
+        return _strip_control_chars(stripped)
 
 
 class ProfileUpdate(BaseModel):
@@ -137,7 +153,9 @@ class ProfileUpdate(BaseModel):
         if value is None:
             return None
         stripped = value.strip()
-        return stripped or None
+        if not stripped:
+            return None
+        return _strip_control_chars(stripped)
 
     @field_validator("email")
     @classmethod
@@ -148,6 +166,8 @@ class ProfileUpdate(BaseModel):
         stripped = value.strip()
         if not stripped:
             return None
+        # Rimuove caratteri di controllo prima di verificare il formato.
+        stripped = _strip_control_chars(stripped)
         # Verifica formato email di base (deve contenere @ e un punto dopo).
         if "@" not in stripped or "." not in stripped.split("@")[-1]:
             raise ValueError("Formato email non valido.")
