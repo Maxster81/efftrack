@@ -59,7 +59,7 @@
 - **Test funzionali (Issue H)**: `tests/conftest.py` configura un DB SQLite su file (isolato da `data/efftrack.db`) impostando `EFFORT_TRACKING_DB_URL` PRIMA dell'import dei moduli app.*; `tests/test_functional.py` usa TestClient (HTTPX). Nota: con `expire_on_commit=False` va chiamato `db_session.expire_all()` prima di rileggere oggetti modificati dal thread del TestClient.
 
 ## Fasi successive
-- **Progetto completo**: tutte le fasi (0–13d, 14) concluse. S11 risolta alla v1.1.0. Eventuali evoluzioni future (vedi `Issue-Suggestion.md`: S10, S4, S6, S9) restano backlog opzionale, non assegnate a fasi correnti.
+- **Progetto completo**: tutte le fasi (0–13d, 14) concluse. S11 risolta alla v1.1.0. Eventuali evoluzioni future (vedi `Issue-Suggestion.md`: S10, S4, S6) restano backlog opzionale, non assegnate a fasi correnti.
 
 ## Fase 14 — Attività chiuse (2026-08-04)
 - **Issue I**: service systemd già corretto (EnvironmentFile=/etc/efftrack.env, nessuna variabile hardcodata). Verificato.
@@ -83,7 +83,7 @@
 - **Documentazione**: `.env.example`, `README.md`, `deploy.sh` (commento password temporanea), `.clinerules/09-post-change.md` (nuova checklist Deploy).
 
 ## Rischi / punti aperti
-- `Issue-Suggestion.md`: non restano issue aperte in Fase 14. Future Features (backlog): S10 (self-creation), S4 (filtro anno+mese), S6 (giorno ferie), S9 (refine lookup tabellare).
+- `Issue-Suggestion.md`: non restano issue aperte in Fase 14. Future Features (backlog): S10 (self-creation), S4 (filtro anno+mese), S6 (giorno ferie).
 - Password admin `admin/admin`: **temporanea** (S11) — letta solo al primo seed, obbligata al cambio al primo login. In produzione va comunque impostata una password forte via env var.
 - `SECRET_KEY` placeholder di sviluppo: obbligatoria robusta in produzione.
 - `pydantic-core` pinnato a 2.46.4 (compatibilità pydantic 2.13.4).
