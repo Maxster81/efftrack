@@ -6,7 +6,7 @@
   <section class="form-card" aria-labelledby="create-user-title">
     <h2 id="create-user-title" class="card-title">Nuovo utente</h2>
     <form class="effort-form" method="post" action="/admin/users/create">
-      <div class="form-row form-row--three">
+      <div class="form-row">
         <div class="form-group">
           <label for="new-username">Username</label>
           <input type="text" id="new-username" name="username" autocomplete="off" required />
@@ -14,15 +14,6 @@
         <div class="form-group">
           <label for="new-password">Password</label>
           <input type="password" id="new-password" name="password" autocomplete="new-password" required />
-        </div>
-        <div class="form-group">
-          <label for="new-group">Gruppo</label>
-          <select id="new-group" name="group_id">
-            <option value="">Nessun gruppo</option>
-            {% for g in groups %}
-              <option value="{{ g.id }}">{{ g.name }}</option>
-            {% endfor %}
-          </select>
         </div>
       </div>
       <div class="form-actions">

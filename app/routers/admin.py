@@ -352,11 +352,13 @@ async def admin_users_create(
     request: Request,
     username: Annotated[str | None, Form()] = None,
     password: Annotated[str | None, Form()] = None,
-    group_id: Annotated[int | None, Form()] = None,
     db: Session = Depends(get_db),
     admin: User = Depends(require_admin),
 ) -> RedirectResponse:
-    """Crea un nuovo utente (username + password, ruolo 'user', gruppo opzionale).
+    """Crea un nuovo utente (username + password, ruolo 'user').
+
+    Il gruppo non viene richiesto in creazione; l'admin lo assegna successivamente
+    dalla pagina di modifica utente.
 
     Nota: usa campi Form() individuali (non Annotated[UserCreate, Form()])
     perché FastAPI non supporta modelli Form() misti ad altri Form() separati
@@ -375,21 +377,16 @@ async def admin_users_create(
         logger.warning("Tentativo di creare utente già esistente %s", payload.username)
         return RedirectResponse("/admin/users?err=Username già esistente", status_code=303)
 
-    if group_id is not None:
-        group = db.get(Group, group_id)
-        if group is None:
-            return RedirectResponse("/admin/users?err=Gruppo inesistente", status_code=303)
-
     db.add(
         User(
             username=payload.username,
             password_hash=bcrypt.hash(payload.password),
             role="user",
-            group_id=group_id,
+            group_id=None,
         )
     )
     db.commit()
-    logger.info("Utente creato da admin: %s (gruppo=%s)", payload.username, group_id)
+    logger.info("Utente creato da admin: %s", payload.username)
     return RedirectResponse("/admin/users?ok=Utente creato", status_code=303)
 
 
