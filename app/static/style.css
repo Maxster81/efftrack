@@ -789,6 +789,12 @@ a:hover { text-decoration: underline; }
   white-space: nowrap;
 }
 
+/* Allinea i campi di testo "rinomina" alla stessa altezza del campo "Nuovo nome" */
+.lookup-item .admin-actions input[type="text"] {
+  padding: var(--space-sm) var(--space-md);
+  font-size: 0.95rem;
+}
+
 .lookup-name {
   font-weight: 600;
 }
