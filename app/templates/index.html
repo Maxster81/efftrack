@@ -53,29 +53,31 @@
                  autocomplete="off" />
         </div>
 
+        {# S7 (2026-08-04): Gruppo autopopolato come User — campo readonly, valore
+           dal DB. L'hidden input `group_id` invia l'id reale al server, che lo
+           forza al gruppo di sessione ignorando il valore del browser. #}
         <div class="form-group">
-          <label for="effort-date">Data</label>
-          <input type="date" id="effort-date" name="date" value="{{ today }}" />
+          <label for="effort-group">Gruppo</label>
+          <input type="text" id="effort-group" readonly
+                 value="{{ current_group_name }}"
+                 placeholder="Nessun gruppo" />
+          <input type="hidden" name="group_id" id="effort-group-id"
+                 value="{{ current_group_id or '' }}" />
         </div>
       </div>
 
       <div class="form-row">
+        <div class="form-group">
+          <label for="effort-date">Data</label>
+          <input type="date" id="effort-date" name="date" value="{{ today }}" />
+        </div>
+
         <div class="form-group">
           <label for="effort-client">Cliente</label>
           <select id="effort-client" name="client_id">
             <option value="">-- Seleziona --</option>
             {% for c in clients %}
               <option value="{{ c.id }}">{{ c.name }}</option>
-            {% endfor %}
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label for="effort-group">Gruppo</label>
-          <select id="effort-group" name="group_id">
-            <option value="">-- Seleziona --</option>
-            {% for g in groups %}
-              <option value="{{ g.id }}">{{ g.name }}</option>
             {% endfor %}
           </select>
         </div>

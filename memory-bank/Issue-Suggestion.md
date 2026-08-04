@@ -49,12 +49,7 @@
 
 **Descrizione:** prevedere una checkbox o un radio button che, se selezionato, renda tutti i campi non obbligatori e non compilabili, ad eccezione della data. Alla pressione di **SALVA**, per quella data verrà creato un record con i campi vuoti e con la dicitura **FERIE** nel campo **NOTE**.
 
-### S7 — Campo Gruppo autopopolato
-**Contesto:** vista Registrazioni, sezione filtro.
-
-**Descrizione:** valutare l'utilità del campo Gruppo modificabile nella registrazione, dato che un utente appartiene già a un gruppo: considerare di renderlo autopopolato come il campo User.
-
----
+<!-- S7 risolta il 2026-08-04 (Gruppo autopopolato come User, campo readonly). -->
 
 <!-- Suggestion 1 risolta in Fase 13c (hamburger nascosto in login). -->
 <!-- Suggestion 2 risolta in Fase 13b (ore step 0.50). -->

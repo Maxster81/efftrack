@@ -115,11 +115,8 @@
     mark(client, ok);
     valid = valid && ok;
 
-    // Gruppo
-    var group = document.getElementById("effort-group");
-    ok = validateSelect(group, "Seleziona un Gruppo.");
-    mark(group, ok);
-    valid = valid && ok;
+    // Gruppo: readonly dal DB (S7, 2026-08-04), non serve validazione client.
+    // Il server forza il group_id della sessione.
 
     // Attività
     ok = validateSelect(activitySelect, "Seleziona un Attività.");

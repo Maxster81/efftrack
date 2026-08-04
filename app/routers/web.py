@@ -131,8 +131,17 @@ async def index(
         return RedirectResponse("/admin", status_code=303)
 
     clients = db.execute(select(Client).order_by(Client.name)).scalars().all()
-    groups = db.execute(select(Group).order_by(Group.name)).scalars().all()
     activities = db.execute(select(Activity).order_by(Activity.name)).scalars().all()
+
+    # Gruppo di appartenenza: non più un select, ma un campo readonly
+    # autopopolato come User (S7, 2026-08-04).
+    current_group_name: str = ""
+    current_group_id: int | None = None
+    if user.group_id is not None:
+        group = db.get(Group, user.group_id)
+        if group is not None:
+            current_group_name = group.name
+            current_group_id = group.id
 
     # Mesi distinti limitati ai record visibili all'utente (Fase 11).
     month_stmt = (
@@ -181,8 +190,9 @@ async def index(
             "app_version": APP_VERSION,
             "phase": "Fase 11 — Multiutente e segregazione",
             "clients": clients,
-            "groups": groups,
             "activities": activities,
+            "current_group_name": current_group_name,
+            "current_group_id": current_group_id,
             "records": records,
             "month_options": month_options,
             "selected_month": month,
@@ -230,8 +240,11 @@ async def save_entry(
 
     # Con auth attiva, rispetta sempre l'utente della sessione (il campo
     # User è readonly lato client, ma qui se ne garantisce l'integrità).
+    # S7 (2026-08-04): anche il Gruppo viene forzato al gruppo di appartenenza
+    # dell'utente di sessione, ignorando il valore inviato dal browser.
     if AUTH_ENABLED:
         user = current_user.username
+        group_id = current_user.group_id
 
     # Eliminazione definitiva: richiede solo `record_id`.
     if action == "delete":

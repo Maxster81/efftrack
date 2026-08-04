@@ -1,10 +1,10 @@
 # Active Context — Effort Tracking
 
 ## Stato corrente
-- **Ultimo task completato**: Pagina Profilo Utente ✅ (2026-08-04) — creata pagina `/profile` per visualizzare e modificare nome, cognome, email e cambiare password. Nuove colonne `first_name`, `last_name`, `email`, `password_change_required` su `users`. Router dedicato `profile.py`, template `profile.html`, schemi `ProfileUpdate` e `SelfPasswordChange`. Link Profilo nel menu utente dropdown e nella sidebar per USER e MANAGER. Aggiunte S10 (Self-creation utente) e S11 (Cambio password obbligatorio al primo login) come Future Features.
+- **Ultimo task completato**: S7 — Campo Gruppo autopopolato ✅ (2026-08-04) — il campo Gruppo nella card "Nuova registrazione" è ora readonly e autopopolato come User, con il valore preso dal `group_id` dell'utente di sessione. Non è più un `<select>` ma un `<input readonly>` con hidden input per l'id. Forzato lato server (stesso pattern di User). Layout form aggiornato: Riga 1: User + Gruppo, Riga 2: Data + Cliente, Riga 3: Attività + Ore. Rimosso da Future Features.
 - **Fase in corso**: nessuna. Prossima: Fase 13d (hardening e sicurezza).
 - **Stato**: idle, pronto per nuovo task.
-- **Versione corrente**: `0.23.0`.
+- **Versione corrente**: `0.23.1`.
 - **Scomposizione Fase 12**: completata integralmente (12a-12d). Hardening = Fase 13, ora riorganizzata.
 - **Scomposizione Fase 13 (riorganizzata 2026-08-03, aggiornata 2026-08-03)**: 13a (funzionalità admin ✅), 13b (sicurezza headers/errori/ore ✅), 13c (fix stilistici e UX ✅), 13d (hardening sicurezza — da fare), 14 (produzione/documentazione — SEMPRE ultima, da fare). S4 spostata in "Future Features".
 - **DB di sviluppo**: rigenerato con dataset multi-gruppo (Fase 12c). 2 gruppi (SOC, NOC), 6 utenti di test con ~20 record ciascuno, password `test`. Admin resta utente di sola gestione (group_id NULL).
