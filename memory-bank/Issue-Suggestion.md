@@ -4,6 +4,11 @@
 > Quando una voce viene risolta, va **rimossa** nello stesso commit che la risolve,
 > così che il file resti sempre aggiornato e non si accumulino voci già chiuse.
 
+## Suggerimenti
+
+### S10 - implementare una sessione un utente
+
+
 ## Issue da verificare (ereditate da progress.md disallineato)
 
 > Le seguenti voci provengono dalla vecchia sezione "Cosa Manca / Da Fare" di `progress.md`
