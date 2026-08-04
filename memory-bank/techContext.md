@@ -57,6 +57,7 @@ Poi:
 - `EFFORT_TRACKING_LOG_LEVEL` — default `INFO` (DEBUG, INFO, WARNING, ERROR).
 - `EFFORT_TRACKING_SESSION_SAMESITE` — SameSite del cookie di sessione, default `lax` (anti-CSRF cross-site).
 - `EFFORT_TRACKING_SESSION_SECURE` — default `false`; impostare a `true` in produzione dietro TLS (cookie solo HTTPS).
+- `EFFORT_TRACKING_MAX_BODY_BYTES` — (Issue L, Fase 14) limite massimo del body in byte, default `1048576` (1 MiB). Applicato dal middleware `RequestBodyLimitMiddleware`.
 
 ### File `.env`
 - Il file `.env` (gitignored) viene caricato automaticamente da `config.py` via `load_dotenv()`.
@@ -66,6 +67,7 @@ Poi:
 ## Vincoli di deploy
 - **No Docker** come prerequisito.
 - Deploy target: **Ubuntu con `systemd`** (template `systemd/efftrack.service` pronto, non attivato di default).
+- **Script opzionale `deploy.sh`** (Issue M, Fase 14): automatizza la creazione di utente/directory/venv, la copia del codice, la generazione di `/etc/efftrack.env` e l'installazione del servizio systemd. Uso: `sudo ./deploy.sh` (completo) o con flag `--install`/`--env`/`--service`. Utilizza il venv in `/opt/efftrack/.venv` (coerente col service).
 - Reverse proxy consigliato in produzione (nginx/Caddy) davanti a Uvicorn.
 
 ## Vincoli di sicurezza

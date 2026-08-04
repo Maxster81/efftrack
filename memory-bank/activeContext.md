@@ -2,9 +2,10 @@
 
 ## Stato corrente
 - **Fase in corso**: nessuna. Prossima: Fase 14 (produzione/documentazione — sempre ultima).
-- **Stato**: idle, pronto per nuovo task.
-- **Versione corrente**: `0.23.3` (tag `v0.23.3`, commit `e214290` — Fase 13d).
+- **Stato**: idle, pronto per nuovo task. Chiuse Issue I/J/K/L/M (Fase 14) — vedi sotto.
+- **Versione corrente**: `0.24.0` (bump MINOR per Issue L+M, non ancora taggata).
 - **Fasi complete**: 0–13d tutte completate. Hardening (13d) e documentazione (14) sono ora audit su richiesta (vedi `.clinerules/09-post-change.md`).
+- **Issue chiuse in Fase 14**: I (systemd già corretto), J (health pubblico), K (timeout — nessuna azione), L (middleware body limit), M (deploy.sh). Resta aperta solo H (test funzionali).
 - **DB di sviluppo**: dataset multi-gruppo (2 gruppi SOC/NOC, 6 utenti di test, ~20 record ciascuno, password `test`). Admin utente di sola gestione (group_id NULL).
 - **Merge su `main`**: autorizzato solo in Fasi 9 e 9b (v0.12.0). Tutte le fasi 10+ sono solo su `develop`.
 - **Ambiente**: Ubuntu in WSL, Python 3.12.3, venv ricreato. Dipendenze: fastapi 0.141.1, uvicorn 0.52.1, sqlalchemy 2.0.51, pydantic 2.13.4 (pydantic-core 2.46.4), jinja2 3.1.6, python-multipart 0.0.32, python-dotenv 1.2.2, pytest 9.1.1 (dev). `pydantic-core` 2.47.0 NON adottato (incompatibile).
@@ -39,6 +40,7 @@
 | Profilo utente | v0.23.0 | feat(profile): user data |
 | Restyle header | v0.23.2 | style(ui): header grid |
 | 13d Hardening | v0.23.3 | fix(security): hardening |
+| 14 Issue L+M | v0.24.0 | feat(security): body limit + deploy.sh |
 
 ## Decisioni recenti
 - **Stack**: FastAPI + Jinja2 + SQLAlchemy 2.x + SQLite (WAL + FK).
@@ -55,6 +57,13 @@
 ## Fasi successive
 - **Fase 13d — Hardening** ✅ completata (2026-08-04). Da ora eseguita come audit su richiesta (`.clinerules/09-post-change.md`, Sezione 2).
 - **Fase 14 — Produzione e documentazione** (da fare, SEMPRE ultima): test funzionali (Issue H), review systemd, README deploy, note PostgreSQL.
+
+## Fase 14 — Attività chiuse (2026-08-04)
+- **Issue I**: service systemd già corretto (EnvironmentFile=/etc/efftrack.env, nessuna variabile hardcodata). Verificato.
+- **Issue J**: `/health` già pubblico (nessuna dependency auth in `web.py:602`). Verificato.
+- **Issue K**: timeout export valutato — Uvicorn senza timeout request, export CSV è StreamingResponse. Nessuna azione necessaria.
+- **Issue L**: nuovo `RequestBodyLimitMiddleware` (`app/core/body_limit.py`), registrato in `main.py`. Soglia `EFFORT_TRACKING_MAX_BODY_BYTES` (default 1 MiB) in `config.py` + `.env.example`.
+- **Issue M**: nuovo `deploy.sh` opzionale (venv, copia codice, `/etc/efftrack.env`, servizio systemd). Allineato al path `.venv`.
 
 ## Rischi / punti aperti
 - `Issue-Suggestion.md`: restano **Issue H** (test funzionali→Fase 14). Future Features: S10 (self-creation), S11 (password obbligatoria al primo login), S4 (filtro anno+mese), S6 (giorno ferie), S9 (refine lookup tabellare).

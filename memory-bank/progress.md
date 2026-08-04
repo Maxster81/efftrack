@@ -3,8 +3,9 @@
 ## Stato globale
 - **Fase in corso**: nessuna. Prossima: Fase 14 (produzione/documentazione — sempre ultima).
 - **Stato**: idle, pronto per nuovo task.
-- **Versione corrente**: `0.23.3` (tag `v0.23.3`, commit `e214290`).
+- **Versione corrente**: `0.24.0` (bump MINOR per Issue L+M, non ancora taggata).
 - **Fasi complete**: 0–13d tutte completate. Vedi `activeContext.md` per la cronologia compatta versione/commit.
+- **Issue I/M/L chiuse** (Fase 14, 2026-08-04): vedi "Dettagli di fasi chiave" e Issue-Suggestion.md.
 
 > **⚠️ NOTA OPERATIVA — Issue e Suggerimenti:** le issue/suggestion sono tracciate **esclusivamente** in `memory-bank/Issue-Suggestion.md`. Consultarlo a inizio ogni fase; le voci risolte vanno **rimosse** lì nello stesso commit che le risolve.
 
@@ -40,7 +41,13 @@
 Jinja2 autoescape attivo (nessun `|safe`); `hours` 1-12 step 0.50; header sicurezza HTTP; `error.html` generico 401/403/405; `_error_context` sincrono senza DB.
 
 - **Fase 13d (2026-08-04)**: XSS da `onsubmit` in `admin_user_edit.html` corretto (data-attributes + script sicuro), sanificazione caratteri di controllo negli schemi Pydantic, cookie sessione SameSite/Secure configurabili, log password prudente. 78 test OK + 5 subtests. **Issue F chiusa.**
-- **Fase 14 (da fare)**: test funzionali (Issue H, pytest+HTTPX), review systemd, README deploy, note PostgreSQL.
+- **Fase 14 (2026-08-04)**: chiuse le issue della lista (vedi sotto).
+  - **Issue I**: service systemd già corretto (EnvironmentFile=/etc/efftrack.env, nessuna variabile hardcodata). Verificato.
+  - **Issue J**: `/health` già pubblico (nessuna dependency auth in `web.py:602`). Verificato.
+  - **Issue K**: timeout export valutato — l'app usa Uvicorn (nessun timeout request) e l'export CSV è uno `StreamingResponse`: nessuna azione necessaria. Documentazione in `techContext.md`.
+  - **Issue L**: nuovo middleware `RequestBodyLimitMiddleware` (`app/core/body_limit.py`) registrato in `main.py`, soglia `EFFORT_TRACKING_MAX_BODY_BYTES` (default 1 MiB) in `config.py`/`.env.example`.
+  - **Issue M**: nuovo script opzionale `deploy.sh` (crea utente/dir/venv, copia codice, genera `/etc/efftrack.env`, installa servizio systemd). Allineato al path `.venv` del service.
+  - Resta aperta **Issue H** (test funzionali pytest+HTTPX) in `Issue-Suggestion.md`.
 
 ## Cose note / limitazioni accettate
 - Auth attiva (route business protette, `/health` pubblico).

@@ -70,6 +70,13 @@ SESSION_COOKIE_SECURE: bool = os.environ.get(
     "EFFORT_TRACKING_SESSION_SECURE", "false"
 ).lower() in ("1", "true", "yes", "on")
 
+# Issue L (Fase 14): limite massimo della dimensione del body delle
+# richieste in byte. Protegge da payload maliziosi o eccessivi.
+# Default 1 MiB (1_048_576 byte), più che sufficiente per i form.
+MAX_BODY_BYTES: int = int(
+    os.environ.get("EFFORT_TRACKING_MAX_BODY_BYTES", "1048576")
+)
+
 
 # --- Server -------------------------------------------------------------------
 
@@ -90,7 +97,7 @@ LOG_FORMAT: str = "%(asctime)s %(levelname)s [%(name)s] %(message)s"
 # --- Costanti applicative -----------------------------------------------------
 
 APP_NAME: str = "Effort Tracking"
-APP_VERSION: str = "0.23.3"
+APP_VERSION: str = "0.24.0"
 
 
 # --- Path applicativi (templates, static) ------------------------------------

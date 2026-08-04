@@ -41,12 +41,14 @@ from app.config import (
     APP_NAME,
     APP_VERSION,
     DATA_DIR,
+    MAX_BODY_BYTES,
     SECRET_KEY,
     SESSION_COOKIE_SAMESITE,
     SESSION_COOKIE_SECURE,
     STATIC_DIR,
     TEMPLATES_DIR,
 )
+from app.core.body_limit import RequestBodyLimitMiddleware
 from app.core.logging_config import setup_logging
 from app.core.migrations import run_schema_migrations
 from app.core.security_headers import SecurityHeadersMiddleware
@@ -128,6 +130,10 @@ app.add_middleware(
 
 # Header di sicurezza HTTP (Fase 13b, Issue G): applicati a ogni risposta.
 app.add_middleware(SecurityHeadersMiddleware)
+
+# Limitazione dimensione body (Issue L, Fase 14): rifiuta richieste
+# con corpo oltre la soglia configurabile.
+app.add_middleware(RequestBodyLimitMiddleware, max_body_bytes=MAX_BODY_BYTES)
 
 
 def _error_context(request: Request) -> dict:
