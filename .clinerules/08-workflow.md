@@ -155,4 +155,5 @@ Questa regola è **procedurale** (dice come lavorare), complementare alle regole
 - `06-security.md` → autenticazione futura, secrets, validazione
 - `07-memory-bank.md` → documentazione persistente del progetto
 - `09-post-change.md` → controlli rapidi post-modifica (sempre) + audit approfondito su richiesta
+- `10-mcp.md` → disponibilità e pattern d'uso dei server MCP (Filesystem, Memory, Playwright)
 - **`08-workflow.md` (questa)** → processo strutturato per task misti BE/FE e gestione a fasi

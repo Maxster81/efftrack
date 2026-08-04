@@ -16,6 +16,7 @@ Prima di committare qualsiasi modifica funzionale (backend o UI), verificare **i
 - [ ] **Input:** i nuovi campi utente hanno validazione server-side e sanitizzazione?
 - [ ] **Route:** le nuove route sono protette da autenticazione/autorizzazione?
 - [ ] **Template:** nessun dato utente in `onsubmit`/`onclick`/attributi `on*`? Nessun `|safe` abusato?
+- [ ] **Verifica browser (se UI):** se il task ha toccato CSS/template/JS, usare Playwright MCP (`browser_navigate` + `browser_snapshot`/`browser_take_screenshot`) per verificare resa, accessibilità e assenza di errori JS/console (pattern in `10-mcp.md`)
 - [ ] **Logging:** nessuna password o dato sensibile nei log?
 - [ ] **Config:** i nuovi parametri sono in `.env.example` con default sicuro?
 - [ ] **Test:** `pytest` eseguibili e tutti verdi?
