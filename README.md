@@ -4,7 +4,7 @@ Web server per la registrazione di **effort** (ore lavorate, attività giornalie
 gestionale CRUD. Sostituto moderno del vecchio tool aziendale, installabile su **Ubuntu** con
 **Python `venv`** (no Docker).
 
-> **Stato**: **v1.0.0** — versione stabile pronta per produzione.
+> **Stato**: **v1.0.1** — versione stabile pronta per produzione.
 > Autenticazione attiva, multiutente con ruoli (USER/MANAGER/ADMIN), hardening di sicurezza,
 > suite di test completa (104 test verdi). La documentazione di stato dettagliata è in
 > [`memory-bank/`](./memory-bank/).
@@ -42,7 +42,7 @@ sudo apt install -y python3 python3-venv python3-pip
 ## Installazione e avvio in sviluppo
 
 ```bash
-cd /home/mbocchini/efftrack   # o la tua cartella del progetto
+cd /home/tuafolder/efftrack   # o la tua cartella del progetto
 python3 -m venv .venv
 source .venv/bin/activate
 pip install --upgrade pip
@@ -89,6 +89,7 @@ Variabili principali:
 | `EFFORT_TRACKING_ADMIN_USERNAME` / `EFFORT_TRACKING_ADMIN_PASSWORD` | `admin` / `admin` | Credenziali del primo admin. **In produzione vanno sovrascritte.** |
 | `EFFORT_TRACKING_USER_DELETE_GRACE_DAYS` | `30` | Giorni di attesa prima che un utente disabilitato sia eliminabile. |
 | `EFFORT_TRACKING_SESSION_SAMESITE` / `EFFORT_TRACKING_SESSION_SECURE` | `lax` / `false` | Sicurezza cookie di sessione (in produzione dietro TLS: `true`). |
+| `EFFORT_TRACKING_SESSION_MAX_AGE_SECONDS` | `1800` | Durata massima sessione in secondi (30 min). Se l'utente chiude il browser senza logout, alla scadenza serve rilogin. |
 | `EFFORT_TRACKING_MAX_BODY_BYTES` | `1048576` (1 MiB) | Limite massimo del body delle richieste. |
 
 Il file `.env` reale **non** va committato (è coperto da `.gitignore`).
