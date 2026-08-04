@@ -163,4 +163,5 @@ Questa regola è **procedurale** (dice come lavorare), complementare alle regole
 - `05-git-6.md` → branching, commit convention, versioning
 - `06-security-7.md` → autenticazione futura, secrets, validazione
 - `07-memory-bank-8.md` → documentazione persistente del progetto
+- **`09-post-change-10.md`** → controlli rapidi post-modifica (sempre) + audit approfondito su richiesta (ad ogni commit funzionale)
 - **`08-workflow-9.md` (questa)** → processo strutturato per task misti BE/FE e gestione a fasi
