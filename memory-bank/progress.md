@@ -1,9 +1,9 @@
 # Progress — Effort Tracking
 
 ## Stato globale
-- **Fase in corso**: nessuna. **Progetto completo alla v1.0.0** (versione stabile pronta per produzione).
+- **Fase in corso**: nessuna. **Progetto completo alla v1.1.0** (versione stabile pronta per produzione).
 - **Stato**: idle, pronto per eventuali evoluzioni future.
-- **Versione corrente**: `1.0.1` (bump PATCH — fix sicurezza sessione, Issue N).
+- **Versione corrente**: `1.1.0` (bump MINOR — cambio password obbligatorio al primo login, S11).
 - **Fasi complete**: 0–13d e 14 tutte completate. Vedi `activeContext.md` per la cronologia compatta versione/commit.
 - **Fase 14 chiusa** (2026-08-04): produzione e documentazione conclusa. Vedi sotto e Issue-Suggestion.md.
 
@@ -50,6 +50,14 @@ Jinja2 autoescape attivo (nessun `|safe`); `hours` 1-12 step 0.50; header sicure
   - **Issue H** (v0.24.2, 2026-08-04): nuova suite `tests/test_functional.py` (26 test) + `tests/conftest.py` con DB SQLite su file dedicato ai test (isolato da `data/efftrack.db`). Dipendenza dev `httpx` aggiunta a `requirements-dev.txt`. Copertura: `/health` pubblico, auth login/logout/account disabilitato, redirect anonimi, CRUD record via form (crea/aggiorna/elimina), regola aziendale (niente update/delete su record altrui), export CSV segregato per utente e filtro mese, permessi di ruolo (USER/MANAGER/ADMIN sull'area admin), vista gruppo manager e relativo export, profilo e cambio password. **104 test totali verdi.** **Issue H chiusa.**
   - **Chiusura (2026-08-04, v1.0.0)**: README riscritto per intero (stato v1.0.0, funzionalità, config, deploy con `deploy.sh` e manuale, note PostgreSQL, test). Memory bank allineato. Bump MAJOR a `1.0.0` (VERSION + `config.py`). **Fase 14 completata.**
   - **Issue N (2026-08-04, v1.0.1)**: bug di sicurezza — sessione senza scadenza (SessionMiddleware default 14 giorni) manteneva il login oltre riavvii/chiusura browser. Aggiunto `max_age` a `SessionMiddleware` con env var `EFFORT_TRACKING_SESSION_MAX_AGE_SECONDS` (default 1800 s = 30 min). Aggiornati `config.py`, `main.py`, `.env.example`. **Issue N chiusa.**
+- **S11 (2026-08-04, v1.1.0)**: cambio password obbligatorio al primo login.
+  - Seed admin con `password_change_required=True`; nuovo middleware `PasswordChangeRequiredMiddleware` (`app/core/password_change.py`) registrato in `main.py` dopo `SessionMiddleware` con whitelist (profile, logout, login, static, health, docs) che redirige a `/profile` gli utenti con flag attivo.
+  - `admin_users_create` imposta il flag per i nuovi utenti (password temporanea).
+  - Redirect post-login a `/profile` quando il flag è attivo (`app/routers/auth.py`).
+  - Banner di primo accesso in `profile.html` + CSS, context `password_change_required`.
+  - `profile.py:change-password` azzera già il flag dopo il successo (verificato).
+  - Documentazione: `.env.example`, `README.md`, `deploy.sh` (commento password temporanea), `.clinerules/09-post-change.md` (checklist Deploy).
+  - **107 test totali verdi** (3 nuovi test in `tests/test_functional.py`). **S11 chiusa.**
 
 ## Cose note / limitazioni accettate
 - Auth attiva (route business protette, `/health` pubblico).

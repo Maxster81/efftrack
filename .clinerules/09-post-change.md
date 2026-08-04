@@ -19,6 +19,7 @@ Prima di committare qualsiasi modifica funzionale (backend o UI), verificare **i
 - [ ] **Verifica browser (se UI):** se il task ha toccato CSS/template/JS, usare Playwright MCP (`browser_navigate` + `browser_snapshot`/`browser_take_screenshot`) per verificare resa, accessibilità e assenza di errori JS/console (pattern in `10-mcp.md`)
 - [ ] **Logging:** nessuna password o dato sensibile nei log?
 - [ ] **Config:** i nuovi parametri sono in `.env.example` con default sicuro?
+- [ ] **Deploy:** se il task tocca env var, configurazione o architettura, verificare che `deploy.sh` e `systemd/efftrack.service` siano allineati (nuove env var in `/etc/efftrack.env`, commenti aggiornati, path coerenti) e aggiornarli se necessario?
 - [ ] **Test:** `pytest` eseguibili e tutti verdi?
 
 Se una verifica non è soddisfatta, correggere prima del commit. Non serve rifare gli audit completi per ogni micro-modifica.

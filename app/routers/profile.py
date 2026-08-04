@@ -86,6 +86,7 @@ async def profile_page(
             "first_name": fresh_user.first_name or "",
             "last_name": fresh_user.last_name or "",
             "email": fresh_user.email or "",
+            "password_change_required": fresh_user.password_change_required,
             # Banner di esito operazioni (query string).
             "profile_ok": request.query_params.get("profile_ok"),
             "profile_err": request.query_params.get("profile_err"),

@@ -1,11 +1,11 @@
 # Active Context — Effort Tracking
 
 ## Stato corrente
-- **Fase in corso**: nessuna. **Progetto completo alla v1.0.0** (versione stabile pronta per produzione).
+- **Fase in corso**: nessuna. **Progetto completo alla v1.1.0** (versione stabile pronta per produzione).
 - **Stato**: idle, pronto per eventuali evoluzioni future.
-- **Versione corrente**: `1.0.1` (bump PATCH — fix sicurezza sessione, Issue N).
-- **Fasi complete**: 0–13d e 14 tutte completate. Hardening (13d) e audit di documentazione sono ora su richiesta (vedi `.clinerules/09-post-change.md`).
-- **Issue chiuse in Fase 14**: I (systemd già corretto), J (health pubblico), K (timeout — nessuna azione), L (middleware body limit), M (deploy.sh), H (test funzionali pytest+HTTPX), N (sessione senza scadenza — fix max_age 30 min).
+- **Versione corrente**: `1.1.0` (bump MINOR — cambio password obbligatorio al primo login, S11).
+- **Fasi complete**: 0–13d e 14 tutte completate. Vedi `activeContext.md` per la cronologia compatta versione/commit.
+- **Issue chiuse in Fase 14**: I (systemd già corretto), J (health pubblico), K (timeout — nessuna azione), L (middleware body limit), M (deploy.sh), H (test funzionali pytest+HTTPX), N (sessione senza scadenza — fix max_age 30 min). **S11** (cambio password obbligatorio al primo login) chiusa alla v1.1.0.
 - **DB di sviluppo**: dataset multi-gruppo (2 gruppi SOC/NOC, 6 utenti di test, ~20 record ciascuno, password `test`). Admin utente di sola gestione (group_id NULL).
 - **Merge su `main`**: autorizzato solo in Fasi 9 e 9b (v0.12.0). Tutte le fasi 10+ sono solo su `develop`.
 - **Ambiente**: Ubuntu in WSL, Python 3.12.3, venv ricreato. Dipendenze: fastapi 0.141.1, uvicorn 0.52.1, sqlalchemy 2.0.51, pydantic 2.13.4 (pydantic-core 2.46.4), jinja2 3.1.6, python-multipart 0.0.32, python-dotenv 1.2.2, pytest 9.1.1 (dev), httpx 0.28.1 (dev). `pydantic-core` 2.47.0 NON adottato (incompatibile).
@@ -43,6 +43,7 @@
 | 14 Issue L+M | v0.24.0 | feat(security): body limit + deploy.sh |
 | Fase 14 Issue H | v0.24.2 | test(functional): e2e pytest+HTTPX |
 | Fase 14 chiusura | v1.0.0 | chore(release): bump to v1.0.0 — Fase 14 completata |
+| S11 Cambio pwd obbligatorio | v1.1.0 | feat(auth): obbligo cambio password al primo login (S11) |
 
 ## Decisioni recenti
 - **Stack**: FastAPI + Jinja2 + SQLAlchemy 2.x + SQLite (WAL + FK).
@@ -58,7 +59,7 @@
 - **Test funzionali (Issue H)**: `tests/conftest.py` configura un DB SQLite su file (isolato da `data/efftrack.db`) impostando `EFFORT_TRACKING_DB_URL` PRIMA dell'import dei moduli app.*; `tests/test_functional.py` usa TestClient (HTTPX). Nota: con `expire_on_commit=False` va chiamato `db_session.expire_all()` prima di rileggere oggetti modificati dal thread del TestClient.
 
 ## Fasi successive
-- **Progetto completo**: tutte le fasi (0–13d, 14) concluse. Eventuali evoluzioni future (vedi `Issue-Suggestion.md`: S10, S11, S4, S6, S9) restano backlog opzionale, non assegnate a fasi correnti.
+- **Progetto completo**: tutte le fasi (0–13d, 14) concluse. S11 risolta alla v1.1.0. Eventuali evoluzioni future (vedi `Issue-Suggestion.md`: S10, S4, S6, S9) restano backlog opzionale, non assegnate a fasi correnti.
 
 ## Fase 14 — Attività chiuse (2026-08-04)
 - **Issue I**: service systemd già corretto (EnvironmentFile=/etc/efftrack.env, nessuna variabile hardcodata). Verificato.
@@ -69,10 +70,21 @@
 - **Issue H**: nuova suite `tests/test_functional.py` (26 test) + `tests/conftest.py`; dipendenza dev `httpx` in `requirements-dev.txt`. Copertura: `/health` pubblico, auth (login/logout/account disabilitato/redirect anonimi), CRUD record via form, regola aziendale (niente update/delete su record altrui), export CSV segregato per utente + filtro mese, permessi di ruolo (USER/MANAGER/ADMIN), vista gruppo manager e relativo export, profilo e cambio password. **104 test totali verdi.**
   - **Chiusura Fase 14 (v1.0.0)**: README riscritto per intero (stato v1.0.0, funzionalità, config, deploy `deploy.sh` e manuale, note PostgreSQL, test). Bump MAJOR a `1.0.0` (VERSION + `config.py`). Memory bank allineato.
   - **Issue N (v1.0.1, 2026-08-04)**: bug di sicurezza — sessione senza scadenza (`SessionMiddleware` default 14 giorni) manteneva il login oltre riavvii/chiusura browser. Aggiunto `max_age` (env `EFFORT_TRACKING_SESSION_MAX_AGE_SECONDS`, default 1800 s = 30 min) in `config.py`, `main.py`, `.env.example`. **Issue N chiusa.**
+  - **S11 (v1.1.0, 2026-08-04)**: cambio password obbligatorio al primo login (seed admin + nuovi utenti, middleware, redirect, banner, test). **S11 chiusa.** Vedi sezione dedicata sotto.
+
+## S11 — Cambio password obbligatorio al primo login (2026-08-04, v1.1.0)
+- **Seed admin**: `password_change_required=True` (password bootstrap `admin/admin` temporanea, letta solo al primo seed).
+- **Nuovo middleware** `PasswordChangeRequiredMiddleware` (`app/core/password_change.py`), registrato in `main.py` **PRIMA** di `SessionMiddleware`. Middleware **puro** (non `BaseHTTPMiddleware`): legge `scope["session"]` direttamente senza clonare lo scope (il `BaseHTTPMiddleware` clona lo scope e perdeva la sessione). Se `AUTH_ENABLED` e l'utente in sessione ha il flag attivo e il path non è in whitelist → redirect a `/profile`. Whitelist: `/profile`, `/profile/change-password`, `/logout`, `/login`, `/health`, `/docs`, `/openapi.json`, `/static/`.
+- **Redirect post-login** a `/profile` quando il flag è attivo (`app/routers/auth.py`).
+- **Nuovi utenti** (`admin_users_create`): `password_change_required=True` (password temporanea impostata dall'admin).
+- **Banner** di primo accesso in `profile.html` + stile `.profile-banner` in `style.css`. Context `password_change_required` in `app/routers/profile.py`.
+- **Cambio password** (`profile.py:change-password`) azzera il flag sul successo (già presente, verificato).
+- **Test**: 3 nuovi test in `tests/test_functional.py` (redirect login→profile, blocco navigazione, azzeramento flag). Test esistenti admin aggiornati (flag azzerato prima di dashboard); test modello admin seed aggiornato a `True`. **107 test totali verdi**.
+- **Documentazione**: `.env.example`, `README.md`, `deploy.sh` (commento password temporanea), `.clinerules/09-post-change.md` (nuova checklist Deploy).
 
 ## Rischi / punti aperti
-- `Issue-Suggestion.md`: non restano issue aperte in Fase 14. Future Features (backlog): S10 (self-creation), S11 (password obbligatoria al primo login), S4 (filtro anno+mese), S6 (giorno ferie), S9 (refine lookup tabellare).
-- Password admin `admin/admin`: da cambiare in produzione via env var (Sicurezza Fase 14).
+- `Issue-Suggestion.md`: non restano issue aperte in Fase 14. Future Features (backlog): S10 (self-creation), S4 (filtro anno+mese), S6 (giorno ferie), S9 (refine lookup tabellare).
+- Password admin `admin/admin`: **temporanea** (S11) — letta solo al primo seed, obbligata al cambio al primo login. In produzione va comunque impostata una password forte via env var.
 - `SECRET_KEY` placeholder di sviluppo: obbligatoria robusta in produzione.
 - `pydantic-core` pinnato a 2.46.4 (compatibilità pydantic 2.13.4).
 - Migrazioni schema: `run_schema_migrations` gestisce modifiche note; per cambi non gestiti va rigenerato il DB. Alembic da valutare.
