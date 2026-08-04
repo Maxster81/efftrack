@@ -23,13 +23,6 @@
 - ESCI
 Aggiornare il suggerimento 3 senza rimuoverlo completamente, seguiranno ulteriori azioni
 
-## Suggestione 4: Prevedere filtro per anni e mesi
-**Contesto:** vista Registrazioni, filtro
-
-**Comportamento attuale:** il filtro è su base mensile che inlcude l'anno.
-
-**Suggerimento:** per evitare una colonna di filtro che nel corso del tempo potrebbe diventare enorme, prevedere il filtro sia per anno che per mese, così da avere una colonna mese "bloccata" ai 12 elementi/mesi
-
 ## Suggestione 5: Illuminare il record modificato
 **Contesto:** vista Registrazioni, filtro
 
@@ -94,10 +87,6 @@ Aggiornare il suggerimento 3 senza rimuoverlo completamente, seguiranno ulterior
 - **Stato**: 🔴 da verificare
 - **Descrizione**: Il pulsante "Esporta CSV" è posizionato nella barra filtri ma non è chiaramente un'azione di export. Valutare se spostarlo in un menu contestuale o in una toolbar dedicata.
 
-### Issue E — Registrazione automatica data/ora ultimo login
-- **Stato**: 🔴 da verificare
-- **Descrizione**: Al momento non viene tracciato l'ultimo accesso degli utenti. Aggiungere campo `last_login` alla tabella `users` e popolarlo al login.
-
 ### Issue F — Sanificazione input e protezione XSS base
 - **Stato**: 🔴 da verificare
 - **Descrizione**: Verificare che tutti gli input utente siano sanificati contro XSS. Jinja2 auto-escape è attivo di default, ma verificare note, descrizione e campi testuali.
@@ -110,20 +99,33 @@ Aggiornare il suggerimento 3 senza rimuoverlo completamente, seguiranno ulterior
   - Autenticazione e permessi
   - Export CSV
 
-### Issue I - Verifica stilistica pagina ADMIN aggiunta utenti- **Stato**: 🔴 da verificare
-- **Descrizione**: lo stile della pagina è completamente sballato
- - pulsanti **ruolo, pwd ed elimina** sono enormi rispetto al resto del testo (a che servono 2 pulsanti per lostesso concetto?)
- - **dropdown** ruolo e campo testo **nuova password** piccoli rispetto ai pulsanti (uno dei due va rivisto)
- - **Devo darti uno screenshot per questo issue**
-
 ### Issue J - Verifica stilistica pagina ADMIN aggiunta lookup- **Stato**: 🔴 da verificare
 - **Descrizione**: lo stile della pagina è completamente sballato
  - pulsante **AGGIUNGI** disallineato rispetto al campo **NOME**
  - vorrei uno stile più tabellare (creare vari mokup)
 
+---
+
+## Future Features
+
+> Voci di sviluppo futuro, non assegnate alle fasi correnti. Vengono riportate
+> qui quando si decide di non gestirle nella roadmap attiva.
+
+### S4 — Filtro per anno e mese separati
+**Contesto:** vista Registrazioni, filtro.
+
+**Descrizione:** separare il filtro mensile (che include l'anno) in due dropdown distinti (Anno + Mese), così la lista dei mesi resta "bloccata" ai 12 valori e non cresce nel tempo.
+
+---
+
+<!-- Suggestion 1 risolta in Fase 13c (hamburger nascosto in login). -->
 <!-- Suggestion 2 risolta in Fase 13b (ore step 0.50). -->
+<!-- Suggestion 5 risolta in Fase 13c (evidenzia record modificato). -->
+<!-- Suggestion 3 risolta in Fase 13c (menu utente a discesa). -->
 <!-- Issue A risolta in Fase 13b (pagine errore 404/500). -->
 <!-- Issue D risolta in Fase 13b (validazione ore 1-12, step 0.50). -->
+<!-- Issue E risolta in Fase 12b (campo last_login). -->
 <!-- Issue G risolta in Fase 13b (header di sicurezza HTTP). -->
+<!-- Issue I risolta in Fase 13c (stile admin utenti ok). -->
 <!-- Issue K risolta in Fase 13a (assegnazione gruppo utenti). -->
 <!-- Issue L risolta in Fase 13a (disabilita utente con flag disabled). -->

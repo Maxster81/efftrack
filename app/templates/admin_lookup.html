@@ -20,17 +20,13 @@
       <div class="lookup-section">
         <h3 class="card-title">{{ label }}</h3>
 
-        <form class="effort-form" method="post" action="/admin/lookup/create">
-          <div class="form-row">
-            <input type="hidden" name="type" value="{{ type }}" />
-            <div class="form-group">
-              <label for="name-{{ type }}">Nome</label>
-              <input type="text" id="name-{{ type }}" name="name" required />
-            </div>
-            <div class="form-actions">
-              <button type="submit" class="btn-primary">Aggiungi</button>
-            </div>
+        <form class="lookup-add-form" method="post" action="/admin/lookup/create">
+          <input type="hidden" name="type" value="{{ type }}" />
+          <div class="form-group lookup-add-form__field">
+            <label class="visually-hidden" for="name-{{ type }}">Nome</label>
+            <input type="text" id="name-{{ type }}" name="name" placeholder="Nuovo nome" required />
           </div>
+          <button type="submit" class="btn-primary lookup-add-form__button">Aggiungi</button>
         </form>
 
         <ul class="lookup-list">

@@ -201,16 +201,64 @@ a:hover { text-decoration: underline; }
 .app-header__user-icon {
   display: block;
 }
-.app-header__user-auth {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  font-size: 0.9rem;
-}
 .app-header__user-name {
   font-weight: 600;
 }
-.app-header__logout,
+/* Menu a discesa utente (Fase 13c, S3): toggle + menu con Profilo/ESCI. */
+.user-dropdown {
+  position: relative;
+  display: inline-flex;
+}
+.user-dropdown__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--color-text-on-primary);
+  font-size: 0.85rem;
+  opacity: 0.9;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  background: transparent;
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background-color 0.15s ease, opacity 0.15s ease;
+  font-family: var(--font-sans);
+}
+.user-dropdown__toggle:hover {
+  background: rgba(255, 255, 255, 0.12);
+  opacity: 1;
+}
+.user-dropdown__caret {
+  display: block;
+}
+.user-dropdown__menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  min-width: 160px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  padding: var(--space-xs) 0;
+  display: none;
+  z-index: 60;
+}
+.user-dropdown__menu.is-open {
+  display: block;
+}
+.user-dropdown__item {
+  display: block;
+  padding: var(--space-sm) var(--space-md);
+  color: var(--color-text);
+  text-decoration: none;
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+.user-dropdown__item:hover {
+  background: var(--color-surface-alt);
+  text-decoration: none;
+}
 .app-header__login {
   color: var(--color-text-on-primary);
   text-decoration: none;
@@ -221,7 +269,6 @@ a:hover { text-decoration: underline; }
   border-radius: var(--radius-sm);
   transition: background-color 0.15s ease, opacity 0.15s ease;
 }
-.app-header__logout:hover,
 .app-header__login:hover {
   background: rgba(255, 255, 255, 0.12);
   text-decoration: none;
@@ -563,6 +610,14 @@ a:hover { text-decoration: underline; }
 .records-table tbody tr.is-selected:hover {
   background: var(--color-accent-strong);
 }
+/* Fase 13c (S5): evidenzia il record appena modificato con una dissolvenza. */
+.records-table tbody tr.is-highlighted {
+  animation: highlight-record 6s ease-out;
+}
+@keyframes highlight-record {
+  0% { background: #fff3b0; }
+  100% { background: transparent; }
+}
 .records-table tbody tr:focus-visible {
   outline: 2px solid var(--color-primary);
   outline-offset: -2px;
@@ -667,6 +722,35 @@ a:hover { text-decoration: underline; }
   margin-bottom: var(--space-lg);
   padding-bottom: var(--space-md);
   border-bottom: 1px solid var(--color-border);
+}
+
+/* Fase 13c (Issue J): form di aggiunta lookup con input e bottone in linea,
+   allineati orizzontalmente (prima il bottone finiva su una riga separata). */
+.lookup-add-form {
+  display: flex;
+  gap: var(--space-sm);
+  align-items: flex-start;
+  margin-bottom: var(--space-md);
+}
+.lookup-add-form__field {
+  flex: 1 1 auto;
+  max-width: 320px;
+}
+.lookup-add-form__button {
+  min-width: auto;
+  white-space: nowrap;
+}
+.lookup-add-form .lookup-add-form__field input {
+  width: 100%;
+}
+@media (max-width: 480px) {
+  .lookup-add-form {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .lookup-add-form__field {
+    max-width: none;
+  }
 }
 
 .lookup-list {

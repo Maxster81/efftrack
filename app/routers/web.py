@@ -116,6 +116,7 @@ async def index(
     success: int | None = None,
     error: str | None = None,
     month: str | None = None,
+    highlight_id: int | None = None,
 ) -> HTMLResponse:
     """Pagina principale: form di inserimento + tabella elenco (protetta)."""
     redirect = _require_auth(user)
@@ -191,6 +192,8 @@ async def index(
             "auth_enabled": AUTH_ENABLED,
             "is_admin": is_admin(user),
             "sidebar_items": _sidebar_items(user),
+            # Fase 13c (S5): id del record da evidenziare dopo l'aggiornamento.
+            "highlight_id": highlight_id,
         },
     )
 
@@ -339,7 +342,9 @@ def _save_single(
         entry.description = payload.description
         db.commit()
         logger.info("Record aggiornato id=%s data=%s ore=%s", record_id, payload.date, payload.hours)
-        return RedirectResponse(_with_month("/?success=2", month), status_code=303)
+        # Fase 13c (S5): passa l'id del record per evidenziarlo nella tabella.
+        base = f"/?success=2&highlight_id={record_id}"
+        return RedirectResponse(_with_month(base, month), status_code=303)
 
     entry = EffortEntry(
         user_id=current_user.id,

@@ -19,7 +19,9 @@
   <header class="app-header" role="banner">
     <div class="app-header__inner">
       <div class="app-header__left">
-        <!-- Hamburger menu: apre la sidebar (Fase 4b). -->
+        <!-- Hamburger menu: apre la sidebar (Fase 4b). Nascosto nelle pagine
+             pubbliche (login, errori) tramite `hide_nav` (Fase 13c, Suggestion 1). -->
+        {% if not hide_nav|default(false) %}
         <button type="button" class="app-header__menu" id="nav-toggle"
                 aria-label="Apri menu di navigazione" aria-expanded="false" aria-controls="app-sidebar">
           <svg class="app-header__menu-icon" width="22" height="22" viewBox="0 0 24 24"
@@ -28,6 +30,7 @@
                   stroke-linecap="round" />
           </svg>
         </button>
+        {% endif %}
         <h1 class="app-header__title">{{ app_name }}</h1>
       </div>
        <div class="app-header__actions">
@@ -37,11 +40,23 @@
            <span class="app-header__theme-icon" id="theme-toggle-icon" aria-hidden="true">🌙</span>
          </button>
          {% if auth_enabled and current_username %}
-           <div class="app-header__user-auth" aria-label="Utente autenticato">
-             <span class="app-header__user-name">{{ current_username }}</span>
-             <a class="app-header__logout" href="/logout">Esci</a>
-           </div>
-         {% elif auth_enabled %}
+            <div class="user-dropdown" data-user-menu>
+              <button type="button" class="user-dropdown__toggle" id="user-menu-toggle"
+                      aria-haspopup="true" aria-expanded="false"
+                      aria-label="Menu utente">
+                <span class="app-header__user-name">{{ current_username }}</span>
+                <svg class="user-dropdown__caret" width="12" height="12" viewBox="0 0 24 24"
+                     fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+                  <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </button>
+              <div class="user-dropdown__menu" id="user-menu">
+                <a class="user-dropdown__item" href="#profile" data-profile-placeholder>Profilo</a>
+                <a class="user-dropdown__item" href="/logout">Esci</a>
+              </div>
+            </div>
+          {% elif auth_enabled %}
            <a class="app-header__login" href="/login">Accedi</a>
          {% else %}
            <button type="button" class="app-header__user" aria-label="Utente (auth disattiva)" title="Utente">
@@ -87,5 +102,6 @@
    {% block scripts %}{% endblock %}
    <script src="{{ url_for('static', path='nav.js') }}" defer></script>
    <script src="{{ url_for('static', path='theme.js') }}" defer></script>
+   <script src="{{ url_for('static', path='user-menu.js') }}" defer></script>
  </body>
 </html>

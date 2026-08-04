@@ -164,7 +164,7 @@
         <tbody>
           {% if records %}
             {% for record in records %}
-              <tr class="records-table__row"
+              <tr class="records-table__row{% if highlight_id is defined and record.id == highlight_id %} is-highlighted{% endif %}"
                   role="button" tabindex="0"
                   data-record-id="{{ record.id }}"
                   data-user="{{ record.user.username if record.user else '' }}"

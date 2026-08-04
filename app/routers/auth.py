@@ -38,6 +38,8 @@ def _login_context(error: str = "") -> dict:
         "current_username": "",
         "error": error,
         "sidebar_items": [],
+        # Fase 13c (S1): nasconde hamburger e sidebar nella pagina pubblica di login.
+        "hide_nav": True,
     }
 
 

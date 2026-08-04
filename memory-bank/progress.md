@@ -1,13 +1,13 @@
 # Progress — Effort Tracking
 
 ## Stato globale
-- **Ultima sottofase completata**: Fase 13b ✅ completata il 2026-08-03 (sicurezza e robustezza: header HTTP, pagine errore 404/500, validazione ore 1-12 step 0.50).
-- **Fase in corso**: nessuna. Prossima: Fase 13c (test, doc e preparazione produzione).
+- **Ultima sottofase completata**: Fase 13c ✅ completata il 2026-08-03 (fix stilistici e UX: S1 hamburger login, S3 menu utente, S5 highlight record, Issue J lookup).
+- **Fase in corso**: nessuna. Prossima: Fase 13d (hardening e sicurezza).
 - **Stato**: idle, pronto per nuovo task.
-- **Versione corrente**: `0.20.0`.
+- **Versione corrente**: `0.21.0`.
 - **Roadmap estesa**: aggiunte Fase 4b (sidebar hamburger), Fase 5b (copia su settimana), Fase 12 (Admin, scomposta in 12a/12b/12c/12d); l'hardening passa a **Fase 13**, ora scomposta in 13a-13d. La Fase 9 è stata **sdoppiata** su richiesta utente in **Fase 9** (backend) e **Fase 9b** (frontend toggle dark/light + dipendenze).
 - **Scomposizione Fase 12 (riorganizzata 2026-08-03)**: approccio "dal basso verso l'alto". 12a-12d ✅ completate. Hardening = Fase 13.
-- **Scomposizione Fase 13 (riorganizzata 2026-08-03)**: 13a (ex 13b) funzionalità admin ✅, 13b (ex 13c) sicurezza ✅, 13c (ex 13d) test+produzione (da fare), 13d (ex 13a) fix stilistici/UX (rinviata, richiede screenshot).
+- **Scomposizione Fase 13 (riorganizzata 2026-08-03)**: 13a (funzionalità admin ✅), 13b (sicurezza ✅), 13c (fix stilistici e UX ✅, 2026-08-03), 13d (hardening sicurezza — da fare), 14 (produzione/documentazione — SEMPRE ultima, da fare).
 - **DB di sviluppo**: rigenerato in Fase 12c con dataset multi-gruppo (2 gruppi SOC/NOC, 6 utenti di test con ~20 record ciascuno).
 
 > **⚠️ NOTA OPERATIVA — Issue e Suggerimenti:** le issue e i suggerimenti raccolti dai test utente sono tracciati **esclusivamente** in `memory-bank/Issue-Suggestion.md`. Prima di iniziare **ogni fase**, consultare quel file. Quando una voce viene risolta, va **rimossa** da lì nello stesso commit che la risolve. Prima di riportare in questo file eventuali checklist "da fare", verificare se esistono già in `Issue-Suggestion.md` per evitare duplicati o disallineamenti.
@@ -272,12 +272,13 @@ La Fase 12 è stata scomposta in sottofasi, riorganizzate "dal basso verso l'alt
 - **Fase 12c** — Ruolo MANAGER: group_id, vista gruppo, export (✅ 2026-08-03)
 - **Fase 12d** — Ruolo ADMIN: pannello amministrativo (CRUD utenti + lookup + records) (✅ 2026-08-03)
 
-### Scomposizione Fase 13 (riorganizzata su richiesta utente 2026-08-03)
-La Fase 13 (hardening) è stata scomposta in 4 sottofasi; 13d rinviata per ultima perché richiede screenshot non supportati dal modello attuale.
-- **Fase 13a (ex 13b)** — Funzionalità admin: disabilita utente + assegnazione gruppo (✅ 2026-08-03)
-- **Fase 13b (ex 13c)** — Sicurezza e robustezza (404/500 ✅, ore 1-12 ✅, headers ✅; XSS rinviato a Fase 14, S4 filtro anno+mese rinviata a 13c/13d) (✅ 2026-08-03)
-- **Fase 13c (ex 13d)** — Test, doc e preparazione produzione (da fare)
-- **Fase 13d (ex 13a)** — Fix stilistici e UX (rinviata, richiede screenshot) (da fare)
+### Scomposizione Fase 13 (riorganizzata su richiesta utente 2026-08-03, aggiornata)
+La Fase 13 (hardening) è stata scomposta in sottofasi. Fase 14 (produzione/documentazione) è **sempre l'ultima**; l'hardening (13d) la precede.
+- **Fase 13a** — Funzionalità admin: disabilita utente + assegnazione gruppo (✅ 2026-08-03)
+- **Fase 13b** — Sicurezza e robustezza (404/500 + error.html, ore 1-12, headers) (✅ 2026-08-03)
+- **Fase 13c** — Fix stilistici e UX: S1 hamburger login, S3 menu utente, S5 highlight record, Issue J lookup (✅ 2026-08-03)
+- **Fase 13d** — Hardening e sicurezza: XSS (Issue F), audit (da fare — penultima)
+- **Fase 14** — Produzione e documentazione: test funzionali (Issue H), Issue C export, systemd, README (da fare — SEMPRE ultima)
 
 ### Fase 12a — Infrastruttura ruoli e permessi
 - **Stato**: ✅ completata il 2026-08-03.
