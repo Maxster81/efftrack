@@ -6,9 +6,6 @@
 
 ## Suggerimenti
 
-### S10 - implementare una sessione un utente
-
-
 ## Issue da verificare (ereditate da progress.md disallineato)
 
 > Le seguenti voci provengono dalla vecchia sezione "Cosa Manca / Da Fare" di `progress.md`
@@ -28,7 +25,16 @@
   - Autenticazione e permessi
   - Export CSV
 
-## Future Features
+## Future Features (aggiornato 2026-08-04)
+
+### S10 — Self-creation utente
+**Contesto:** pagina di login.
+**Descrizione:** consentire a un nuovo utente di auto-registrarsi dalla pagina di login. Il modello `users` ha già i campi `first_name`, `last_name`, `email` e `password_change_required`. La self-creation imposta `password_change_required=True` e `role="user"`. L'utente riceverebbe poi via email (o comunicazione) le credenziali per il primo accesso.
+
+### S11 — Cambio password obbligatorio al primo login
+**Contesto:** flusso di autenticazione dopo S10.
+**Descrizione:** se `password_change_required=True`, dopo il login l'utente viene rediretto a `/profile` invece che alla pagina principale. Finché non cambia la password (e `password_change_required` viene azzerato), ogni tentativo di accedere ad altre pagine lo riporta a `/profile`. Il flag `password_change_required` e il router `profile.py` sono già predisposti.
+
 
 > Voci di sviluppo futuro, non assegnate alle fasi correnti. Vengono riportate
 > qui quando si decide di non gestirle nella roadmap attiva.

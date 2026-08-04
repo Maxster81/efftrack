@@ -128,6 +128,36 @@ def _migrate_users_disabled(engine: Engine) -> None:
     logger.info("Colonna users.disabled aggiunta")
 
 
+def _migrate_users_profile(engine: Engine) -> None:
+    """Migrazione profilo utente: aggiunge `first_name`, `last_name`, `email`
+    e `password_change_required` a `users`.
+
+    Idempotente: se le colonne esistono già, non fa nulla.
+    """
+    inspector = inspect(engine)
+    if "users" not in inspector.get_table_names():
+        return
+
+    columns = {col["name"] for col in inspector.get_columns("users")}
+    new_columns = [
+        ("first_name", "ALTER TABLE users ADD COLUMN first_name VARCHAR(64)"),
+        ("last_name", "ALTER TABLE users ADD COLUMN last_name VARCHAR(64)"),
+        ("email", "ALTER TABLE users ADD COLUMN email VARCHAR(128)"),
+        (
+            "password_change_required",
+            "ALTER TABLE users ADD COLUMN password_change_required BOOLEAN NOT NULL DEFAULT 0",
+        ),
+    ]
+    for col_name, sql in new_columns:
+        if col_name in columns:
+            logger.debug("Colonna users.%s già presente, migrazione non necessaria", col_name)
+            continue
+        logger.info("Migrazione profilo utente: aggiunta colonna users.%s", col_name)
+        with engine.begin() as connection:
+            connection.execute(text(sql))
+        logger.info("Colonna users.%s aggiunta", col_name)
+
+
 def run_schema_migrations(engine: Engine) -> None:
     """Applica le migrazioni controllate dello schema all'avvio.
 
@@ -136,6 +166,8 @@ def run_schema_migrations(engine: Engine) -> None:
     - Fase 12c: aggiunta della colonna `users.group_id` (FK verso groups).
     - Fase 13a: aggiunta della colonna `users.disabled`.
     - Suggestion 8 (Fase 13d): aggiunta della colonna `users.disabled_at`.
+    - Profilo utente: aggiunta colonne `first_name`, `last_name`, `email`,
+      `password_change_required`.
 
     Idempotente: se lo schema è già allineato, non fa nulla.
     """
@@ -144,3 +176,4 @@ def run_schema_migrations(engine: Engine) -> None:
     _migrate_users_group_id(engine)
     _migrate_users_disabled_at(engine)
     _migrate_users_disabled(engine)
+    _migrate_users_profile(engine)

@@ -51,6 +51,7 @@ from app.db import Base, SessionLocal, engine
 from app.routers.admin import router as admin_router
 from app.routers.api import router as api_router
 from app.routers.auth import router as auth_router
+from app.routers.profile import router as profile_router
 from app.routers.web import router as web_router
 
 # Import dei modelli: registra le tabelle su Base.metadata così che
@@ -187,5 +188,6 @@ app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 # `api` è un prefisso riservato alle future API JSON.
 app.include_router(auth_router)
 app.include_router(web_router)
+app.include_router(profile_router)
 app.include_router(admin_router)
 app.include_router(api_router)

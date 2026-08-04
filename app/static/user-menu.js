@@ -1,8 +1,7 @@
 /* Menu a discesa utente (Fase 13c, Suggestion 3).
  *
  * Apre/chiude il menu al click sul toggle, lo chiude su click esterno e su
- * ESC. La voce "Profilo" è un placeholder: mostra un avviso finché la pagina
- * profilo non sarà implementata.
+ * ESC. Le voci "Profilo" ed "Esci" sono link diretti.
  */
 (function () {
   "use strict";
@@ -14,7 +13,6 @@
 
   var toggle = document.getElementById("user-menu-toggle");
   var menu = document.getElementById("user-menu");
-  var profileLink = menu ? menu.querySelector("[data-profile-placeholder]") : null;
 
   function setOpen(open) {
     if (!menu) { return; }
@@ -32,15 +30,13 @@
     });
   }
 
-  if (profileLink) {
-    profileLink.addEventListener("click", function (event) {
-      event.preventDefault();
-      event.stopPropagation();
-      // Placeholder: la pagina profilo sarà implementata come Future Feature.
-      try {
-        window.alert("Pagina Profilo in arrivo.");
-      } catch (e) {}
-      setOpen(false);
+  // Il click su una voce del menu (link) lo chiude automaticamente.
+  if (menu) {
+    menu.addEventListener("click", function (event) {
+      var link = event.target.closest("a");
+      if (link && link.getAttribute("href") !== "#") {
+        setOpen(false);
+      }
     });
   }
 

@@ -4,12 +4,15 @@ Dalla Fase 10 il modello traccia credenziali e ruolo.
 Fase 12b: aggiunta colonna `last_login` per l'ultimo accesso.
 Fase 12c: aggiunta colonna `group_id` (FK verso groups) per il ruolo MANAGER,
 che gestisce un gruppo di lavoro e ne può consultare/esportare i record.
+Profilo utente (2026-08-04): aggiunte colonne `first_name`, `last_name`, `email`
+e `password_change_required` per la pagina profilo e il futuro flusso
+di cambio password obbligatorio al primo login.
 """
 from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, String
+from sqlalchemy import Boolean, DateTime, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base
@@ -37,6 +40,14 @@ class User(Base):
     # Suggestion 8 (Fase 13d): momento della disabilitazione, per calcolare la
     # finestra temporale minima prima di poter eliminare definitivamente l'utente.
     disabled_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    # Profilo utente: dati anagrafici di base.
+    first_name: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    last_name: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    email: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    # Flag per forzare il cambio password al prossimo login (futuro).
+    password_change_required: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False,
+    )
 
     # Relazione verso il gruppo (per leggere il nome nel template).
     group: Mapped["Group | None"] = relationship()  # noqa: F821

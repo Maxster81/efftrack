@@ -1,10 +1,10 @@
 # Active Context — Effort Tracking
 
 ## Stato corrente
-- **Ultimo task completato**: S9 — Tab stile schedario per Gestione Lookup ✅ (2026-08-04) — la pagina `/admin/lookup` ora mostra le tre sezioni (Clienti, Gruppi, Attività) come schede cliccabili con linguette colorate stile schedario, invece che una sotto l'altra. JS vanilla per switch tab, CSS con effetto "fogli sovrapposti" e accenti colorati differenziati (blu, verde, arancione). Funzionalità invariata.
+- **Ultimo task completato**: Pagina Profilo Utente ✅ (2026-08-04) — creata pagina `/profile` per visualizzare e modificare nome, cognome, email e cambiare password. Nuove colonne `first_name`, `last_name`, `email`, `password_change_required` su `users`. Router dedicato `profile.py`, template `profile.html`, schemi `ProfileUpdate` e `SelfPasswordChange`. Link Profilo nel menu utente dropdown e nella sidebar per USER e MANAGER. Aggiunte S10 (Self-creation utente) e S11 (Cambio password obbligatorio al primo login) come Future Features.
 - **Fase in corso**: nessuna. Prossima: Fase 13d (hardening e sicurezza).
 - **Stato**: idle, pronto per nuovo task.
-- **Versione corrente**: `0.22.4`.
+- **Versione corrente**: `0.23.0`.
 - **Scomposizione Fase 12**: completata integralmente (12a-12d). Hardening = Fase 13, ora riorganizzata.
 - **Scomposizione Fase 13 (riorganizzata 2026-08-03, aggiornata 2026-08-03)**: 13a (funzionalità admin ✅), 13b (sicurezza headers/errori/ore ✅), 13c (fix stilistici e UX ✅), 13d (hardening sicurezza — da fare), 14 (produzione/documentazione — SEMPRE ultima, da fare). S4 spostata in "Future Features".
 - **DB di sviluppo**: rigenerato con dataset multi-gruppo (Fase 12c). 2 gruppi (SOC, NOC), 6 utenti di test con ~20 record ciascuno, password `test`. Admin resta utente di sola gestione (group_id NULL).

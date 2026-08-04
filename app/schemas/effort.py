@@ -121,3 +121,50 @@ class LookupCreate(BaseModel):
         if not stripped:
             raise ValueError("Il campo nome è obbligatorio.")
         return stripped
+
+
+class ProfileUpdate(BaseModel):
+    """Input per l'aggiornamento del profilo utente (nome, cognome, email)."""
+
+    first_name: str | None = Field(default=None, max_length=64)
+    last_name: str | None = Field(default=None, max_length=64)
+    email: str | None = Field(default=None, max_length=128)
+
+    @field_validator("first_name", "last_name")
+    @classmethod
+    def normalize_name(cls, value: str | None) -> str | None:
+        """Normalizza i campi nome/cognome: rimuove spazi, None se vuoto."""
+        if value is None:
+            return None
+        stripped = value.strip()
+        return stripped or None
+
+    @field_validator("email")
+    @classmethod
+    def normalize_email(cls, value: str | None) -> str | None:
+        """Normalizza l'email: rimuove spazi, None se vuoto, formato valido."""
+        if value is None:
+            return None
+        stripped = value.strip()
+        if not stripped:
+            return None
+        # Verifica formato email di base (deve contenere @ e un punto dopo).
+        if "@" not in stripped or "." not in stripped.split("@")[-1]:
+            raise ValueError("Formato email non valido.")
+        return stripped.lower()
+
+
+class SelfPasswordChange(BaseModel):
+    """Input per il cambio password da parte dell'utente stesso."""
+
+    current_password: str = Field(min_length=1, max_length=128)
+    new_password: str = Field(min_length=1, max_length=128)
+
+    @field_validator("new_password")
+    @classmethod
+    def password_not_blank(cls, value: str) -> str:
+        """La nuova password non deve essere una stringa vuota o solo spazi."""
+        stripped = value.strip()
+        if not stripped:
+            raise ValueError("La nuova password è obbligatoria.")
+        return stripped

@@ -49,15 +49,22 @@ _ACTIVITIES: list[dict[str, object]] = [
 # Utenti di test (Fasi 11/12c): per verificare segregazione e ruoli.
 # La colonna `group` è il nome del gruppo di appartenenza (mappato a group_id
 # da seed_test_users); `group_none=True` lascia il group_id a None (es. admin).
+# Profilo utente (2026-08-04): aggiunti campi `first_name`, `last_name`, `email`.
 _TEST_USERS: list[dict[str, str | None]] = [
     # 2 MANAGER: uno per SOC, uno per NOC.
-    {"username": "giulia", "password": "test", "role": "manager", "group": "GRUPPO SOC"},
-    {"username": "marco", "password": "test", "role": "manager", "group": "GRUPPO NOC"},
+    {"username": "giulia", "password": "test", "role": "manager", "group": "GRUPPO SOC",
+     "first_name": "Giulia", "last_name": "Verdi", "email": "giulia@efftrack.local"},
+    {"username": "marco", "password": "test", "role": "manager", "group": "GRUPPO NOC",
+     "first_name": "Marco", "last_name": "Neri", "email": "marco@efftrack.local"},
     # 4 USER: 2 per SOC, 2 per NOC.
-    {"username": "mario", "password": "test", "role": "user", "group": "GRUPPO SOC"},
-    {"username": "paolo", "password": "test", "role": "user", "group": "GRUPPO SOC"},
-    {"username": "anna", "password": "test", "role": "user", "group": "GRUPPO NOC"},
-    {"username": "elisa", "password": "test", "role": "user", "group": "GRUPPO NOC"},
+    {"username": "mario", "password": "test", "role": "user", "group": "GRUPPO SOC",
+     "first_name": "Mario", "last_name": "Bianchi", "email": "mario@efftrack.local"},
+    {"username": "paolo", "password": "test", "role": "user", "group": "GRUPPO SOC",
+     "first_name": "Paolo", "last_name": "Gialli", "email": "paolo@efftrack.local"},
+    {"username": "anna", "password": "test", "role": "user", "group": "GRUPPO NOC",
+     "first_name": "Anna", "last_name": "Rossi", "email": "anna@efftrack.local"},
+    {"username": "elisa", "password": "test", "role": "user", "group": "GRUPPO NOC",
+     "first_name": "Elisa", "last_name": "Marroni", "email": "elisa@efftrack.local"},
 ]
 
 # Record di test per ciascun utente di test (Fase 11).
@@ -105,6 +112,10 @@ def seed_admin_user(db: Session) -> None:
             username=ADMIN_USERNAME,
             password_hash=password_hash,
             role="admin",
+            first_name="Admin",
+            last_name="Master",
+            email="admin@efftrack.local",
+            password_change_required=False,
         )
     )
     db.commit()
@@ -138,6 +149,10 @@ def seed_test_users(db: Session) -> None:
             select(User).where(User.username == username)
         ).scalar_one_or_none()
 
+        first_name = data.get("first_name")
+        last_name = data.get("last_name")
+        email = data.get("email")
+
         if user is None:
             db.add(
                 User(
@@ -145,18 +160,30 @@ def seed_test_users(db: Session) -> None:
                     password_hash=bcrypt.hash(data["password"]),
                     role=role,
                     group_id=group_id,
+                    first_name=first_name,
+                    last_name=last_name,
+                    email=email,
                 )
             )
             updated.append(f"{username} (creato, {role})")
             continue
 
-        # Upsert per allineare ruolo e gruppo.
+        # Upsert per allineare ruolo, gruppo e profilo.
         changed = False
         if user.role != role:
             user.role = role
             changed = True
         if user.group_id != group_id:
             user.group_id = group_id
+            changed = True
+        if user.first_name != first_name:
+            user.first_name = first_name
+            changed = True
+        if user.last_name != last_name:
+            user.last_name = last_name
+            changed = True
+        if user.email != email:
+            user.email = email
             changed = True
         if changed:
             updated.append(f"{username} (aggiornato, {role})")

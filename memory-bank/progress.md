@@ -400,6 +400,26 @@ La Fase 13 (hardening) è stata scomposta in sottofasi. Fase 14 (produzione/docu
 - **MINOR** = nuove funzionalità retrocompatibili.
 - **PATCH** = bug fix, refactoring interno, miglioramenti UI.
 
+### Pagina Profilo Utente — Dati anagrafici e cambio password
+- **Stato**: ✅ completata il 2026-08-04.
+- **Obiettivo**: creare una pagina `/profile` per visualizzare e modificare nome, cognome, email e per cambiare la password. Predisporre il modello per future self-creation e cambio password obbligatorio.
+- **Cosa è stato fatto**:
+  - **`app/models/user.py`**: aggiunte colonne `first_name`, `last_name`, `email`, `password_change_required`.
+  - **`app/core/migrations.py`**: nuova `_migrate_users_profile` (idempotente, 4 ALTER TABLE).
+  - **`app/schemas/effort.py`**: nuovi `ProfileUpdate` e `SelfPasswordChange`.
+  - **`app/routers/profile.py`** (NUOVO): GET `/profile`, POST `/profile`, POST `/profile/change-password`.
+  - **`app/templates/profile.html`** (NUOVO): due card (Dati personali, Cambia password) con banner.
+  - **`app/static/style.css`**: `.profile-page`, `.profile-card`, `.form-row--two`.
+  - **`app/static/user-menu.js`**: link "Profilo" diretto, menu si chiude al click su link.
+  - **`app/templates/base.html`**: href profilo = `/profile`.
+  - **`app/main.py`**: registrato `profile_router`.
+  - **`app/core/seed.py`**: popolati `first_name`, `last_name`, `email` per admin e utenti test.
+  - **`app/routers/web.py`**: `_sidebar_items` aggiunge "Profilo" per USER e MANAGER.
+  - **`memory-bank/Issue-Suggestion.md`**: aggiunte S10 (Self-creation utente) e S11 (Cambio password obbligatorio) in Future Features.
+  - **`tests/test_models.py`**: 19 nuovi test (da 53 a 72). Totale 72 test OK.
+- **Verifiche**: 72/72 test OK; migrazione 4 colonne applicata; profilo aggiornamento ok; cambio password con verifica vecchia/nuova ok.
+- **Note futuro**: `password_change_required` predisposto ma non attivo; `email` non unique per ora; cambio password azzera il flag.
+
 ## Cose note / limitazioni accettate
 - Auth attiva da Fase 10: route business protette da sessione, `/health` pubblico.
 - `bcrypt` pinnato `<4.1` per compatibilità con passlib 1.7.4.

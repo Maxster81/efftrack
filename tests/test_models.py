@@ -20,7 +20,11 @@ from app.core.seed import (
 )
 from app.db import Base
 from app.models import Activity, Client, EffortEntry, Group, User
-from app.schemas.effort import EffortEntryCreate
+from app.schemas.effort import (
+    EffortEntryCreate,
+    ProfileUpdate,
+    SelfPasswordChange,
+)
 
 
 class DatabaseTestCase(unittest.TestCase):
@@ -164,8 +168,6 @@ class TestExportCsv(DatabaseTestCase):
             notes="Nota di test",
             description=None,
         )
-        # Assegna le relazioni direttamente sull'oggetto: `_build_csv`
-        # accede a `client.name`, `group.name`, `activity.name` e `user.username`.
         entry.client = client
         entry.group = group
         entry.activity = activity
@@ -184,12 +186,11 @@ class TestExportCsv(DatabaseTestCase):
         entry = self._create_entry(self.db, user=user)
 
         csv_lines = _build_csv([entry]).splitlines()
-        # La prima riga inizia con il BOM UTF-8.
         self.assertTrue(csv_lines[0].startswith("\ufeffData"))
         self.assertEqual(len(csv_lines), 2)
         row = csv_lines[1]
         self.assertIn("31/07/2026", row)
-        self.assertIn("mario", row)  # username dal JOIN su users (Fase 11)
+        self.assertIn("mario", row)
         self.assertIn("INAIL", row)
         self.assertIn("GRUPPO SOC", row)
         self.assertIn("7.5", row)
@@ -202,7 +203,6 @@ class TestExportCsv(DatabaseTestCase):
         entry = self._create_entry(self.db, user=None)
         csv_lines = _build_csv([entry]).splitlines()
         row = csv_lines[1]
-        # La colonna Utente (quinta, indice 4) è vuota.
         fields = row.split(",")
         self.assertEqual(fields[4], "")
 
@@ -239,12 +239,13 @@ class TestEffortEntry(DatabaseTestCase):
 
     def test_update_entry(self) -> None:
         """Aggiorna un record esistente senza cambiare il proprietario (Fase 7/11)."""
-        # Prepara un record da aggiornare.
         self.test_insert_entry()
         entry = self.db.get(EffortEntry, self.entry_id)
         self.assertIsNotNone(entry)
 
-        second_client = self.db.execute(select(Client).order_by(Client.id.desc())).scalars().first()
+        second_client = self.db.execute(
+            select(Client).order_by(Client.id.desc())
+        ).scalars().first()
         entry.client_id = second_client.id
         entry.work_date = date(2026, 8, 1)
         entry.hours_spent = 8.0
@@ -259,7 +260,6 @@ class TestEffortEntry(DatabaseTestCase):
         self.assertEqual(updated.notes, "Note aggiornate")
         self.assertEqual(updated.description, "Descrizione aggiornata")
         self.assertIsNotNone(updated.updated_at)
-        # Il proprietario resta invariato su update (Fase 11).
         self.assertEqual(updated.user_id, self.entry_user_id)
 
 
@@ -342,25 +342,35 @@ def _count_total_records(engine) -> int:
 class TestSidebar(DatabaseTestCase):
     """Test delle voci della sidebar in base al ruolo (Fasi 12b/12c)."""
 
-    def test_user_sidebar_has_registrazioni_link(self) -> None:
+    def test_user_sidebar_has_registrazioni_and_profile(self) -> None:
+        """L'utente USER ha Registrazioni e Profilo nella sidebar."""
         from app.routers.web import _sidebar_items
 
         user = User(username="mario", password_hash="x", role="user")
         items = _sidebar_items(user)
-        self.assertEqual(items, [{"label": "Registrazioni", "href": "/"}])
+        self.assertEqual(
+            items,
+            [
+                {"label": "Registrazioni", "href": "/"},
+                {"label": "Profilo", "href": "/profile"},
+            ],
+        )
 
-    def test_manager_sidebar_has_registrazioni_and_group(self) -> None:
-        """Fase 12c: il manager ha i link Registrazioni e Gruppo."""
+    def test_manager_sidebar_has_registrazioni_group_and_profile(self) -> None:
+        """Fase 12c: il manager ha Registrazioni, Gruppo e Profilo."""
         from app.routers.web import _sidebar_items
 
         group = self.db.execute(select(Group)).scalars().first()
-        user = User(username="giulia", password_hash="x", role="manager", group_id=group.id)
+        user = User(
+            username="giulia", password_hash="x", role="manager", group_id=group.id
+        )
         items = _sidebar_items(user)
         self.assertEqual(
             items,
             [
                 {"label": "Registrazioni", "href": "/"},
                 {"label": "Gruppo", "href": "/group"},
+                {"label": "Profilo", "href": "/profile"},
             ],
         )
 
@@ -368,20 +378,20 @@ class TestSidebar(DatabaseTestCase):
         """Fase 12c: un manager senza group_id non è abilitato alla vista gruppo."""
         from app.routers.web import _is_manager_view
 
-        manager_no_group = User(username="giulia", password_hash="x", role="manager", group_id=None)
+        manager_no_group = User(
+            username="giulia", password_hash="x", role="manager", group_id=None
+        )
         self.assertFalse(_is_manager_view(manager_no_group))
 
         group = self.db.execute(select(Group)).scalars().first()
-        manager = User(username="giulia", password_hash="x", role="manager", group_id=group.id)
+        manager = User(
+            username="giulia", password_hash="x", role="manager", group_id=group.id
+        )
         self.assertTrue(_is_manager_view(manager))
 
 
 class TestDisabledUser(DatabaseTestCase):
-    """Test della disabilitazione utente (Fase 13a, Issue L).
-
-    Usa username unici (disp_test) per evitare collisioni con la fixture
-    condivisa (admin + mario/giulia/... creati da seed_test_users).
-    """
+    """Test della disabilitazione utente (Fase 13a, Issue L)."""
 
     def test_user_defaults_to_not_disabled(self) -> None:
         """Un nuovo utente non è disabilitato per default."""
@@ -409,11 +419,7 @@ class TestDisabledUser(DatabaseTestCase):
 
 
 class TestUserGracePeriod(DatabaseTestCase):
-    """Test della finestra temporale di eliminazione (Suggestion 8).
-
-    Verifica che la colonna `disabled_at` venga popolata/azzerata e che la
-    logica `_can_delete_user` rispetti `USER_DELETE_GRACE_DAYS`.
-    """
+    """Test della finestra temporale di eliminazione (Suggestion 8)."""
 
     def test_disabled_at_populated_on_disable(self) -> None:
         """Disabilitando un utente, `disabled_at` viene valorizzato."""
@@ -453,8 +459,9 @@ class TestUserGracePeriod(DatabaseTestCase):
         from app.models.effort_entry import utcnow
         from app.routers.admin import _can_delete_user
 
-        u = User(username="grace_test_3", password_hash="x", role="user", disabled=True)
-        # Disabilitato da pochi secondi -> non eliminabile.
+        u = User(
+            username="grace_test_3", password_hash="x", role="user", disabled=True
+        )
         u.disabled_at = utcnow() - timedelta(seconds=30)
         self.assertFalse(_can_delete_user(u))
 
@@ -466,32 +473,34 @@ class TestUserGracePeriod(DatabaseTestCase):
         from app.models.effort_entry import utcnow
         from app.routers.admin import _can_delete_user
 
-        u = User(username="grace_test_4", password_hash="x", role="user", disabled=True)
+        u = User(
+            username="grace_test_4", password_hash="x", role="user", disabled=True
+        )
         u.disabled_at = utcnow() - timedelta(days=USER_DELETE_GRACE_DAYS + 1)
         self.assertTrue(_can_delete_user(u))
 
 
 class TestUserGroupAssignment(DatabaseTestCase):
-    """Test dell'assegnazione gruppo a un utente (Fase 13a, Issue K).
-
-    Usa username unici (grp_test_*) per evitare collisioni con la fixture.
-    """
+    """Test dell'assegnazione gruppo a un utente (Fase 13a, Issue K)."""
 
     def test_user_can_be_assigned_to_group(self) -> None:
         """A un utente può essere assegnato group_id (dal lookup gruppi)."""
         group = self.db.execute(select(Group)).scalars().first()
-        u = User(username="grp_test_1", password_hash="x", role="user", group_id=group.id)
+        u = User(
+            username="grp_test_1", password_hash="x", role="user", group_id=group.id
+        )
         self.db.add(u)
         self.db.commit()
         saved = self.db.get(User, u.id)
         self.assertEqual(saved.group_id, group.id)
-        # La relazione group consente di leggere il nome.
         self.assertEqual(saved.group.name, group.name)
 
     def test_user_group_can_be_cleared(self) -> None:
         """Assegnare group_id=None rimuove l'appartenenza al gruppo."""
         group = self.db.execute(select(Group)).scalars().first()
-        u = User(username="grp_test_2", password_hash="x", role="user", group_id=group.id)
+        u = User(
+            username="grp_test_2", password_hash="x", role="user", group_id=group.id
+        )
         self.db.add(u)
         self.db.commit()
         u.group_id = None
@@ -552,14 +561,19 @@ class TestManagerGroup(DatabaseTestCase):
         self.activity = self.db.execute(select(Activity)).scalars().first()
 
     def _create_users(self) -> tuple[User, User, User]:
-        """Crea manager + 2 utenti del gruppo + 1 utente fuori gruppo.
-
-        Usa username unici per evitare collisioni con la fixture condivisa
-        (il setUp pulisce gli utenti non-admin prima di ogni test).
-        """
-        manager = User(username="mgmt1", password_hash="x", role="manager", group_id=self.group.id)
-        member = User(username="mem1", password_hash="x", role="user", group_id=self.group.id)
-        member2 = User(username="mem2", password_hash="x", role="user", group_id=self.group.id)
+        """Crea manager + 2 utenti del gruppo + 1 utente fuori gruppo."""
+        manager = User(
+            username="mgmt1",
+            password_hash="x",
+            role="manager",
+            group_id=self.group.id,
+        )
+        member = User(
+            username="mem1", password_hash="x", role="user", group_id=self.group.id
+        )
+        member2 = User(
+            username="mem2", password_hash="x", role="user", group_id=self.group.id
+        )
         outsider = User(username="ext1", password_hash="x", role="user", group_id=None)
         self.db.add_all([manager, member, member2, outsider])
         self.db.commit()
@@ -653,24 +667,26 @@ class TestSegregation(DatabaseTestCase):
         group = self.db.execute(select(Group)).scalars().first()
         activity = self.db.execute(select(Activity)).scalars().first()
 
-        self.db.add_all([
-            EffortEntry(
-                user_id=mario.id,
-                client_id=client.id,
-                group_id=group.id,
-                activity_id=activity.id,
-                work_date=date(2026, 1, 15),
-                hours_spent=8,
-            ),
-            EffortEntry(
-                user_id=giulia.id,
-                client_id=client.id,
-                group_id=group.id,
-                activity_id=activity.id,
-                work_date=date(2026, 2, 20),
-                hours_spent=6,
-            ),
-        ])
+        self.db.add_all(
+            [
+                EffortEntry(
+                    user_id=mario.id,
+                    client_id=client.id,
+                    group_id=group.id,
+                    activity_id=activity.id,
+                    work_date=date(2026, 1, 15),
+                    hours_spent=8,
+                ),
+                EffortEntry(
+                    user_id=giulia.id,
+                    client_id=client.id,
+                    group_id=group.id,
+                    activity_id=activity.id,
+                    work_date=date(2026, 2, 20),
+                    hours_spent=6,
+                ),
+            ]
+        )
         self.db.commit()
         return mario, giulia, admin
 
@@ -719,19 +735,17 @@ class TestSegregation(DatabaseTestCase):
             description=None,
         )
 
-        # L'admin NON può aggiornare il record di giulia: redirect a errore.
-        resp_update = _save_single(payload, self.db, admin, record_id=giulia_entry.id)
+        resp_update = _save_single(
+            payload, self.db, admin, record_id=giulia_entry.id
+        )
         self.assertIn("error=validazione", resp_update.headers["location"])
 
-        # Il record di giulia è intatto.
         refreshed = self.db.get(EffortEntry, giulia_entry.id)
         self.assertEqual(refreshed.hours_spent, giulia_entry.hours_spent)
 
-        # L'admin NON può eliminare il record di giulia: redirect a errore.
         resp_delete = _delete_entry(giulia_entry.id, self.db, admin)
         self.assertIn("error=validazione", resp_delete.headers["location"])
 
-        # Il record di giulia esiste ancora.
         self.assertIsNotNone(self.db.get(EffortEntry, giulia_entry.id))
 
     def test_orphan_records_invisible_to_normal_user(self) -> None:
@@ -755,20 +769,20 @@ class TestSegregation(DatabaseTestCase):
         self.db.commit()
 
         stmt = select(EffortEntry)
-        records_mario = self.db.execute(_filter_by_user(stmt, mario)).scalars().all()
-        self.assertEqual(len(records_mario), 1)  # solo il suo
+        records_mario = self.db.execute(
+            _filter_by_user(stmt, mario)
+        ).scalars().all()
+        self.assertEqual(len(records_mario), 1)
 
         stmt_admin = select(EffortEntry)
-        records_admin = self.db.execute(_filter_by_user(stmt_admin, admin)).scalars().all()
-        self.assertEqual(len(records_admin), 3)  # 2 + 1 orfano
+        records_admin = self.db.execute(
+            _filter_by_user(stmt_admin, admin)
+        ).scalars().all()
+        self.assertEqual(len(records_admin), 3)
 
 
 class TestEffortEntryValidation(DatabaseTestCase):
-    """Test della validazione delle ore (Fase 13b, Issue D / Suggestion 2).
-
-    Il range è 1-12 con step 0.50, senza vincoli specifici per Supporto
-    Specialistico (possono esserci straordinari > 4h).
-    """
+    """Test della validazione delle ore (Fase 13b)."""
 
     def _payload(self, hours: float) -> EffortEntryCreate:
         client = self.db.execute(select(Client)).scalars().first()
@@ -816,6 +830,192 @@ class TestEffortEntryValidation(DatabaseTestCase):
         """Nessun vincolo della vecchia 4h per Supporto Specialistico: 12h ok."""
         model = self._payload(12)
         self.assertEqual(model.hours, 12)
+
+
+# ─── Nuovi test: profilo utente ───────────────────────────────────────────
+
+
+class TestProfileColumns(DatabaseTestCase):
+    """Test delle colonne profilo utente (nome, cognome, email, pwd_change_required)."""
+
+    def test_users_has_first_name_column(self) -> None:
+        columns = {col["name"] for col in inspect(self.engine).get_columns("users")}
+        self.assertIn("first_name", columns)
+
+    def test_users_has_last_name_column(self) -> None:
+        columns = {col["name"] for col in inspect(self.engine).get_columns("users")}
+        self.assertIn("last_name", columns)
+
+    def test_users_has_email_column(self) -> None:
+        columns = {col["name"] for col in inspect(self.engine).get_columns("users")}
+        self.assertIn("email", columns)
+
+    def test_users_has_password_change_required_column(self) -> None:
+        columns = {col["name"] for col in inspect(self.engine).get_columns("users")}
+        self.assertIn("password_change_required", columns)
+
+    def test_profile_fields_default_null(self) -> None:
+        u = User(username="prof_test", password_hash="x", role="user")
+        self.assertIsNone(u.first_name)
+        self.assertIsNone(u.last_name)
+        self.assertIsNone(u.email)
+        self.assertFalse(u.password_change_required)
+
+    def test_profile_fields_persist_correctly(self) -> None:
+        u = User(
+            username="prof_persist",
+            password_hash="x",
+            role="user",
+            first_name="Mario",
+            last_name="Rossi",
+            email="mario@example.com",
+            password_change_required=True,
+        )
+        self.db.add(u)
+        self.db.commit()
+        saved = self.db.get(User, u.id)
+        self.assertIsNotNone(saved)
+        self.assertEqual(saved.first_name, "Mario")
+        self.assertEqual(saved.last_name, "Rossi")
+        self.assertEqual(saved.email, "mario@example.com")
+        self.assertTrue(saved.password_change_required)
+
+
+class TestProfileUpdateValidation(DatabaseTestCase):
+    """Test della validazione Pydantic per ProfileUpdate."""
+
+    def test_valid_profile_update(self) -> None:
+        data = ProfileUpdate(
+            first_name="Giulia",
+            last_name="Verdi",
+            email="giulia@efftrack.local",
+        )
+        self.assertEqual(data.first_name, "Giulia")
+        self.assertEqual(data.last_name, "Verdi")
+        self.assertEqual(data.email, "giulia@efftrack.local")
+
+    def test_empty_strings_become_none(self) -> None:
+        data = ProfileUpdate(first_name="", last_name=" ", email="")
+        self.assertIsNone(data.first_name)
+        self.assertIsNone(data.last_name)
+        self.assertIsNone(data.email)
+
+    def test_email_is_lowercased(self) -> None:
+        data = ProfileUpdate(email="Giulia@EffTrack.Local")
+        self.assertEqual(data.email, "giulia@efftrack.local")
+
+    def test_invalid_email_format(self) -> None:
+        with self.assertRaises(ValidationError):
+            ProfileUpdate(email="notanemail")
+
+    def test_email_without_dot_after_at(self) -> None:
+        with self.assertRaises(ValidationError):
+            ProfileUpdate(email="user@localhost")
+
+    def test_all_fields_none(self) -> None:
+        data = ProfileUpdate(first_name=None, last_name=None, email=None)
+        self.assertIsNone(data.first_name)
+        self.assertIsNone(data.last_name)
+        self.assertIsNone(data.email)
+
+
+class TestSelfPasswordChangeValidation(DatabaseTestCase):
+    """Test della validazione Pydantic per SelfPasswordChange."""
+
+    def test_valid_password_change(self) -> None:
+        data = SelfPasswordChange(current_password="oldpass", new_password="newpass123")
+        self.assertEqual(data.current_password, "oldpass")
+        self.assertEqual(data.new_password, "newpass123")
+
+    def test_blank_new_password_rejected(self) -> None:
+        with self.assertRaises(ValidationError):
+            SelfPasswordChange(current_password="x", new_password="")
+        with self.assertRaises(ValidationError):
+            SelfPasswordChange(current_password="x", new_password="   ")
+
+    def test_missing_fields_rejected(self) -> None:
+        with self.assertRaises(ValidationError):
+            SelfPasswordChange(current_password="x")  # type: ignore[arg-type]
+        with self.assertRaises(ValidationError):
+            SelfPasswordChange(new_password="x")  # type: ignore[arg-type]
+
+
+class TestSeedProfileFields(DatabaseTestCase):
+    """Test dei campi profilo popolati dal seed."""
+
+    def test_admin_seed_has_profile_fields(self) -> None:
+        admin = self.db.execute(
+            select(User).where(User.username == "admin")
+        ).scalar_one_or_none()
+        self.assertIsNotNone(admin)
+        self.assertEqual(admin.first_name, "Admin")
+        self.assertEqual(admin.last_name, "Master")
+        self.assertEqual(admin.email, "admin@efftrack.local")
+        self.assertFalse(admin.password_change_required)
+
+    def test_test_users_have_profile_fields(self) -> None:
+        seed_test_users(self.db)
+        mario = self.db.execute(
+            select(User).where(User.username == "mario")
+        ).scalar_one_or_none()
+        self.assertIsNotNone(mario)
+        self.assertEqual(mario.first_name, "Mario")
+        self.assertEqual(mario.last_name, "Bianchi")
+        self.assertEqual(mario.email, "mario@efftrack.local")
+
+        giulia = self.db.execute(
+            select(User).where(User.username == "giulia")
+        ).scalar_one_or_none()
+        self.assertIsNotNone(giulia)
+        self.assertEqual(giulia.first_name, "Giulia")
+        self.assertEqual(giulia.last_name, "Verdi")
+        self.assertEqual(giulia.email, "giulia@efftrack.local")
+
+
+class TestPasswordChangeIntegration(DatabaseTestCase):
+    """Test end-to-end del cambio password."""
+
+    def test_password_hash_updated_after_change(self) -> None:
+        from passlib.hash import bcrypt
+
+        old_hash = bcrypt.hash("oldpass")
+        user = User(username="pwd_test", password_hash=old_hash, role="user")
+        self.db.add(user)
+        self.db.commit()
+
+        fresh = self.db.get(User, user.id)
+        self.assertTrue(bcrypt.verify("oldpass", fresh.password_hash))
+
+        fresh.password_hash = bcrypt.hash("newpass456")
+        self.db.commit()
+
+        refreshed = self.db.get(User, user.id)
+        self.assertNotEqual(refreshed.password_hash, old_hash)
+        self.assertTrue(bcrypt.verify("newpass456", refreshed.password_hash))
+        self.assertFalse(bcrypt.verify("oldpass", refreshed.password_hash))
+
+    def test_password_change_required_reset(self) -> None:
+        from passlib.hash import bcrypt
+
+        user = User(
+            username="pwd_flag_test",
+            password_hash=bcrypt.hash("temppass"),
+            role="user",
+            password_change_required=True,
+        )
+        self.db.add(user)
+        self.db.commit()
+
+        fresh = self.db.get(User, user.id)
+        self.assertTrue(fresh.password_change_required)
+
+        fresh.password_hash = bcrypt.hash("newsecure")
+        fresh.password_change_required = False
+        self.db.commit()
+
+        refreshed = self.db.get(User, user.id)
+        self.assertFalse(refreshed.password_change_required)
+        self.assertTrue(bcrypt.verify("newsecure", refreshed.password_hash))
 
 
 if __name__ == "__main__":

@@ -88,10 +88,10 @@ def _with_month(base_url: str, month: str | None) -> str:
 def _sidebar_items(user: User) -> list[dict[str, str]]:
     """Voci della sidebar in base al ruolo dell'utente loggato (Fasi 12b/12c/12d).
 
-    - USER: solo "Registrazioni".
-    - MANAGER: "Registrazioni" + "Gruppo" (vista gruppo, Fase 12c).
-    - ADMIN: Dashboard + Registrazioni + Gestione Utenti + Gestione Lookup (Fase 12d).
-      L'admin atterra su `/admin` e gestisce tutto dall'area admin.
+    - USER: "Registrazioni" + "Profilo".
+    - MANAGER: "Registrazioni" + "Gruppo" (vista gruppo, Fase 12c) + "Profilo".
+    - ADMIN: Dashboard + Registrazioni + Gestione Utenti + Gestione Lookup
+      (il Profilo è accessibile dal menu utente, non dalla sidebar admin).
     """
     if is_admin(user):
         return [
@@ -105,6 +105,7 @@ def _sidebar_items(user: User) -> list[dict[str, str]]:
     ]
     if is_manager(user):
         items.append({"label": "Gruppo", "href": "/group"})
+    items.append({"label": "Profilo", "href": "/profile"})
     return items
 
 

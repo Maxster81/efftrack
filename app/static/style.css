@@ -1063,3 +1063,25 @@ a:hover { text-decoration: underline; }
   }
 }
 
+/* ---------- Pagina Profilo Utente ---------- */
+.profile-page {
+  max-width: 700px;
+  margin: var(--space-xl) auto;
+  padding: 0 var(--space-lg);
+}
+
+.profile-card {
+  margin-bottom: var(--space-xl);
+}
+
+/* Variante form-row a 2 colonne esplicita (già di default su desktop,
+   ma serve per i form inline che non usano .effort-form). */
+.form-row--two {
+  grid-template-columns: 1fr;
+}
+@media (min-width: 720px) {
+  .form-row--two {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
