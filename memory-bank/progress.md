@@ -1,11 +1,11 @@
 # Progress — Effort Tracking
 
 ## Stato globale
-- **Fase in corso**: nessuna. Prossima: Fase 14 (produzione/documentazione — sempre ultima).
-- **Stato**: idle, pronto per nuovo task.
-- **Versione corrente**: `0.24.2` (bump PATCH per Issue H — test funzionali).
-- **Fasi complete**: 0–13d tutte completate. Vedi `activeContext.md` per la cronologia compatta versione/commit.
-- **Issue I/J/K/L/M chiuse** (Fase 14, 2026-08-04); **Issue H chiusa** (Fase 14, v0.24.2). Vedi "Dettagli di fasi chiave" e Issue-Suggestion.md.
+- **Fase in corso**: nessuna. **Progetto completo alla v1.0.0** (versione stabile pronta per produzione).
+- **Stato**: idle, pronto per eventuali evoluzioni future.
+- **Versione corrente**: `1.0.0` (bump MAJOR per rilascio finale).
+- **Fasi complete**: 0–13d e 14 tutte completate. Vedi `activeContext.md` per la cronologia compatta versione/commit.
+- **Fase 14 chiusa** (2026-08-04): produzione e documentazione conclusa. Vedi sotto e Issue-Suggestion.md.
 
 > **⚠️ NOTA OPERATIVA — Issue e Suggerimenti:** le issue/suggestion sono tracciate **esclusivamente** in `memory-bank/Issue-Suggestion.md`. Consultarlo a inizio ogni fase; le voci risolte vanno **rimosse** lì nello stesso commit che le risolve.
 
@@ -35,7 +35,7 @@
 | 13b Sicurezza (headers, errori) | ✅ |
 | 13c Fix stilistici e UX | ✅ |
 | 13d Hardening (audit su richiesta) | ✅ 2026-08-04 |
-| 14 Produzione e documentazione | ⬜ da fare (SEMPRE ultima) |
+| 14 Produzione e documentazione | ✅ 2026-08-04 (chiusura v1.0.0) |
 
 ## Dettagli di fasi chiave
 Jinja2 autoescape attivo (nessun `|safe`); `hours` 1-12 step 0.50; header sicurezza HTTP; `error.html` generico 401/403/405; `_error_context` sincrono senza DB.
@@ -48,6 +48,7 @@ Jinja2 autoescape attivo (nessun `|safe`); `hours` 1-12 step 0.50; header sicure
   - **Issue L**: nuovo middleware `RequestBodyLimitMiddleware` (`app/core/body_limit.py`) registrato in `main.py`, soglia `EFFORT_TRACKING_MAX_BODY_BYTES` (default 1 MiB) in `config.py`/`.env.example`.
   - **Issue M**: nuovo script opzionale `deploy.sh` (crea utente/dir/venv, copia codice, genera `/etc/efftrack.env`, installa servizio systemd). Allineato al path `.venv` del service.
   - **Issue H** (v0.24.2, 2026-08-04): nuova suite `tests/test_functional.py` (26 test) + `tests/conftest.py` con DB SQLite su file dedicato ai test (isolato da `data/efftrack.db`). Dipendenza dev `httpx` aggiunta a `requirements-dev.txt`. Copertura: `/health` pubblico, auth login/logout/account disabilitato, redirect anonimi, CRUD record via form (crea/aggiorna/elimina), regola aziendale (niente update/delete su record altrui), export CSV segregato per utente e filtro mese, permessi di ruolo (USER/MANAGER/ADMIN sull'area admin), vista gruppo manager e relativo export, profilo e cambio password. **104 test totali verdi.** **Issue H chiusa.**
+  - **Chiusura (2026-08-04, v1.0.0)**: README riscritto per intero (stato v1.0.0, funzionalità, config, deploy con `deploy.sh` e manuale, note PostgreSQL, test). Memory bank allineato. Bump MAJOR a `1.0.0` (VERSION + `config.py`). **Fase 14 completata.**
 
 ## Cose note / limitazioni accettate
 - Auth attiva (route business protette, `/health` pubblico).
@@ -56,7 +57,7 @@ Jinja2 autoescape attivo (nessun `|safe`); `hours` 1-12 step 0.50; header sicure
 - `pydantic-core` pinnato 2.46.4 per compatibilità pydantic 2.13.4.
 - Migrazioni schema con `run_schema_migrations` (idempotente); Alembic da valutare.
 - `user_id` FK verso users (ON DELETE SET NULL); regola aziendale: nessuno modifica/elimina record altrui.
-- Cancellazione **permanente** senza soft-delete/audit (da valutare in Fase 14).
+- Cancellazione **permanente** senza soft-delete/audit (da valutare in futuro).
 - DB sviluppo: 2 gruppi SOC/NOC, 6 utenti test (~20 record ciascuno, password `test`), admin gestore.
 - Config: `.env` locale dev; in produzione `/etc/efftrack.env` (systemd EnvironmentFile).
 - Campi form opzionali nella firma `POST /` per supportare `action=delete`; validazione obbligatoria server-side via `EffortEntryCreate`.

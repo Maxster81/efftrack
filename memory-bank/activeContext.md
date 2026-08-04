@@ -1,10 +1,10 @@
 # Active Context — Effort Tracking
 
 ## Stato corrente
-- **Fase in corso**: nessuna. Prossima: Fase 14 (produzione/documentazione — sempre ultima).
-- **Stato**: idle, pronto per nuovo task. Chiuse Issue I/J/K/L/M/H (Fase 14) — vedi sotto.
-- **Versione corrente**: `0.24.2` (bump PATCH per Issue H — test funzionali).
-- **Fasi complete**: 0–13d tutte completate. Hardening (13d) e documentazione (14) sono ora audit su richiesta (vedi `.clinerules/09-post-change.md`).
+- **Fase in corso**: nessuna. **Progetto completo alla v1.0.0** (versione stabile pronta per produzione).
+- **Stato**: idle, pronto per eventuali evoluzioni future.
+- **Versione corrente**: `1.0.0` (bump MAJOR per rilascio finale, Fase 14 chiusa).
+- **Fasi complete**: 0–13d e 14 tutte completate. Hardening (13d) e audit di documentazione sono ora su richiesta (vedi `.clinerules/09-post-change.md`).
 - **Issue chiuse in Fase 14**: I (systemd già corretto), J (health pubblico), K (timeout — nessuna azione), L (middleware body limit), M (deploy.sh), H (test funzionali pytest+HTTPX).
 - **DB di sviluppo**: dataset multi-gruppo (2 gruppi SOC/NOC, 6 utenti di test, ~20 record ciascuno, password `test`). Admin utente di sola gestione (group_id NULL).
 - **Merge su `main`**: autorizzato solo in Fasi 9 e 9b (v0.12.0). Tutte le fasi 10+ sono solo su `develop`.
@@ -41,7 +41,8 @@
 | Restyle header | v0.23.2 | style(ui): header grid |
 | 13d Hardening | v0.23.3 | fix(security): hardening |
 | 14 Issue L+M | v0.24.0 | feat(security): body limit + deploy.sh |
-| 14 Issue H | v0.24.2 | test(functional): e2e pytest+HTTPX |
+| Fase 14 Issue H | v0.24.2 | test(functional): e2e pytest+HTTPX |
+| Fase 14 chiusura | v1.0.0 | chore(release): bump to v1.0.0 — Fase 14 completata |
 
 ## Decisioni recenti
 - **Stack**: FastAPI + Jinja2 + SQLAlchemy 2.x + SQLite (WAL + FK).
@@ -57,8 +58,7 @@
 - **Test funzionali (Issue H)**: `tests/conftest.py` configura un DB SQLite su file (isolato da `data/efftrack.db`) impostando `EFFORT_TRACKING_DB_URL` PRIMA dell'import dei moduli app.*; `tests/test_functional.py` usa TestClient (HTTPX). Nota: con `expire_on_commit=False` va chiamato `db_session.expire_all()` prima di rileggere oggetti modificati dal thread del TestClient.
 
 ## Fasi successive
-- **Fase 13d — Hardening** ✅ completata (2026-08-04). Da ora eseguita come audit su richiesta (`.clinerules/09-post-change.md`, Sezione 2).
-- **Fase 14 — Produzione e documentazione** (in corso, SEMPRE ultima): completata Issue H (test funzionali). Restano: review systemd, README deploy, note PostgreSQL.
+- **Progetto completo**: tutte le fasi (0–13d, 14) concluse. Eventuali evoluzioni future (vedi `Issue-Suggestion.md`: S10, S11, S4, S6, S9) restano backlog opzionale, non assegnate a fasi correnti.
 
 ## Fase 14 — Attività chiuse (2026-08-04)
 - **Issue I**: service systemd già corretto (EnvironmentFile=/etc/efftrack.env, nessuna variabile hardcodata). Verificato.
@@ -67,12 +67,13 @@
 - **Issue L**: nuovo `RequestBodyLimitMiddleware` (`app/core/body_limit.py`), registrato in `main.py`. Soglia `EFFORT_TRACKING_MAX_BODY_BYTES` (default 1 MiB) in `config.py` + `.env.example`.
 - **Issue M**: nuovo `deploy.sh` opzionale (venv, copia codice, `/etc/efftrack.env`, servizio systemd). Allineato al path `.venv`.
 - **Issue H**: nuova suite `tests/test_functional.py` (26 test) + `tests/conftest.py`; dipendenza dev `httpx` in `requirements-dev.txt`. Copertura: `/health` pubblico, auth (login/logout/account disabilitato/redirect anonimi), CRUD record via form, regola aziendale (niente update/delete su record altrui), export CSV segregato per utente + filtro mese, permessi di ruolo (USER/MANAGER/ADMIN), vista gruppo manager e relativo export, profilo e cambio password. **104 test totali verdi.**
+- **Chiusura Fase 14 (v1.0.0)**: README riscritto per intero (stato v1.0.0, funzionalità, config, deploy `deploy.sh` e manuale, note PostgreSQL, test). Bump MAJOR a `1.0.0` (VERSION + `config.py`). Memory bank allineato.
 
 ## Rischi / punti aperti
-- `Issue-Suggestion.md`: non restano issue aperte in Fase 14. Future Features: S10 (self-creation), S11 (password obbligatoria al primo login), S4 (filtro anno+mese), S6 (giorno ferie), S9 (refine lookup tabellare).
+- `Issue-Suggestion.md`: non restano issue aperte in Fase 14. Future Features (backlog): S10 (self-creation), S11 (password obbligatoria al primo login), S4 (filtro anno+mese), S6 (giorno ferie), S9 (refine lookup tabellare).
 - Password admin `admin/admin`: da cambiare in produzione via env var (Sicurezza Fase 14).
 - `SECRET_KEY` placeholder di sviluppo: obbligatoria robusta in produzione.
 - `pydantic-core` pinnato a 2.46.4 (compatibilità pydantic 2.13.4).
-- Migrazioni schema: `run_schema_migrations` gestisce modifiche note; per cambi non gestiti va rigenerato il DB. Alembic da valutare se la complessità cresce.
-- Cancellazione record **permanente** senza soft-delete/audit (da valutare in Fase 14).
+- Migrazioni schema: `run_schema_migrations` gestisce modifiche note; per cambi non gestiti va rigenerato il DB. Alembic da valutare.
+- Cancellazione record **permanente** senza soft-delete/audit (da valutare in futuro).
 - Il `.env` reale in produzione è sostituito da `/etc/efftrack.env` (systemd).
