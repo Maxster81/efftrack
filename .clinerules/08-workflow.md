@@ -50,20 +50,12 @@ Prima di scrivere codice, analizza il task e classifica gli impatti in due aree 
 
 ### Fase 2 — Pianificazione di Fase
 
-Per questo progetto, prima di implementare, mappare sempre il task contro la roadmap:
-- **Fase 0:** bootstrap progetto, venv, struttura, pagina test server
-- **Fase 1:** pagina HTML statica raggiungibile
-- **Fase 2:** layout statico stile effort tracking
-- **Fase 3:** form interattivo con valori hardcoded e show/hide descrizione
-- **Fase 4:** database e seed lookup
-- **Fase 5:** salvataggio record
-- **Fase 6:** elenco record
-- **Fase 7:** selezione record e update
-- **Fase 8:** export CSV/XLSX
-- **Fase 9:** refactoring, logging, .env, systemd
-- **Fase 10:** autenticazione locale
-- **Fase 11:** multiutente e segregazione dati
-- **Fase 12:** hardening e produzione
+Per questo progetto, prima di implementare, mappare sempre il task contro la roadmap attuale (stato completo in `memory-bank/progress.md`):
+- **Fasi 0–8:** bootstrap, pagine, form, DB, salvataggio, elenco, CRUD, export.
+- **Fasi 4b/5b/9b:** sidebar, copia su settimana, toggle tema.
+- **Fasi 9–11:** refactor/logging, auth, multiutente e segregazione.
+- **Fasi 12a–13d:** ruoli/permessi, ADMIN, hardening.
+- **Fase 14:** produzione e documentazione (sempre ultima; audit su richiesta via `.clinerules/09-post-change.md`).
 
 Ogni task deve dichiarare esplicitamente:
 - in quale fase ricade
@@ -156,12 +148,11 @@ Task puramente **applicativi** o puramente **UI** non richiedono la separazione 
 ## Relazione con le Altre Regole
 
 Questa regola è **procedurale** (dice come lavorare), complementare alle regole **normative**:
-- `01-python-2.md` → stile Python, type hints, pattern FastAPI
-- `02-services-3.md` → architettura del servizio, binding, reverse proxy
-- `03-database-4.md` → SQLite, WAL, migrazioni, lookup
-- `04-frontend-5.md` → Jinja2, vanilla JS, tema, CSS condiviso
-- `05-git-6.md` → branching, commit convention, versioning
-- `06-security-7.md` → autenticazione futura, secrets, validazione
-- `07-memory-bank-8.md` → documentazione persistente del progetto
-- **`09-post-change-10.md`** → controlli rapidi post-modifica (sempre) + audit approfondito su richiesta (ad ogni commit funzionale)
-- **`08-workflow-9.md` (questa)** → processo strutturato per task misti BE/FE e gestione a fasi
+- `01-python.md` → stile Python, type hints, pattern FastAPI, architettura servizi
+- `03-database.md` → SQLite, WAL, migrazioni, lookup
+- `04-frontend.md` → Jinja2, vanilla JS, tema, CSS condiviso
+- `05-git.md` → branching, commit convention, versioning
+- `06-security.md` → autenticazione futura, secrets, validazione
+- `07-memory-bank.md` → documentazione persistente del progetto
+- `09-post-change.md` → controlli rapidi post-modifica (sempre) + audit approfondito su richiesta
+- **`08-workflow.md` (questa)** → processo strutturato per task misti BE/FE e gestione a fasi

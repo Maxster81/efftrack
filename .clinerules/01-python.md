@@ -14,5 +14,18 @@
 - **Interattività:** vanilla JavaScript per comportamento form/tabella; evitare SPA nelle prime fasi.
 - **Business logic:** separare logica di persistenza, logica di validazione e logica di rendering.
 
+## Architettura Servizi
+- **Servizio iniziale:** un singolo servizio web dedicato all'effort tracking.
+- **Router root:** `APIRouter(prefix="")` per la root; prefissi espliciti per moduli futuri (`/auth`, `/exports`, `/admin`, `/api`).
+- **Endpoint:** distinzione chiara tra pagine HTML e API/azioni di backend.
+
+## Host e Binding
+- **Sviluppo:** bindare `0.0.0.0` per accessibilità da rete locale, WSL o VM.
+- Quando viene creato il servizio, **annotare nella chat** che in produzione va rivisto il binding, indicando file e riga precisi.
+
+## Health Check
+- Raccomandato il path `/health` (GET).
+- Deve restituire almeno stato applicazione e controllo base della connettività al database.
+
 ## Sovrascrivibilità
 Se per una funzionalità specifica un altro stile è più adatto (es. classi invece di funzioni, SQLAlchemy invece di SQLite diretto), proporre con analisi pro/contro. Non c'è una regola fissa che impone uno stile unico per tutto.
