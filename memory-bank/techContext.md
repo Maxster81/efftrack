@@ -19,6 +19,8 @@
 - **Pydantic v2** — validazione input/output.
 - **python-multipart** — parsing form data.
 - **python-dotenv** — carica `.env` in sviluppo (dalla Fase 9).
+- **passlib[bcrypt]** — hashing password (Fase 10); `bcrypt` pinnato `<4.1` per compatibilità con passlib 1.7.4.
+- **itsdangerous** — richiesto da `SessionMiddleware` per firmare i cookie di sessione (Fase 10).
 - **pytest** — framework di test (dipendenza DEV, in `requirements-dev.txt`).
 
 ## Database
@@ -53,6 +55,9 @@ Poi:
 - `EFFORT_TRACKING_HOST` — default `0.0.0.0` in dev.
 - `EFFORT_TRACKING_PORT` — default `8000`.
 - `EFFORT_TRACKING_LOG_LEVEL` — default `INFO` (DEBUG, INFO, WARNING, ERROR).
+- `EFFORT_TRACKING_SESSION_SAMESITE` — SameSite del cookie di sessione, default `lax` (anti-CSRF cross-site).
+- `EFFORT_TRACKING_SESSION_SECURE` — default `false`; impostare a `true` in produzione dietro TLS (cookie solo HTTPS).
+- `EFFORT_TRACKING_MAX_BODY_BYTES` — (Issue L, Fase 14) limite massimo del body in byte, default `1048576` (1 MiB). Applicato dal middleware `RequestBodyLimitMiddleware`.
 
 ### File `.env`
 - Il file `.env` (gitignored) viene caricato automaticamente da `config.py` via `load_dotenv()`.
@@ -62,6 +67,7 @@ Poi:
 ## Vincoli di deploy
 - **No Docker** come prerequisito.
 - Deploy target: **Ubuntu con `systemd`** (template `systemd/efftrack.service` pronto, non attivato di default).
+- **Script opzionale `deploy.sh`** (Issue M, Fase 14): automatizza la creazione di utente/directory/venv, la copia del codice, la generazione di `/etc/efftrack.env` e l'installazione del servizio systemd. Uso: `sudo ./deploy.sh` (completo) o con flag `--install`/`--env`/`--service`. Utilizza il venv in `/opt/efftrack/.venv` (coerente col service).
 - Reverse proxy consigliato in produzione (nginx/Caddy) davanti a Uvicorn.
 
 ## Vincoli di sicurezza
@@ -72,15 +78,21 @@ Poi:
 - Campi numerici vincolati a range consentiti.
 
 ## Test
-- **Framework**: `pytest` (dalla Fase 9), in `requirements-dev.txt` (dipendenza solo di sviluppo).
+- **Framework**: `pytest` (dalla Fase 9) e `httpx` (per TestClient), in `requirements-dev.txt` (solo sviluppo).
 - **Installazione**: `.venv/bin/pip install -r requirements-dev.txt`
 - **Esecuzione**: `.venv/bin/python -m pytest tests/ -v`
-- **DB di test**: SQLite in-memory isolato (`tests/test_models.py`), separato dal DB di sviluppo `data/efftrack.db`.
-- `pytest` non è in `requirements.txt` (produzione pulita).
+- **DB di test isolato**:
+  - `tests/test_models.py` usa un SQLite **in-memory** dedicato (fixture `DatabaseTestCase`).
+  - `tests/conftest.py` (Issue H) configura un SQLite **su file** temporaneo per i test funzionali, impostando `EFFORT_TRACKING_DB_URL` PRIMA di importare i moduli app.*. Serve un file (non `:memory:`) perché `TestClient` esegue il server in un thread separato e le connessioni in-memory non sono condivise.
+  - Entrambi sono isolati dal DB di sviluppo `data/efftrack.db`.
+- **Nota `expire_on_commit=False`**: nei test funzionali, prima di rileggere un oggetto modificato dal thread del TestClient va chiamato `db_session.expire_all()`, altrimenti l'identity map restituisce valori in cache (vedi `tests/test_functional.py`).
+- `pytest` e `httpx` NON sono in `requirements.txt` (produzione pulita).
 
 ## Rigenerazione DB di sviluppo
 - Il DB `data/efftrack.db` è **gitignored** e viene creato/seeded automaticamente al primo avvio (lifespan di `app/main.py`).
-- Se cambia lo schema (es. rimozione colonna), il DB va **cancellato** (`rm -f data/efftrack.db data/efftrack.db-shm data/efftrack.db-wal`) e rigenerato riavviando il server.
+- Migrazioni controllate in `app/core/migrations.py` (`run_schema_migrations`): Fase 11 ricrea automaticamente `effort_entries` (DROP + create_all) se la colonna legacy `user_text` è presente, eliminando i dati di sviluppo.
+- Se lo schema cambia in modo non gestito dalle migrazioni (es. rimozione `code` in Fase 4), il DB va **cancellato** (`rm -f data/efftrack.db data/efftrack.db-shm data/efftrack.db-wal`) e rigenerato riavviando il server.
+- I seed di Fase 11 (`seed_test_users`, `seed_test_records`) popolano automaticamente utenti (mario/giulia/luca) e ~20 record/utente di test al primo avvio.
 
 ## Tool di sviluppo
 - `git` per versionamento, branching su `develop`.

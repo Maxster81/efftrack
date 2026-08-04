@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+
+{% block title %}{{ app_name }} &mdash; Gestione Lookup{% endblock %}
+
+{% block content %}
+  <section class="records-card" aria-labelledby="lookup-title">
+    <div class="records-card__header">
+      <h2 id="lookup-title" class="card-title">Gestione Lookup</h2>
+    </div>
+
+    {% if ok %}
+      <div class="form-success" role="status">{{ ok }}</div>
+    {% endif %}
+    {% if err %}
+      <div class="form-error" role="alert">{{ err }}</div>
+    {% endif %}
+
+    {# Macro per una sezione lookup (evita duplicazione) #}
+    {% macro lookup_section(label, type, items, used_ids) %}
+      <div class="lookup-section">
+        <h3 class="card-title">{{ label }}</h3>
+
+        <form class="lookup-add-form" method="post" action="/admin/lookup/create">
+          <input type="hidden" name="type" value="{{ type }}" />
+          <div class="form-group lookup-add-form__field">
+            <label class="visually-hidden" for="name-{{ type }}">Nome</label>
+            <input type="text" id="name-{{ type }}" name="name" placeholder="Nuovo nome" required />
+          </div>
+          <button type="submit" class="btn-primary lookup-add-form__button">Aggiungi</button>
+        </form>
+
+        <ul class="lookup-list">
+          {% for item in items %}
+            <li class="lookup-item">
+              <span class="lookup-name">{{ item.name }}</span>
+              <div class="admin-actions">
+                <form method="post" action="/admin/lookup/{{ item.id }}/edit">
+                  <input type="hidden" name="lookup_type" value="{{ type }}" />
+                  <label class="visually-hidden" for="edit-{{ type }}-{{ item.id }}">Nuovo nome</label>
+                  <input type="text" id="edit-{{ type }}-{{ item.id }}" name="name" value="{{ item.name }}" />
+                  <button type="submit" class="btn-secondary">Rinomina</button>
+                </form>
+                {% if item.id in used_ids %}
+                  <span class="text-muted" title="Elemento con record associati">In uso</span>
+                {% else %}
+                  <form method="post" action="/admin/lookup/{{ item.id }}/delete"
+                        onsubmit="return confirm('Eliminare {{ item.name }}?')">
+                    <input type="hidden" name="lookup_type" value="{{ type }}" />
+                    <button type="submit" class="btn-danger">Elimina</button>
+                  </form>
+                {% endif %}
+              </div>
+            </li>
+          {% else %}
+            <li class="lookup-item text-muted">Nessun elemento.</li>
+          {% endfor %}
+        </ul>
+      </div>
+    {% endmacro %}
+
+    {# Barra tab stile schedario #}
+    <nav class="lookup-tabs" role="tablist" aria-label="Sezioni lookup">
+      <button
+        class="lookup-tabs__btn is-active"
+        role="tab"
+        aria-selected="true"
+        aria-controls="tabpanel-client"
+        id="tab-client"
+        data-tab="client"
+      >Clienti</button>
+      <button
+        class="lookup-tabs__btn"
+        role="tab"
+        aria-selected="false"
+        aria-controls="tabpanel-group"
+        id="tab-group"
+        data-tab="group"
+        tabindex="-1"
+      >Gruppi</button>
+      <button
+        class="lookup-tabs__btn"
+        role="tab"
+        aria-selected="false"
+        aria-controls="tabpanel-activity"
+        id="tab-activity"
+        data-tab="activity"
+        tabindex="-1"
+      >Attività</button>
+    </nav>
+
+    {# Pannelli delle schede #}
+    <div class="lookup-tab-panels">
+      <div
+        class="lookup-tab-panel is-active"
+        role="tabpanel"
+        id="tabpanel-client"
+        aria-labelledby="tab-client"
+        data-tab="client"
+      >
+        {{ lookup_section("Clienti", "client", clients, used_client_ids) }}
+      </div>
+      <div
+        class="lookup-tab-panel"
+        role="tabpanel"
+        id="tabpanel-group"
+        aria-labelledby="tab-group"
+        data-tab="group"
+      >
+        {{ lookup_section("Gruppi", "group", groups, used_group_ids) }}
+      </div>
+      <div
+        class="lookup-tab-panel"
+        role="tabpanel"
+        id="tabpanel-activity"
+        aria-labelledby="tab-activity"
+        data-tab="activity"
+      >
+        {{ lookup_section("Attività", "activity", activities, used_activity_ids) }}
+      </div>
+    </div>
+  </section>
+
+  <script>
+    (function () {
+      var tabs = document.querySelectorAll('.lookup-tabs__btn');
+      var panels = document.querySelectorAll('.lookup-tab-panel');
+
+      function activateTab(activeBtn) {
+        var tabName = activeBtn.getAttribute('data-tab');
+
+        /* Aggiorna bottoni tab */
+        tabs.forEach(function (btn) {
+          var isActive = btn === activeBtn;
+          btn.classList.toggle('is-active', isActive);
+          btn.setAttribute('aria-selected', String(isActive));
+          btn.setAttribute('tabindex', isActive ? '0' : '-1');
+        });
+
+        /* Aggiorna pannelli */
+        panels.forEach(function (panel) {
+          var isActive = panel.getAttribute('data-tab') === tabName;
+          panel.classList.toggle('is-active', isActive);
+        });
+      }
+
+      tabs.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          activateTab(btn);
+        });
+      });
+    })();
+  </script>
+{% endblock %}

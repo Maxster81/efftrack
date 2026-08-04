@@ -1,5 +1,5 @@
 /* ------------------------------------------------------------
- * Effort Tracking — toggle tema dark/light (Fase 9b).
+ * Effort Tracking — toggle tema dark/light.
  *
  * Due sole modalità (dark / light), nessun rilevamento automatico
  * del sistema. La preferenza è salvata in localStorage con chiave

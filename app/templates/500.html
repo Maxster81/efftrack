@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block title %}{{ app_name|default("Effort Tracking") }} &mdash; Errore del server{% endblock %}
+
+{% block content %}
+  <section class="form-card" aria-labelledby="error-title">
+    <div class="admin-hero" style="text-align:center;">
+      <h2 id="error-title" class="card-title">500 — Errore interno del server</h2>
+      <p>Si è verificato un errore imprevisto durante la elaborazione della richiesta.</p>
+      <p>Riprova tra qualche istante o contatta l'amministratore.</p>
+      <p>
+        <a class="filter-bar__export" href="/" role="button">Torna alla home</a>
+      </p>
+    </div>
+  </section>
+{% endblock %}

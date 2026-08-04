@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block title %}{{ app_name|default("Effort Tracking") }} &mdash; Errore {{ status_code }}{% endblock %}
+
+{% block content %}
+  <section class="form-card" aria-labelledby="error-title">
+    <div class="admin-hero" style="text-align:center;">
+      <h2 id="error-title" class="card-title">Errore {{ status_code }} — {{ detail }}</h2>
+      <p>La richiesta non può essere completata. Controlla i permessi dell'account o l'URL e riprova.</p>
+      <p>
+        <a class="filter-bar__export" href="/" role="button">Torna alla home</a>
+      </p>
+    </div>
+  </section>
+{% endblock %}

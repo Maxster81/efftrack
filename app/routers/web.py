@@ -1,9 +1,13 @@
 """Router web dell'applicazione Effort Tracking.
 
 Espone le pagine HTML renderizzate server-side con Jinja2 e gli endpoint
-di base (indice, health check). Le route business reali (form di
-inserimento, elenco, selezione, export) verranno aggiunte nelle fasi
-successive a partire dalla Fase 2.
+di base (indice, health check). Le route business sono protette: se
+l'autenticazione è attiva e non c'è una sessione valida, l'utente viene
+rediretto al login.
+
+Ogni utente normale vede, crea, modifica ed esporta solo i propri record;
+l'admin (ruolo "admin") vede tutti i record come supervisore. `user_id`
+viene valorizzato su ogni nuovo record con l'utente della sessione.
 """
 from __future__ import annotations
 
@@ -16,20 +20,21 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, StreamingResponse
 from pydantic import ValidationError
-from sqlalchemy import func, select, text
+from sqlalchemy import Select, func, select, text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session, selectinload
-
-from app.config import APP_NAME, APP_VERSION, TEMPLATES_DIR
-from app.db import get_db
-from app.models import Activity, Client, EffortEntry, Group
-from app.schemas.effort import EffortEntryCreate
 from fastapi.templating import Jinja2Templates
+
+from app.config import APP_NAME, APP_VERSION, AUTH_ENABLED, TEMPLATES_DIR
+from app.core.permissions import is_admin, is_manager
+from app.db import get_db
+from app.dependencies import get_current_user
+from app.models import Activity, Client, EffortEntry, Group, User
+from app.schemas.effort import EffortEntryCreate
 
 logger: logging.Logger = logging.getLogger(__name__)
 
 # Template engine condiviso dal router web.
-# I template vivono in app/templates/ (path centralizzato in app/config.py).
 templates: Jinja2Templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
 
@@ -41,7 +46,7 @@ _MESI_ITALIANI = [
     "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre",
 ]
 
-# Header del CSV di export (Fase 8), coerente con le colonne della tabella.
+# Header del CSV di export, coerente con le colonne della tabella.
 _CSV_HEADER = [
     "Data",
     "Cliente",
@@ -54,50 +59,114 @@ _CSV_HEADER = [
 ]
 
 
+def _require_auth(user: User | None) -> RedirectResponse | None:
+    """Se l'auth è attiva e manca l'utente, restituisce il redirect al login."""
+    if AUTH_ENABLED and user is None:
+        return RedirectResponse("/login", status_code=303)
+    return None
+
+
+def _filter_by_user(stmt: Select, user: User) -> Select:
+    """Filtra una query sugli effort in base al ruolo.
+
+    L'admin vede tutti i record; un utente normale solo i propri.
+    """
+    if is_admin(user):
+        return stmt
+    return stmt.where(EffortEntry.user_id == user.id)
+
+
+def _with_month(base_url: str, month: str | None) -> str:
+    """Aggiunge il parametro month a un URL se presente."""
+    if month and month != "None":  # "None" (stringa) = mese non valido
+        separator: str = "&" if "?" in base_url else "?"
+        return f"{base_url}{separator}month={month}"
+    return base_url
+
+
+def _sidebar_items(user: User) -> list[dict[str, str]]:
+    """Voci della sidebar in base al ruolo dell'utente loggato.
+
+    - USER: "Registrazioni" + "Profilo".
+    - MANAGER: "Registrazioni" + "Gruppo" (vista gruppo) + "Profilo".
+    - ADMIN: Dashboard + Registrazioni + Gestione Utenti + Gestione Lookup
+      (il Profilo è accessibile dal menu utente, non dalla sidebar admin).
+    """
+    if is_admin(user):
+        return [
+            {"label": "Dashboard", "href": "/admin"},
+            {"label": "Registrazioni", "href": "/admin/records"},
+            {"label": "Gestione Utenti", "href": "/admin/users"},
+            {"label": "Gestione Lookup", "href": "/admin/lookup"},
+        ]
+    items: list[dict[str, str]] = [
+        {"label": "Registrazioni", "href": "/"},
+    ]
+    if is_manager(user):
+        items.append({"label": "Gruppo", "href": "/group"})
+    items.append({"label": "Profilo", "href": "/profile"})
+    return items
+
+
 @router.get("/", response_class=HTMLResponse, name="index")
 async def index(
     request: Request,
     db: Session = Depends(get_db),
+    user: User | None = Depends(get_current_user),
     success: int | None = None,
     error: str | None = None,
     month: str | None = None,
+    highlight_id: int | None = None,
 ) -> HTMLResponse:
-    """Pagina principale: form di inserimento + tabella elenco.
+    """Pagina principale: form di inserimento + tabella elenco (protetta)."""
+    redirect = _require_auth(user)
+    if redirect is not None:
+        return redirect
+    assert user is not None  # con auth attiva, dopo _require_auth l'utente c'è.
 
-    Fase 7: la tabella inferiore è popolata dai record di `effort_entries`
-    (ordinati per data decrescente) e mostra un dropdown filtro mese/anno
-    basato sui mesi distinti presenti nei record. Il parametro `month`
-    (es. `?month=2026-07`) filtra i record di quel mese; il mese resta
-    derivato da `work_date`, mai persistito. `success`/`error` (set dal
-    POST) mostrano i banner. `success=1` = record inserito, `success=2` =
-    record aggiornato (Fase 7).
-    """
+    # L'admin atterra sulla dashboard /admin, non sulla pagina di
+    # registrazione (che non può usare: niente card form, solo consultazione).
+    if is_admin(user):
+        return RedirectResponse("/admin", status_code=303)
+
     clients = db.execute(select(Client).order_by(Client.name)).scalars().all()
-    groups = db.execute(select(Group).order_by(Group.name)).scalars().all()
     activities = db.execute(select(Activity).order_by(Activity.name)).scalars().all()
 
-    # Mesi distinti presenti nei record, ordinati dal più recente.
-    month_rows = db.execute(
+    # Gruppo di appartenenza: non un select, ma un campo readonly
+    # autopopolato come User.
+    current_group_name: str = ""
+    current_group_id: int | None = None
+    if user.group_id is not None:
+        group = db.get(Group, user.group_id)
+        if group is not None:
+            current_group_name = group.name
+            current_group_id = group.id
+
+    # Mesi distinti limitati ai record visibili all'utente.
+    month_stmt = (
         select(func.strftime("%Y-%m", EffortEntry.work_date).label("month"))
         .distinct()
         .order_by(func.strftime("%Y-%m", EffortEntry.work_date).desc())
-    ).scalars().all()
+    )
+    month_stmt = _filter_by_user(month_stmt, user)
+    month_rows = db.execute(month_stmt).scalars().all()
 
     month_options: list[tuple[str, str]] = []
     for m in month_rows:
         anno, num = m.split("-")
         month_options.append((m, f"{_MESI_ITALIANI[int(num)]} {anno}"))
 
-    # Record con filtro mese opzionale, eager load delle relazioni.
     stmt = (
         select(EffortEntry)
         .options(
             selectinload(EffortEntry.client),
             selectinload(EffortEntry.group),
             selectinload(EffortEntry.activity),
+            selectinload(EffortEntry.user),
         )
         .order_by(EffortEntry.work_date.desc())
     )
+    stmt = _filter_by_user(stmt, user)
     if month:
         stmt = stmt.where(func.strftime("%Y-%m", EffortEntry.work_date) == month)
     records = db.execute(stmt).scalars().all()
@@ -110,28 +179,38 @@ async def index(
     elif success == 3:
         success_message = "Registrazione eliminata correttamente."
 
+    current_username: str = user.username
+
     return templates.TemplateResponse(
         request=request,
         name="index.html",
         context={
             "app_name": APP_NAME,
             "app_version": APP_VERSION,
-            "phase": "Fase 9b — Toggle dark/light",
+            "phase": "Registrazioni",
             "clients": clients,
-            "groups": groups,
             "activities": activities,
+            "current_group_name": current_group_name,
+            "current_group_id": current_group_id,
             "records": records,
             "month_options": month_options,
             "selected_month": month,
             "today": date.today().isoformat(),
             "success_message": success_message,
             "error": error,
+            "current_username": current_username,
+            "auth_enabled": AUTH_ENABLED,
+            "is_admin": is_admin(user),
+            "sidebar_items": _sidebar_items(user),
+            # Id del record da evidenziare dopo l'aggiornamento.
+            "highlight_id": highlight_id,
         },
     )
 
 
 @router.post("/", response_class=HTMLResponse, name="save_entry")
 async def save_entry(
+    request: Request,
     user: Annotated[str | None, Form()] = None,
     date: Annotated[date | None, Form()] = None,
     client_id: Annotated[int | None, Form()] = None,
@@ -142,28 +221,34 @@ async def save_entry(
     description: Annotated[str | None, Form()] = None,
     action: Annotated[str, Form()] = "single",
     record_id: Annotated[int | None, Form()] = None,
+    month: Annotated[str | None, Form()] = None,
+    current_user: User | None = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
-    """Salva o aggiorna un record di effort nel database.
+    """Salva o aggiorna un record di effort (protetta).
 
-    Fase 5: persistenza reale su `effort_entries`. `action` può essere
-    "single" (salvataggio di un singolo record) oppure "week" (copia su
-    settimana: crea un record per ogni giorno feriale lun→ven della
-    settimana che contiene la data del form).
-
-    Fase 7: se `record_id` è presente, `action=single` aggiorna il record
-    esistente invece di crearne uno nuovo (modalità "modifica"). La copia
-    su settimana è pensata solo per l'inserimento (i valori non sono
-    validi in modalità modifica). Verifica che l'attività richieda una
-    descrizione prima di creare/aggiornare i record. `action=delete`
-    elimina definitivamente il record indicato da `record_id` (richiede
-    solo l'id, non i campi del form).
+    Con auth attiva, il campo User viene forzato lato server allo username
+    della sessione, indipendentemente da quanto inviato dal browser.
+    `month` preserva il filtro mese nel redirect. `user_id` viene
+    valorizzato con l'utente della sessione.
     """
-    # Eliminazione definitiva: richiede solo `record_id`, non i campi del form.
-    if action == "delete":
-        return _delete_entry(record_id, db)
+    redirect = _require_auth(current_user)
+    if redirect is not None:
+        return redirect
+    assert current_user is not None
 
-    # Costruisce il modello Pydantic per la validazione server-side completa.
+    # Con auth attiva, rispetta sempre l'utente della sessione (il campo
+    # User è readonly lato client, ma qui se ne garantisce l'integrità).
+    # Anche il Gruppo viene forzato al gruppo di appartenenza dell'utente
+    # di sessione, ignorando il valore inviato dal browser.
+    if AUTH_ENABLED:
+        user = current_user.username
+        group_id = current_user.group_id
+
+    # Eliminazione definitiva: richiede solo `record_id`.
+    if action == "delete":
+        return _delete_entry(record_id, db, current_user, month)
+
     try:
         payload = EffortEntryCreate(
             user=user,
@@ -177,68 +262,90 @@ async def save_entry(
         )
     except ValidationError as exc:
         logger.warning("Validazione fallita nel form: %s", exc.errors())
-        return RedirectResponse("/?error=validazione", status_code=303)
+        return RedirectResponse(_with_month("/?error=validazione", month), status_code=303)
 
     activity = db.execute(
         select(Activity).where(Activity.id == payload.activity_id)
     ).scalar_one_or_none()
 
-    # Validazione condizionale: la descrizione è obbligatoria se richiesta.
     if activity is not None and activity.requires_description and not payload.description:
         logger.warning("Descrizione mancante per attività che la richiede")
-        return RedirectResponse("/?error=descrizione", status_code=303)
+        return RedirectResponse(_with_month("/?error=descrizione", month), status_code=303)
 
-    # La copia su settimana non è supportata in modalità modifica:
-    # se il record è in fase di update, il pulsante "Copia su settimana"
-    # viene nascosto lato UI; qui si blocca comunque per sicurezza.
     if action == "week" and record_id is not None:
-        return RedirectResponse("/?error=validazione", status_code=303)
+        return RedirectResponse(_with_month("/?error=validazione", month), status_code=303)
 
     if action == "week":
-        return _save_week(payload, db)
+        return _save_week(payload, db, current_user, month)
 
-    return _save_single(payload, db, record_id=record_id)
+    return _save_single(payload, db, current_user, record_id=record_id, month=month)
 
 
-def _delete_entry(record_id: int | None, db: Session) -> RedirectResponse:
+def _delete_entry(
+    record_id: int | None,
+    db: Session,
+    current_user: User,
+    month: str | None = None,
+) -> RedirectResponse:
     """Elimina definitivamente un record di effort dal database.
 
-    Fase 7: con `record_id` valorizzato recupera e cancella il record.
-    Se l'id non è presente o il record non esiste, redirect con errore
-    di validazione; altrimenti redirect con `?success=3`.
+    Ogni utente può eliminare SOLO i propri record. Nessuna eccezione per
+    admin/manager — la modifica o cancellazione di record altrui non è mai
+    consentita (regola aziendale: nessuno tocca i dati degli altri, nemmeno
+    con ruolo di supervisione).
     """
     if record_id is None:
         logger.warning("Eliminazione senza record_id")
-        return RedirectResponse("/?error=validazione", status_code=303)
+        return RedirectResponse(_with_month("/?error=validazione", month), status_code=303)
 
     entry = db.get(EffortEntry, record_id)
     if entry is None:
         logger.warning("Tentativo di eliminazione record inesistente id=%s", record_id)
-        return RedirectResponse("/?error=validazione", status_code=303)
+        return RedirectResponse(_with_month("/?error=validazione", month), status_code=303)
+
+    if entry.user_id != current_user.id:
+        logger.warning(
+            "Utente %s tenta di eliminare record altrui id=%s",
+            current_user.username,
+            record_id,
+        )
+        return RedirectResponse(_with_month("/?error=validazione", month), status_code=303)
 
     db.delete(entry)
     db.commit()
     logger.info("Record eliminato id=%s", record_id)
-    return RedirectResponse("/?success=3", status_code=303)
+    return RedirectResponse(_with_month("/?success=3", month), status_code=303)
 
 
 def _save_single(
     payload: EffortEntryCreate,
     db: Session,
+    current_user: User,
     record_id: int | None = None,
+    month: str | None = None,
 ) -> RedirectResponse:
     """Crea un nuovo record oppure aggiorna quello indicato da `record_id`.
 
-    Fase 7: con `record_id` valorizzato, recupera il record esistente e ne
-    aggiorna i campi modificabili dal form, poi fa redirect con
-    `?success=2`. Se il record non esiste, redirect con errore validazione.
+    Il nuovo record viene associato all'utente corrente; su update ogni
+    utente può modificare SOLO i propri record (nessuna eccezione per
+    admin/manager — regola aziendale).
     """
     if record_id is not None:
         entry = db.get(EffortEntry, record_id)
         if entry is None:
             logger.warning("Update di record inesistente id=%s", record_id)
-            return RedirectResponse("/?error=validazione", status_code=303)
-        entry.user_text = payload.user
+            return RedirectResponse(_with_month("/?error=validazione", month), status_code=303)
+        # Ogni utente può aggiornare SOLO i propri record. Nessuna eccezione
+        # per admin/manager (regola aziendale).
+        if entry.user_id != current_user.id:
+            logger.warning(
+                "Utente %s tenta di aggiornare record altrui id=%s",
+                current_user.username,
+                record_id,
+            )
+            return RedirectResponse(_with_month("/?error=validazione", month), status_code=303)
+        # Su update il proprietario del record non cambia (è sempre l'utente
+        # corrente, già verificato sopra).
         entry.client_id = payload.client_id
         entry.group_id = payload.group_id
         entry.activity_id = payload.activity_id
@@ -248,11 +355,12 @@ def _save_single(
         entry.description = payload.description
         db.commit()
         logger.info("Record aggiornato id=%s data=%s ore=%s", record_id, payload.date, payload.hours)
-        return RedirectResponse("/?success=2", status_code=303)
+        # Passa l'id del record per evidenziarlo nella tabella.
+        base = f"/?success=2&highlight_id={record_id}"
+        return RedirectResponse(_with_month(base, month), status_code=303)
 
     entry = EffortEntry(
-        user_id=None,
-        user_text=payload.user,
+        user_id=current_user.id,
         client_id=payload.client_id,
         group_id=payload.group_id,
         activity_id=payload.activity_id,
@@ -264,18 +372,24 @@ def _save_single(
     db.add(entry)
     db.commit()
     logger.info("Record creato id=%s data=%s ore=%s", entry.id, payload.date, payload.hours)
-    return RedirectResponse("/?success=1", status_code=303)
+    return RedirectResponse(_with_month("/?success=1", month), status_code=303)
 
 
-def _save_week(payload: EffortEntryCreate, db: Session) -> RedirectResponse:
-    """Copia il form su tutti i giorni feriali della settimana della data."""
-    # Lunedì della settimana che contiene la data selezionata (lun=0).
+def _save_week(
+    payload: EffortEntryCreate,
+    db: Session,
+    current_user: User,
+    month: str | None = None,
+) -> RedirectResponse:
+    """Copia il form su tutti i giorni feriali della settimana della data.
+
+    Tutti i record creati vengono associati all'utente corrente.
+    """
     monday = payload.date - timedelta(days=payload.date.weekday())
     for offset in range(5):  # lun, mar, mer, gio, ven
         db.add(
             EffortEntry(
-                user_id=None,
-                user_text=payload.user,
+                user_id=current_user.id,
                 client_id=payload.client_id,
                 group_id=payload.group_id,
                 activity_id=payload.activity_id,
@@ -287,32 +401,33 @@ def _save_week(payload: EffortEntryCreate, db: Session) -> RedirectResponse:
         )
     db.commit()
     logger.info("Copia settimanale creata (settimana di %s)", payload.date.isoformat())
-    return RedirectResponse("/?success=1", status_code=303)
+    return RedirectResponse(_with_month("/?success=1", month), status_code=303)
 
 
 @router.get("/export", response_class=StreamingResponse, name="export_csv")
 async def export_csv(
+    request: Request,
     db: Session = Depends(get_db),
+    user: User | None = Depends(get_current_user),
     month: str | None = None,
 ) -> StreamingResponse:
-    """Esporta i record di effort in formato CSV.
+    """Esporta i record di effort in formato CSV (protetta, segregata)."""
+    redirect = _require_auth(user)
+    if redirect is not None:
+        return redirect
+    assert user is not None
 
-    Fase 8: genera un CSV con le stesse colonne della tabella (Data,
-    Cliente, Gruppo, Attività, Utente, Ore, Note, Descrizione attività).
-    Il parametro opzionale `month` (es. `?month=2026-07`) filtra i record
-    di quel mese; senza filtro vengono esportati tutti i record. La data
-    è formattata DD/MM/YYYY. Il file inizia con il BOM UTF-8 per una
-    corretta apertura in Excel/Windows.
-    """
     stmt = (
         select(EffortEntry)
         .options(
             selectinload(EffortEntry.client),
             selectinload(EffortEntry.group),
             selectinload(EffortEntry.activity),
+            selectinload(EffortEntry.user),
         )
         .order_by(EffortEntry.work_date.asc())
     )
+    stmt = _filter_by_user(stmt, user)
     if month:
         stmt = stmt.where(func.strftime("%Y-%m", EffortEntry.work_date) == month)
     records = db.execute(stmt).scalars().all()
@@ -329,10 +444,8 @@ async def export_csv(
 def _build_csv(records: list[EffortEntry]) -> str:
     """Costruisce il contenuto CSV (con BOM UTF-8) dai record di effort.
 
-    Fase 8: le righe seguono l'ordine de `records` così come passato dal
-    chiamante (l'endpoint le ordina per data crescente). Header coerente
-    con le colonne della tabella. La funzione è separata dall'endpoint
-    per renderne il contenuto facilmente testabile senza richieste HTTP.
+    La colonna Utente mostra lo username reale dal JOIN su users; per i
+    record senza proprietario (legacy) mostra una stringa vuota.
     """
     buffer = io.StringIO()
     buffer.write("\ufeff")  # BOM UTF-8 per compatibilità Excel/Windows.
@@ -345,7 +458,7 @@ def _build_csv(records: list[EffortEntry]) -> str:
                 record.client.name,
                 record.group.name,
                 record.activity.name,
-                record.user_text or "",
+                record.user.username if record.user is not None else "",
                 record.hours_spent,
                 record.notes or "",
                 record.description or "",
@@ -354,15 +467,140 @@ def _build_csv(records: list[EffortEntry]) -> str:
     return buffer.getvalue()
 
 
+def _is_manager_view(user: User | None) -> bool:
+    """True se l'utente è un manager (con un gruppo da gestire)."""
+    return user is not None and is_manager(user) and user.group_id is not None
+
+
+def _records_in_group_statement(db: Session, group_id: int) -> Select:
+    """Restituisce lo statement SQL dei record di tutti gli utenti del gruppo.
+
+    La vista gruppo del manager mostra i record di tutti gli utenti che
+    hanno `group_id` uguale a quello del manager.
+    """
+    user_ids = db.execute(select(User.id).where(User.group_id == group_id)).scalars().all()
+    stmt: Select = (
+        select(EffortEntry)
+        .options(
+            selectinload(EffortEntry.client),
+            selectinload(EffortEntry.group),
+            selectinload(EffortEntry.activity),
+            selectinload(EffortEntry.user),
+        )
+        .order_by(EffortEntry.work_date.desc())
+    )
+    if user_ids:
+        stmt = stmt.where(EffortEntry.user_id.in_(user_ids))
+    else:
+        # Nessun membro nel gruppo: nessun record visibile.
+        stmt = stmt.where(False)
+    return stmt
+
+
+def _records_in_group(db: Session, group_id: int, month: str | None) -> list[EffortEntry]:
+    """Restituisce i record del gruppo indicato, opzionalmente filtrati per mese."""
+    stmt = _records_in_group_statement(db, group_id)
+    if month:
+        stmt = stmt.where(func.strftime("%Y-%m", EffortEntry.work_date) == month)
+    return db.execute(stmt).scalars().all()
+
+
+def _month_options_in_group(db: Session, group_id: int) -> list[tuple[str, str]]:
+    """Calcola le opzioni mese (YYYY-MM, label italiana) per i record del gruppo."""
+    month_stmt = (
+        select(func.strftime("%Y-%m", EffortEntry.work_date).label("month"))
+        .distinct()
+        .order_by(func.strftime("%Y-%m", EffortEntry.work_date).desc())
+        .where(
+            EffortEntry.user_id.in_(
+                select(User.id).where(User.group_id == group_id)
+            )
+        )
+    )
+    month_rows = db.execute(month_stmt).scalars().all()
+    return [
+        (m, f"{_MESI_ITALIANI[int(m.split('-')[1])]} {m.split('-')[0]}")
+        for m in month_rows
+    ]
+
+
+@router.get("/group", response_class=HTMLResponse, name="group_view")
+async def group_view(
+    request: Request,
+    db: Session = Depends(get_db),
+    user: User | None = Depends(get_current_user),
+    month: str | None = None,
+) -> HTMLResponse:
+    """Pagina del gruppo per il manager: solo visualizzazione/esportazione.
+
+    Il manager vede i record di tutti gli utenti del gruppo che gestisce,
+    con filtro mese/anno. Non c'è il form di inserimento: la vista è read-only.
+    """
+    redirect = _require_auth(user)
+    if redirect is not None:
+        return redirect
+    assert user is not None
+    if not _is_manager_view(user):
+        logger.warning("Accesso negato a /group per utente %s (ruolo=%s)", user.username, user.role)
+        return RedirectResponse("/", status_code=303)
+
+    group = db.get(Group, user.group_id)
+    records = _records_in_group(db, user.group_id, month)
+    month_options = _month_options_in_group(db, user.group_id)
+
+    return templates.TemplateResponse(
+        request=request,
+        name="group.html",
+        context={
+            "app_name": APP_NAME,
+            "app_version": APP_VERSION,
+            "phase": "Vista gruppo (manager)",
+            "group_name": group.name if group else "Gruppo",
+            "records": records,
+            "month_options": month_options,
+            "selected_month": month,
+            "current_username": user.username,
+            "auth_enabled": AUTH_ENABLED,
+            "is_admin": is_admin(user),
+            "sidebar_items": _sidebar_items(user),
+        },
+    )
+
+
+@router.get("/group/export", response_class=StreamingResponse, name="group_export_csv")
+async def group_export_csv(
+    request: Request,
+    db: Session = Depends(get_db),
+    user: User | None = Depends(get_current_user),
+    month: str | None = None,
+) -> StreamingResponse:
+    """Esporta in CSV i record del gruppo gestito dal manager."""
+    redirect = _require_auth(user)
+    if redirect is not None:
+        return redirect
+    assert user is not None
+    if not _is_manager_view(user):
+        logger.warning("Export negato per utente %s (ruolo=%s)", user.username, user.role)
+        return RedirectResponse("/", status_code=303)
+
+    group = db.get(Group, user.group_id)
+    stmt = _records_in_group_statement(db, user.group_id)
+    if month:
+        stmt = stmt.where(func.strftime("%Y-%m", EffortEntry.work_date) == month)
+    records = db.execute(stmt.order_by(EffortEntry.work_date.asc())).scalars().all()
+
+    filename = f"effort_{group.name if group else 'gruppo'}_{month or 'tutti'}.csv"
+    logger.info("Export CSV gruppo generato (record=%d, mese=%s)", len(records), month or "tutti")
+    return StreamingResponse(
+        iter([_build_csv(records)]),
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
 @router.get("/health", name="health")
 async def health() -> JSONResponse:
-    """Health check: stato applicazione + check base della connettività al DB.
-
-    Restituisce 200 con `status: ok` se la connessione al DB risponde,
-    altrimenti 503 con `status: degraded` e dettaglio dell'errore.
-    """
-    # Import lazy per evitare di inizializzare l'engine al solo caricamento
-    # del modulo (utile in test e in contesti senza DB).
+    """Health check: stato applicazione + check base della connettività al DB (pubblico)."""
     from app.db import engine as db_engine  # noqa: WPS433
 
     db_status: str = "ok"

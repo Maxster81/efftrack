@@ -1,12 +1,8 @@
 /* ------------------------------------------------------------
  * Effort Tracking — fogli di stile condivisi.
  *
- * Fase 2: layout statico stile effort tracking (form + tabella).
- * Le regole della welcome card delle Fasi 0/1 sono state rimosse.
- *
- * Palette: blu navy + grigi neutri (vedi memory-bank/projectbrief.md).
- * Variabili CSS in :root per consentire un futuro tema dark/light
- * senza refactoring.
+ * Layout stile effort tracking (form + tabella). Palette: blu navy +
+ * grigi neutri. Variabili CSS in :root per supportare tema dark/light.
  * ------------------------------------------------------------ */
 
 :root {
@@ -50,7 +46,7 @@
   --radius-lg: 12px;
 }
 
-/* Tema esplicito "light" (Fase 9b): replica :root per chiarezza.
+/* Tema esplicito "light": replica :root per chiarezza.
    La modalità dark è attivata da data-theme="dark" sull'elemento <html>. */
 [data-theme="light"] {
   --color-primary: #1e3a5f;
@@ -72,7 +68,7 @@
   --color-border-strong: #b6bdc6;
 }
 
-/* Predisposizione tema dark (toggle UI arriverà in Fase 9) */
+/* Tema dark, attivato da data-theme="dark" sull'elemento <html>. */
 [data-theme="dark"] {
   --color-primary: #4a78b8;
   --color-bg: #14181d;
@@ -109,24 +105,25 @@ a:hover { text-decoration: underline; }
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
 }
 .app-header__inner {
-  max-width: 1100px;
-  margin: 0 auto;
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  justify-content: space-between;
   gap: var(--space-md);
+  width: 100%;
 }
 .app-header__left {
   display: flex;
   align-items: center;
   gap: var(--space-sm);
+  grid-column: 1;
+  justify-self: start;
 }
 .app-header__menu {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: 45px;
+  height: 45px;
   padding: 0;
   border: 1px solid rgba(255, 255, 255, 0.35);
   border-radius: var(--radius-sm);
@@ -147,11 +144,16 @@ a:hover { text-decoration: underline; }
   margin: 0;
   letter-spacing: 0.04em;
   text-transform: uppercase;
+  grid-column: 2;
+  justify-self: center;
+  white-space: nowrap;
 }
 .app-header__actions {
   display: flex;
   align-items: center;
   gap: var(--space-md);
+  grid-column: 3;
+  justify-self: end;
 }
 .app-header__phase {
   font-size: 0.9rem;
@@ -161,8 +163,8 @@ a:hover { text-decoration: underline; }
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: 45px;
+  height: 45px;
   padding: 0;
   border: 1px solid rgba(255, 255, 255, 0.35);
   border-radius: 50%;
@@ -201,8 +203,81 @@ a:hover { text-decoration: underline; }
 .app-header__user-icon {
   display: block;
 }
+.app-header__user-name {
+  font-weight: 600;
+}
+/* Menu a discesa utente: toggle + menu con Profilo/ESCI. */
+.user-dropdown {
+  position: relative;
+  display: inline-flex;
+}
+.user-dropdown__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--color-text-on-primary);
+  font-size: 1.05rem;
+  opacity: 0.9;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  background: transparent;
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background-color 0.15s ease, opacity 0.15s ease;
+  font-family: var(--font-sans);
+}
+.user-dropdown__toggle:hover {
+  background: rgba(255, 255, 255, 0.12);
+  opacity: 1;
+}
+.user-dropdown__caret {
+  display: block;
+}
+.user-dropdown__menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  min-width: 160px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  padding: var(--space-xs) 0;
+  display: none;
+  z-index: 60;
+}
+.user-dropdown__menu.is-open {
+  display: block;
+}
+.user-dropdown__item {
+  display: block;
+  padding: var(--space-sm) var(--space-md);
+  color: var(--color-text);
+  text-decoration: none;
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+.user-dropdown__item:hover {
+  background: var(--color-surface-alt);
+  text-decoration: none;
+}
+.app-header__login {
+  color: var(--color-text-on-primary);
+  text-decoration: none;
+  font-size: 0.85rem;
+  opacity: 0.9;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--radius-sm);
+  transition: background-color 0.15s ease, opacity 0.15s ease;
+}
+.app-header__login:hover {
+  background: rgba(255, 255, 255, 0.12);
+  text-decoration: none;
+  opacity: 1;
+}
 
-/* ---------- Sidebar (menu hamburger, Fase 4b) ---------- */
+/* ---------- Sidebar (menu hamburger) ---------- */
 .sidebar-overlay {
   position: fixed;
   inset: 0;
@@ -322,6 +397,15 @@ a:hover { text-decoration: underline; }
 @media (min-width: 720px) {
   .form-row {
     grid-template-columns: 1fr 1fr;
+  }
+}
+/* Variante a 3 colonne per il form "Nuovo utente" (admin). */
+.form-row--three {
+  grid-template-columns: 1fr;
+}
+@media (min-width: 720px) {
+  .form-row--three {
+    grid-template-columns: 1fr 1fr 1fr;
   }
 }
 .form-group--full {
@@ -537,6 +621,14 @@ a:hover { text-decoration: underline; }
 .records-table tbody tr.is-selected:hover {
   background: var(--color-accent-strong);
 }
+/* Evidenzia il record appena modificato con una dissolvenza. */
+.records-table tbody tr.is-highlighted {
+  animation: highlight-record 6s ease-out;
+}
+@keyframes highlight-record {
+  0% { background: #fff3b0; }
+  100% { background: transparent; }
+}
 .records-table tbody tr:focus-visible {
   outline: 2px solid var(--color-primary);
   outline-offset: -2px;
@@ -552,7 +644,22 @@ a:hover { text-decoration: underline; }
   font-style: italic;
 }
 
-/* ---------- Form: stato nascosto, errori (Fase 3) ---------- */
+/* ---------- Login ---------- */
+.login-card {
+  max-width: 420px;
+  margin: var(--space-xl) auto;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+.login-form {
+  display: grid;
+  gap: var(--space-md);
+}
+
+/* ---------- Form: stato nascosto, errori ---------- */
 .is-hidden {
   display: none !important;
 }
@@ -583,3 +690,400 @@ a:hover { text-decoration: underline; }
   color: #1e8449;
   font-size: 0.92rem;
 }
+
+/* ------------------------------------------------------------
+   Pannello Admin (dashboard, utenti, lookup).
+   ------------------------------------------------------------ */
+.admin-hero {
+  padding: var(--space-md) 0;
+}
+
+.admin-links {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+  padding: 0;
+  margin: var(--space-md) 0;
+}
+
+.admin-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  align-items: center;
+}
+
+.admin-actions form {
+  display: inline-flex;
+  gap: var(--space-xs);
+  align-items: center;
+}
+
+.admin-actions input[type="password"],
+.admin-actions input[type="text"] {
+  padding: var(--space-xs);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.lookup-section {
+  margin-bottom: var(--space-lg);
+  padding-bottom: var(--space-md);
+  border-bottom: 1px solid var(--color-border);
+}
+
+/* Form di aggiunta lookup: input e bottone in linea, allineati
+   orizzontalmente. */
+.lookup-add-form {
+  display: flex;
+  gap: var(--space-sm);
+  align-items: flex-start;
+  margin-bottom: var(--space-md);
+}
+.lookup-add-form__field {
+  flex: 1 1 auto;
+  max-width: 320px;
+}
+.lookup-add-form__button {
+  min-width: auto;
+  white-space: nowrap;
+}
+.lookup-add-form .lookup-add-form__field input {
+  width: 100%;
+}
+@media (max-width: 480px) {
+  .lookup-add-form {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .lookup-add-form__field {
+    max-width: none;
+  }
+}
+
+.lookup-list {
+  list-style: none;
+  padding: 0;
+  margin: var(--space-sm) 0 0 0;
+}
+
+.lookup-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  padding: var(--space-xs) 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.lookup-item:last-child {
+  border-bottom: none;
+}
+
+/* Rendi compatti i pulsanti dentro la lista lookup (Rinomina, Elimina) */
+.lookup-item .admin-actions .btn-secondary,
+.lookup-item .admin-actions .btn-danger {
+  min-width: auto;
+  white-space: nowrap;
+}
+
+/* Allinea i campi di testo "rinomina" alla stessa altezza del campo "Nuovo nome" */
+.lookup-item .admin-actions input[type="text"] {
+  padding: var(--space-sm) var(--space-md);
+  font-size: 0.95rem;
+}
+
+.lookup-name {
+  font-weight: 600;
+}
+
+.text-muted {
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+}
+
+.visually-hidden {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ---------- Gestione utenti (disabilita, badge, stati) ---------- */
+.btn-sm {
+  min-width: auto;
+  padding: 2px 8px;
+  font-size: 0.78rem;
+}
+
+.badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+.badge-active {
+  background: #eaf7ec;
+  color: #1e8449;
+  border: 1px solid #27ae60;
+}
+.badge-disabled {
+  background: #fdecea;
+  color: #a93226;
+  border: 1px solid #e74c3c;
+}
+
+.records-table tbody tr.is-disabled {
+  opacity: 0.6;
+  background: var(--color-surface-alt);
+}
+.records-table tbody tr.is-disabled:hover {
+  background: var(--color-accent);
+}
+.records-table .admin-actions {
+  gap: 4px;
+}
+.admin-actions input[type="password"] {
+  max-width: 110px;
+}
+.admin-actions select {
+  font-size: 0.8rem;
+  padding: 2px 4px;
+}
+.admin-actions form {
+  gap: 3px;
+}
+
+/* ---------- Fase: pagina di modifica utente (admin_user_edit.html) ---------- */
+/* Link "Torna alla lista": comporta da pulsante outline ma senza larghezza fissa. */
+.user-edit-back {
+  display: inline-flex;
+  align-items: center;
+  margin-bottom: var(--space-md);
+  min-width: auto;
+  padding: var(--space-sm) var(--space-lg);
+  font-family: var(--font-sans);
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  background: transparent;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  text-decoration: none;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.user-edit-back:hover {
+  background: var(--color-surface-alt);
+  border-color: var(--color-text-muted);
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+/* Griglia dati utente (dl) nella card di dettaglio. */
+.user-detail {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-sm);
+  margin: 0;
+}
+@media (min-width: 720px) {
+  .user-detail {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+.user-detail__row {
+  display: flex;
+  gap: var(--space-sm);
+  align-items: baseline;
+  padding: var(--space-xs) 0;
+  border-bottom: 1px solid var(--color-border);
+}
+.user-detail__row dt {
+  min-width: 120px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+.user-detail__row dd {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+/* Form compatti a riga singola per le card di modifica utente. */
+.user-edit-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+  align-items: flex-end;
+}
+.user-edit-form .form-group {
+  flex: 1 1 auto;
+  max-width: 320px;
+}
+.user-edit-form .form-actions {
+  flex: 0 0 auto;
+  margin: 0;
+  grid-column: auto;
+}
+@media (max-width: 480px) {
+  .user-edit-form {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .user-edit-form .form-group,
+  .user-edit-form .form-actions {
+    max-width: none;
+    width: 100%;
+  }
+}
+
+/* ---------- Tab stile schedario per Gestione Lookup ---------- */
+
+/* Barra dei tab (linguette dello schedario) */
+.lookup-tabs {
+  display: flex;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Singolo bottone tab (linguetta) */
+.lookup-tabs__btn {
+  position: relative;
+  z-index: 0;
+  padding: var(--space-sm) var(--space-lg);
+  font-family: var(--font-sans);
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  background: var(--color-surface-alt);
+  border: 1px solid var(--color-border);
+  border-bottom: none;
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+  cursor: pointer;
+  transition: color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+  box-shadow: 0 -1px 3px rgba(0, 0, 0, 0.04);
+}
+
+/* Effetto hover sui tab inattivi */
+.lookup-tabs__btn:hover:not(.is-active) {
+  color: var(--color-text);
+  background: var(--color-surface);
+  box-shadow: 0 -1px 5px rgba(0, 0, 0, 0.07);
+}
+
+/* Tab attivo: in primo piano, sfondo superficie, bordo marcato */
+.lookup-tabs__btn.is-active {
+  z-index: 1;
+  color: var(--color-primary);
+  background: var(--color-surface);
+  border-color: var(--color-border-strong);
+  box-shadow: 0 -2px 6px rgba(0, 0, 0, 0.06), 0 2px 0 var(--color-surface);
+}
+
+/* Accento superiore colorato per ciascun tab (visibile quando attivo o in hover) */
+.lookup-tabs__btn[data-tab="client"].is-active {
+  border-top: 2px solid var(--color-primary);
+}
+.lookup-tabs__btn[data-tab="group"].is-active {
+  border-top: 2px solid #2e7d32;
+}
+.lookup-tabs__btn[data-tab="activity"].is-active {
+  border-top: 2px solid #e67e22;
+}
+
+/* Sottile accento anche su hover del tab inattivo */
+.lookup-tabs__btn[data-tab="client"]:hover:not(.is-active) {
+  border-top-color: var(--color-primary);
+}
+.lookup-tabs__btn[data-tab="group"]:hover:not(.is-active) {
+  border-top-color: #2e7d32;
+}
+.lookup-tabs__btn[data-tab="activity"]:hover:not(.is-active) {
+  border-top-color: #e67e22;
+}
+
+/* Contenitore pannelli (si unisce visivamente ai tab) */
+.lookup-tab-panels {
+  margin-top: -1px;
+}
+
+/* Pannello singolo: card con bordo, nascosto di default */
+.lookup-tab-panel {
+  display: none;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-strong);
+  border-radius: 0 var(--radius-md) var(--radius-md) var(--radius-md);
+  padding: var(--space-lg);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+}
+
+/* Pannello attivo */
+.lookup-tab-panel.is-active {
+  display: block;
+}
+
+/* All'interno del pannello attivo: rimuovi bordo inferiore dell'ultima
+   lookup-section perché il pannello stesso già fornisce il contenitore */
+.lookup-tab-panel .lookup-section:last-child {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+/* Rimuovi il titolo h3 duplicato dentro il pannello (la linguetta fa già da titolo),
+   ma lascia il titolo visibile per screen reader */
+.lookup-tab-panel .lookup-section .card-title {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Su viewport stretti: i tab si riducono proporzionalmente */
+@media (max-width: 480px) {
+  .lookup-tabs__btn {
+    padding: var(--space-xs) var(--space-md);
+    font-size: 0.82rem;
+  }
+  .lookup-tab-panel {
+    padding: var(--space-md);
+  }
+}
+
+/* ---------- Pagina Profilo Utente ---------- */
+.profile-page {
+  max-width: 700px;
+  margin: var(--space-xl) auto;
+  padding: 0 var(--space-lg);
+}
+
+.profile-card {
+  margin-bottom: var(--space-xl);
+}
+
+/* Variante form-row a 2 colonne esplicita (già di default su desktop,
+   ma serve per i form inline che non usano .effort-form). */
+.form-row--two {
+  grid-template-columns: 1fr;
+}
+@media (min-width: 720px) {
+  .form-row--two {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+

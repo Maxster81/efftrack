@@ -1,11 +1,10 @@
 /* ------------------------------------------------------------
- * Effort Tracking — logica form (Fase 3, aggiornata in Fase 4).
+ * Effort Tracking — logica form.
  *
  * Show/hide condizionale del campo "Descrizione attività" e
  * validazione client-side del form. JavaScript vanilla, niente
- * dipendenze esterne. La validazione server-side arriverà in Fase 5.
- * In Fase 4 il show/hide usa `data-requires-description` dell'attività
- * selezionata (popolata dal DB), non più un confronto su stringa fissa.
+ * dipendenze esterne. Il show/hide usa `data-requires-description`
+ * dell'attività selezionata (popolata dal DB).
  * ------------------------------------------------------------ */
 (function () {
   "use strict";
@@ -68,13 +67,13 @@
     }
   }
 
-  // --- Validazione ore (0.25 .. 24, multipli di 0.25) ---
+  // --- Validazione ore (1 .. 12, multipli di 0.50) ---
   function isValidHours(raw) {
     if (raw.trim() === "") { return false; }
     var value = parseFloat(raw.replace(",", "."));
-    if (isNaN(value) || value < 0.25 || value > 24) { return false; }
-    // Multiplo di 0.25: tolleranza floating point.
-    return Math.abs(value * 4 - Math.round(value * 4)) < 1e-6;
+    if (isNaN(value) || value < 1 || value > 12) { return false; }
+    // Multiplo di 0.50: tolleranza floating point.
+    return Math.abs(value * 2 - Math.round(value * 2)) < 1e-6;
   }
 
   // --- Validazione submit ---
@@ -93,10 +92,14 @@
       if (!ok && !firstInvalid) { firstInvalid = field; }
     }
 
-    // User
+    // User: obbligatorio solo se NON è readonly (quando loggato è precompilato
+    // dal server dalla sessione).
     var user = document.getElementById("effort-user");
-    var ok = validateRequired(user, "Il campo User è obbligatorio.");
-    mark(user, ok);
+    var ok = true;
+    if (user && !user.readOnly) {
+      ok = validateRequired(user, "Il campo User è obbligatorio.");
+      mark(user, ok);
+    }
     valid = valid && ok;
 
     // Data
@@ -111,11 +114,8 @@
     mark(client, ok);
     valid = valid && ok;
 
-    // Gruppo
-    var group = document.getElementById("effort-group");
-    ok = validateSelect(group, "Seleziona un Gruppo.");
-    mark(group, ok);
-    valid = valid && ok;
+    // Gruppo: readonly dal DB, non serve validazione client.
+    // Il server forza il group_id della sessione.
 
     // Attività
     ok = validateSelect(activitySelect, "Seleziona un Attività.");
@@ -128,7 +128,7 @@
     setInvalid(hours, !ok);
     if (!ok) {
       if (!firstInvalid) { firstInvalid = hours; }
-      showError("Inserisci le Ore Spese (da 0.25 a 24, step 0.25).");
+      showError("Inserisci le Ore Spese (da 1 a 12, step 0.50).");
     }
     valid = valid && ok;
 
@@ -187,7 +187,7 @@
     });
   }
 
-  // Espone helper riusabili da row-select.js (Fase 7).
+  // Espone helper riusabili da row-select.js.
   window.EffortTrack = window.EffortTrack || {};
   window.EffortTrack.syncDescriptionVisibility = syncDescriptionVisibility;
 

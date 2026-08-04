@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}Profilo — {{ app_name }}{% endblock %}
+
+{% block content %}
+<section class="profile-page">
+  <!-- Card Dati personali -->
+  <div class="card profile-card">
+    <h2 class="card-title">Dati personali</h2>
+
+    {% if profile_err %}
+      <div class="form-error" role="alert">{{ profile_err }}</div>
+    {% elif profile_ok %}
+      <div class="form-success" role="alert">Profilo aggiornato con successo.</div>
+    {% endif %}
+
+    <form method="post" action="/profile" class="profile-form">
+      <div class="form-row form-row--two">
+        <div class="form-group">
+          <label for="first-name">Nome</label>
+          <input type="text" id="first-name" name="first_name"
+                 value="{{ first_name }}" maxlength="64"
+                 placeholder="Il tuo nome" />
+        </div>
+        <div class="form-group">
+          <label for="last-name">Cognome</label>
+          <input type="text" id="last-name" name="last_name"
+                 value="{{ last_name }}" maxlength="64"
+                 placeholder="Il tuo cognome" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="email">Email</label>
+        <input type="email" id="email" name="email"
+               value="{{ email }}" maxlength="128"
+               placeholder="La tua email" />
+      </div>
+      <div class="form-actions">
+        <button type="submit" class="btn-primary">Salva modifiche</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Card Cambia password -->
+  <div class="card profile-card">
+    <h2 class="card-title">Cambia password</h2>
+
+    {% if pwd_err %}
+      <div class="form-error" role="alert">{{ pwd_err }}</div>
+    {% elif pwd_ok %}
+      <div class="form-success" role="alert">Password cambiata con successo.</div>
+    {% endif %}
+
+    <form method="post" action="/profile/change-password" class="profile-form"
+          autocomplete="off">
+      <div class="form-group">
+        <label for="current-password">Password attuale</label>
+        <input type="password" id="current-password" name="current_password"
+               required maxlength="128" autocomplete="current-password"
+               placeholder="Inserisci la password attuale" />
+      </div>
+      <div class="form-row form-row--two">
+        <div class="form-group">
+          <label for="new-password">Nuova password</label>
+          <input type="password" id="new-password" name="new_password"
+                 required maxlength="128" autocomplete="new-password"
+                 placeholder="Inserisci la nuova password" />
+        </div>
+        <div class="form-group">
+          <label for="confirm-password">Conferma password</label>
+          <input type="password" id="confirm-password" name="confirm_password"
+                 required maxlength="128" autocomplete="new-password"
+                 placeholder="Ripeti la nuova password" />
+        </div>
+      </div>
+      <div class="form-actions">
+        <button type="submit" class="btn-primary">Cambia password</button>
+      </div>
+    </form>
+  </div>
+</section>
+{% endblock %}

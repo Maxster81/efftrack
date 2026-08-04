@@ -1,5 +1,5 @@
 /* ------------------------------------------------------------
- * Effort Tracking — selezione record dalla tabella (Fase 7).
+ * Effort Tracking — selezione record dalla tabella.
  *
  * Click su una riga della tabella popola il form con i dati del
  * record e attiva la "modalità modifica": il campo hidden `record_id`
@@ -30,7 +30,8 @@
   var userInput = document.getElementById("effort-user");
   var dateInput = document.getElementById("effort-date");
   var clientSelect = document.getElementById("effort-client");
-  var groupSelect = document.getElementById("effort-group");
+  var groupInput = document.getElementById("effort-group");       // input readonly
+  var groupIdHidden = document.getElementById("effort-group-id"); // hidden con l'id
   var activitySelect = document.getElementById("effort-activity");
   var hoursInput = document.getElementById("effort-hours");
   var notesInput = document.getElementById("effort-notes");
@@ -63,8 +64,14 @@
     if (clientSelect) {
       clientSelect.value = row.getAttribute("data-client-id") || "";
     }
-    if (groupSelect) {
-      groupSelect.value = row.getAttribute("data-group-id") || "";
+    // Il gruppo è un campo readonly. L'input readonly mostra il nome
+    // (non serve popolarlo dalle righe: è sempre il gruppo dell'utente).
+    // L'hidden `group_id` invia l'id, che il server forza comunque.
+    if (groupInput) {
+      groupInput.value = groupInput.value;  // mantiene il valore iniziale
+    }
+    if (groupIdHidden) {
+      groupIdHidden.value = row.getAttribute("data-group-id") || "";
     }
     if (activitySelect) {
       activitySelect.value = row.getAttribute("data-activity-id") || "";

@@ -1,11 +1,29 @@
 # Effort Tracking
 
 Web server per la registrazione di **effort** (ore lavorate, attività giornaliere, note) con
-piccolo gestionale CRUD. Sostituto moderno del vecchio tool aziendale, pensato per essere
-installato su **Ubuntu** con **Python `venv`** (no Docker).
+gestionale CRUD. Sostituto moderno del vecchio tool aziendale, installabile su **Ubuntu** con
+**Python `venv`** (no Docker).
 
-> Stato corrente: **Fase 0 — Bootstrap**. Server di test raggiungibile, health check attivo.
-> La documentazione di stato è in [`memory-bank/`](./memory-bank/).
+> **Stato**: **v1.0.1** — versione stabile pronta per produzione.
+> Autenticazione attiva, multiutente con ruoli (USER/MANAGER/ADMIN), hardening di sicurezza,
+> suite di test completa (104 test verdi). La documentazione di stato dettagliata è in
+> [`memory-bank/`](./memory-bank/).
+
+---
+
+## Funzionalità
+
+- **Registrazione effort**: form in alto + tabella elenco in basso, CRUD completo.
+- **Copia su settimana**: inserimento bulk dei giorni feriali.
+- **Filtro per mese** nell'elenco e negli export.
+- **Export CSV** (UTF-8 con BOM) con segregazione dati per utente.
+- **Autenticazione** locale con sessione firmata e password hashate (bcrypt).
+- **Multiutente**: ogni utente vede/cambia/elimina solo i propri record.
+- **Ruoli**: `USER`, `MANAGER` (vista gruppo), `ADMIN` (pannello di gestione).
+- **Pannello admin**: dashboard, registrazioni globali, gestione utenti, gestione lookup.
+- **Profilo utente**: dati anagrafici e cambio password.
+- **Tema dark/light** con preferenza salvata nel browser.
+- **Sicurezza**: header HTTP, body limit, cookie sessione SameSite/Secure, validazione server-side.
 
 ---
 
@@ -21,28 +39,33 @@ sudo apt install -y python3 python3-venv python3-pip
 
 ---
 
-## Installazione
+## Installazione e avvio in sviluppo
 
 ```bash
-cd /home/mbocchini/efftrack
+cd /home/tuafolder/efftrack   # o la tua cartella del progetto
 python3 -m venv .venv
 source .venv/bin/activate
 pip install --upgrade pip
 pip install -r requirements.txt
-```
 
-## Avvio in sviluppo
+# Crea il file di configurazione locale (opzionale; se non esiste
+# vengono usati i default di sviluppo, vedi .env.example)
+cp .env.example .env
 
-```bash
-source .venv/bin/activate
+# Avvia il server in sviluppo
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
 Endpoint disponibili:
 
-- `http://localhost:8000/` — pagina di benvenuto.
-- `http://localhost:8000/health` — health check (status app + check DB).
+- `http://localhost:8000/` — pagina di registrazione effort (richiede login).
+- `http://localhost:8000/health` — health check pubblico (status app + check DB).
 - `http://localhost:8000/docs` — documentazione OpenAPI generata da FastAPI.
+
+> **Nota binding**: in sviluppo il server è bindato a `0.0.0.0` per accessibilità da rete
+> locale/WSL/VM. In produzione si usa `127.0.0.1` dietro un reverse proxy (vedi sotto).
+
+---
 
 ## Configurazione
 
@@ -54,64 +77,133 @@ cp .env.example .env
 # modifica .env a piacere
 ```
 
+Variabili principali:
+
+| Variabile | Default | Descrizione |
+|-----------|---------|-------------|
+| `EFFORT_TRACKING_SECRET_KEY` | placeholder dev | Chiave per firmare le sessioni. **In produzione genera una chiave robusta.** |
+| `EFFORT_TRACKING_DB_URL` | `sqlite:///./data/efftrack.db` | URL del database (SQLite oggi, PostgreSQL in futuro). |
+| `EFFORT_TRACKING_HOST` / `EFFORT_TRACKING_PORT` | `0.0.0.0` / `8000` | Host e porta del web server. |
+| `EFFORT_TRACKING_LOG_LEVEL` | `INFO` | Livello dei log (DEBUG/INFO/WARNING/ERROR). |
+| `EFFORT_TRACKING_AUTH_ENABLED` | `true` | `true` login obbligatorio, `false` server pubblico. |
+| `EFFORT_TRACKING_ADMIN_USERNAME` / `EFFORT_TRACKING_ADMIN_PASSWORD` | `admin` / `admin` | Credenziali del primo admin. **In produzione vanno sovrascritte.** |
+| `EFFORT_TRACKING_USER_DELETE_GRACE_DAYS` | `30` | Giorni di attesa prima che un utente disabilitato sia eliminabile. |
+| `EFFORT_TRACKING_SESSION_SAMESITE` / `EFFORT_TRACKING_SESSION_SECURE` | `lax` / `false` | Sicurezza cookie di sessione (in produzione dietro TLS: `true`). |
+| `EFFORT_TRACKING_SESSION_MAX_AGE_SECONDS` | `1800` | Durata massima sessione in secondi (30 min). Se l'utente chiude il browser senza logout, alla scadenza serve rilogin. |
+| `EFFORT_TRACKING_MAX_BODY_BYTES` | `1048576` (1 MiB) | Limite massimo del body delle richieste. |
+
 Il file `.env` reale **non** va committato (è coperto da `.gitignore`).
+
+---
 
 ## Deploy in produzione (Ubuntu + systemd)
 
-Un template di unit file è fornito in [`systemd/efftrack.service`](./systemd/efftrack.service).
-**Non viene attivato automaticamente**: è solo un documento pronto all'uso.
+Ci sono due strade: **script automatizzato** (consigliata) o **passi manuali**.
 
-I passi consigliati sono descritti in testa al file stesso; in sintesi:
+### Opzione A — Script automatizzato `deploy.sh`
+
+Lo script `deploy.sh` (root del repo) automatizza: creazione utente/directory/venv, copia del
+codice, generazione di `/etc/efftrack.env` e installazione del servizio systemd.
+
+```bash
+sudo ./deploy.sh           # deploy completo (consigliato)
+# oppure in step separati:
+sudo ./deploy.sh --install # solo installazione (venv + dipendenze + copia)
+sudo ./deploy.sh --env     # solo generazione /etc/efftrack.env
+sudo ./deploy.sh --service # solo installazione/avvio del servizio systemd
+sudo ./deploy.sh --help    # aiuto
+```
+
+Lo script genera una `SECRET_KEY` robusta e crea `/etc/efftrack.env` con valori sicuri.
+**CAMBIA la password admin** (`EFFORT_TRACKING_ADMIN_PASSWORD`) prima di andare in produzione.
+
+### Opzione B — Passi manuali
+
+Il template dell'unità systemd è in [`systemd/efftrack.service`](./systemd/efftrack.service).
+Viene documentato in testa al file; in sintesi:
 
 ```bash
 sudo cp systemd/efftrack.service /etc/systemd/system/efftrack.service
 sudo useradd --system --home /opt/efftrack --shell /usr/sbin/nologin efftrack
 sudo mkdir -p /opt/efftrack
 sudo chown -R efftrack:efftrack /opt/efftrack
-sudo cp .env.example /etc/efftrack.env   # poi personalizza
+# copia il codice in /opt/efftrack (es. rsync), crea il venv e installa le dipendenze
+sudo cp .env.example /etc/efftrack.env   # poi personalizza (vedi config)
 sudo systemctl daemon-reload
 sudo systemctl enable --now efftrack.service
 sudo systemctl status efftrack.service
+sudo journalctl -u efftrack -f            # log
 ```
 
-⚠️ **Nota di binding**: il template `ExecStart` usa `--host 127.0.0.1` perché in
-produzione ci si attende un reverse proxy davanti (nginx/Caddy). Per test locali
-su Ubuntu puoi modificare temporaneamente a `0.0.0.0`.
+> **Nota**: il template usa `--host 127.0.0.1` perché in produzione si usa un **reverse proxy**
+> (nginx/Caddy) davanti a Uvicorn. I log escono su **journald**.
+
+---
+
+## Migrazione futura a PostgreSQL
+
+Il progetto è predisposto al passaggio da SQLite a PostgreSQL: è sufficiente modificare
+`EFFORT_TRACKING_DB_URL` (config) senza refactoring di repository/service. Il prefisso mostra
+l'esempio: `postgresql://efftrack:PASSWORD@localhost:5432/efftrack`.
+
+---
+
+## Test
+
+La suite di test usa `pytest` + `httpx` (dipendenze DEV in `requirements-dev.txt`).
+
+```bash
+source .venv/bin/activate
+pip install -r requirements-dev.txt
+python -m pytest tests/ -v
+```
+
+- **104 test**: `tests/test_models.py` (modelli, seed, validazione, segregazione) +
+  `tests/test_functional.py` (test end-to-end HTTP su route, auth, permessi, CRUD, export).
+- I test usano un database SQLite **dedicato e isolato** (non toccano `data/efftrack.db`).
+
+---
 
 ## Struttura del progetto
 
 ```
 efftrack/
 ├── app/                # codice applicativo (FastAPI)
-│   ├── main.py
-│   ├── config.py
-│   ├── db.py
-│   ├── routers/
-│   ├── services/
-│   ├── repositories/
-│   ├── schemas/
-│   ├── models/
-│   ├── core/
-│   ├── templates/
-│   └── static/
-├── systemd/            # template service (NON attivato)
+│   ├── main.py         # entry point, lifespan, middleware, errori
+│   ├── config.py       # configurazione centralizzata (env vars)
+│   ├── db.py           # engine, sessione, dependency
+│   ├── dependencies.py # dependency di autenticazione
+│   ├── core/           # body_limit, logging, migrazioni, permissions, seed, security_headers
+│   ├── routers/        # web, auth, admin, profile, api
+│   ├── schemas/        # modelli Pydantic (validazione)
+│   ├── models/         # modelli ORM (SQLAlchemy)
+│   ├── repositories/   # accesso dati dedicato
+│   ├── services/       # logica di servizio
+│   ├── templates/      # template Jinja2
+│   └── static/         # CSS e JS
+├── systemd/            # template unit systemd (NON attivato)
 ├── data/               # SQLite (gitignored)
-├── tests/
-├── memory-bank/        # documentazione persistente
+├── tests/              # pytest (unit + funzionali)
+├── memory-bank/        # documentazione persistente di progetto
+├── deploy.sh           # script di deploy opzionale
 ├── .env.example
 ├── .gitignore
 ├── requirements.txt
+├── requirements-dev.txt
 ├── README.md
-└── VERSION
+└── VERSION             # versione del progetto (SemVer)
 ```
+
+---
 
 ## Workflow del progetto
 
-Il progetto segue una roadmap in 12 fasi. **Ogni fase si considera completata solo
-dopo conferma esplicita dell'utente**: niente commit funzionale, niente bump di
-versione, niente tag finché non arriva il "ok". Lo stato è sempre riflesso in
+Il progetto segue una roadmap a fasi documentata in [`memory-bank/`](./memory-bank/). Ogni fase
+si considera completata solo dopo conferma esplicita dell'utente. Lo stato corrente è riflesso in
 [`memory-bank/activeContext.md`](./memory-bank/activeContext.md) e
 [`memory-bank/progress.md`](./memory-bank/progress.md).
+
+---
 
 ## Licenza
 

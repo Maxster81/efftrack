@@ -81,18 +81,27 @@ efftrack/
 - `PRAGMA foreign_keys=ON` su ogni connessione.
 - DB file in `data/efftrack.db`, fuori dal versionamento.
 
-### Modello dati (completo dalla Fase 4)
+### Modello dati (completo dalla Fase 4; auth in Fase 10; segregazione in Fase 11)
 - `clients(id, name UNIQUE)` — seed: INAIL, MDS. (Solo `name`: la colonna `code` è stata rimossa in Fase 4 su decisione utente.)
 - `groups(id, name UNIQUE)` — seed: GRUPPO SOC.
 - `activities(id, name UNIQUE, requires_description BOOL)` — seed: SOC-Conduzione (no), SOC-Supporto Specialistico (sì).
-- `effort_entries(id, user_id NULL senza FK, client_id FK, group_id FK, activity_id FK, work_date DATE, hours_spent NUMERIC(4,2) CHECK >0 AND <=24, notes TEXT NULL, description TEXT NULL, created_at, updated_at)`.
+- `effort_entries(id, user_id FK->users.id ON DELETE SET NULL, client_id FK, group_id FK, activity_id FK, work_date DATE, hours_spent NUMERIC(4,2) CHECK >0 AND <=24, notes TEXT NULL, description TEXT NULL, created_at, updated_at)`. Nota: la colonna `user_text` (Fase 5) è stata **rimossa** in Fase 11.
+- `users(id, username UNIQUE, password_hash, role)` — Fase 10 (role: admin/manager/user, usato da Fase 12).
 - `Mese` **mai** persistito, derivato da `work_date` via service helper.
-- **Seed**: `app/core/seed_lookup_tables(db)` idempotente, eseguito nel lifespan di `main.py` dopo `create_all`.
-- **Test**: `tests/test_models.py` (unittest + SQLite in-memory isolato).
+- **Seed**: `app/core/seed.py` — `seed_lookup_tables`, `seed_admin_user`, `seed_test_users`, `seed_test_records` (tutti idempotenti), eseguiti nel lifespan di `main.py` dopo la migrazione schema e `create_all`.
+- **Test**: `tests/test_models.py` (pytest + SQLite in-memory isolato).
 
 ### Migrazioni
-- Fase 0–8: `CREATE TABLE IF NOT EXISTS` + seed idempotente + (se serve) `ALTER TABLE` controllato a startup, documentato in `progress.md`. NB: la rimozione di una colonna (come `code` in Fase 4) non è gestita automaticamente — va rigenerato il DB.
+- `app/core/migrations.py` → `run_schema_migrations(engine)`: migrazioni controllate all'avvio, idempotenti. Fase 11: ricrea `effort_entries` (DROP + create_all) se la colonna legacy `user_text` è presente, eliminando i dati di sviluppo. Eseguita **prima** di `create_all` nel lifespan.
+- Fase 0–8: `CREATE TABLE IF NOT EXISTS` + seed idempotente + (se serve) `ALTER TABLE` controllato a startup, documentato in `progress.md`. NB: la rimozione di una colonna che non è gestita da `run_schema_migrations` (es. `code` in Fase 4) richiede di rigenerare il DB.
 - Se la complessità cresce: introduzione Alembic (proposta con analisi pro/contro, decisione documentata).
+
+### Segregazione dati e regola aziendale (Fase 11)
+- `_filter_by_user(stmt, user)` in `app/routers/web.py`: applica `WHERE user_id == current_user.id` per gli utenti normali; l'admin vede tutti i record (nessun filtro) usando `_is_admin`.
+- **Regola aziendale**: su update/delete, `entry.user_id != current_user.id` → blocco con redirect `/?error=validazione`, **per tutti** (admin/manager inclusi). Nessuno modifica o elimina record altrui.
+- `_build_csv` usa lo **username reale via JOIN su `users`** per la colonna Utente.
+- Campo User del form forzato lato server allo username della sessione (già da Fase 10); `user_id` valorizzato su ogni insert con l'utente corrente.
+- Bug noto risolto: campo hidden `month` con `selected_month or ''` per evitare il valore stringa `"None"` nel redirect (che svuotava l'elenco).
 
 ## Tema e CSS
 - Variabili CSS in `:root` + blocchi `[data-theme="light"]` e `[data-theme="dark"]` (palette blu navy + grigi neutri).
@@ -100,8 +109,32 @@ efftrack/
 - Script inline anti-FOUC nel `<head>` di `base.html` applica il tema salvato prima del rendering.
 - `app/static/theme.js` gestisce il toggle e aggiorna `data-theme="dark"` su `<html>`.
 
-## Sicurezza
+## Autenticazione (Fase 10)
+- Sessione HTTP firmata via `starlette.middleware.sessions.SessionMiddleware` con `SECRET_KEY` da config.
+- Route: `GET/POST /login`, `GET /logout` (router `app/routers/auth.py`).
+- Password hashate con `passlib[bcrypt]` (`bcrypt` pinnato `<4.1` per compatibilità passlib 1.7.4).
+- Dependency `get_current_user` in `app/dependencies.py` legge `request.session["user_id"]` e carica l'utente.
+- Route business (`/`, `/export`, POST) protette: se `AUTH_ENABLED` e niente sessione → redirect a `/login` (`_require_auth`).
+- Campo User del form forzato lato server allo username della sessione (readonly client).
+- `/health` resta pubblico.
+- Seed utente admin idempotente (primo utente master) con username/password da config (env var).
+
+## Autorizzazione e ruoli (Fase 12a)
+- `app/core/permissions.py` è la **fonte di verità** per ruoli e permessi: costanti ruoli, helper `is_admin`/`is_manager`/`is_staff`, dependency FastAPI `require_admin`/`require_manager` (401/403).
+- `app/routers/admin.py` (prefisso `/admin`) protegge le route di amministrazione; in 12a è uno scheletro senza endpoint.
+
+## Sicurezza (Fase 13b)
 - `SECRET_KEY` letto da env var, default di sviluppo con placeholder esplicito.
 - Validazione server-side obbligatoria su tutti gli input in persistenza.
-- Campi numerici limitati a range consentiti (es. `hours_spent` 1..24).
+- Campi numerici limitati a range consentiti: `hours` in `EffortEntryCreate` → `ge=1, le=12`, step 0.50 (validatore `hours_step_half` con tolleranza floating point e arrotondamento a 2 decimali). Nessun vincolo specifico per Supporto Specialistico (straordinari > 4h ammessi).
 - Dropdown validati lato server, mai fidarsi dei valori del browser.
+- Password mai in chiaro: solo hash bcrypt in `users.password_hash`.
+- La password admin in produzione va cambiata via env var (mai lasciare admin/admin).
+- **Header di sicurezza HTTP** (`app/core/security_headers.py`, Issue G): middleware `SecurityHeadersMiddleware` (Starlette `BaseHTTPMiddleware`) registrato in `main.py` che aggiunge a ogni risposta `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Content-Security-Policy` (default-src 'self'; style/script 'unsafe-inline' per il tema anti-FOUC; img data:; object 'none'; base-uri self; form-action self), `Strict-Transport-Security`, `Referrer-Policy: no-referrer`, `Permissions-Policy`. Non sovrascrive header già impostati.
+- **Pagine errore** (Issue A, Fase 13b): `exception_handlers` in `main.py` per `StarletteHTTPException` (404→`404.html`, 500→`500.html`, altri codici 401/403/405/...→`error.html` generico con `status_code`+`detail` nel context) e `RequestValidationError` (→`500.html`). engine `templates` (Jinja2Templates) dal `TEMPLATES_DIR`. `error.html` estende `base.html` coerente col tema. Helper `_error_context(request)` **sincrono** e **senza query DB** (solo username da sessione) per pagine di errore robuste anche in caso di problemi di connettività. Nota: i context di errore vanno costruiti con funzioni sincrone (no `async def`) per evitare coroutine passate a `TemplateResponse`.
+
+## Hardening (Fase 13d, Issue F)
+- **XSS da handler inline**: nessun dato utente in attributi `on*` (es. `onsubmit`). I valori che servono al JS passano via **data-attributes escapati** da Jinja2 (contesto HTML) e si leggono con `getAttribute`/`textContent`. Esempio: `admin_user_edit.html` id `user-delete-form` con `data-username`/`data-record-count` + script nel blocco `{% block scripts %}` che costruisce il messaggio di conferma.
+- **Sanificazione input**: i validatori Pydantic in `app/schemas/effort.py` rimuovono i caratteri di controllo (helper `_strip_control_chars`, regex `[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]`) da tutti i campi testo che finiscono in persistenza/rendering (user, notes, description, username, lookup name, nome/cognome, email). Nessun `|safe`/`Markup` usato (autoescape Jinja2 attivo).
+- **Cookie di sessione**: `SessionMiddleware` in `main.py` con `same_site` e `https_only` configurabili — `SESSION_COOKIE_SAMESITE` (default `lax`, anti-CSRF cross-site) e `SESSION_COOKIE_SECURE` (default `false`, da attivare in produzione dietro TLS) in `config.py`.
+- **Logging prudente**: non si loggano dettagli di validazione di password; il log di cambio password fallito riporta solo `user_id`.
