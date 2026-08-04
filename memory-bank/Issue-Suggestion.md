@@ -33,11 +33,6 @@
 > Voci di sviluppo futuro, non assegnate alle fasi correnti. Vengono riportate
 > qui quando si decide di non gestirle nella roadmap attiva.
 
-### S9 — Stile tabellare per la pagina ADMIN lookup
-**Contesto:** pagina ADMIN Gestione Lookup.
-
-**Descrizione:** refine grafico (non applicativo): la parte di allineamento del pulsante AGGIUNGI al campo NOME è già risolta in Fase 13c, ma restano da migliorare lo stile 'tabellare' della pagina (creare vari mockup). Riassegnata come Suggestion in quanto intervento esclusivamente grafico.
-
 ### S4 — Filtro per anno e mese separati
 **Contesto:** vista Registrazioni, filtro.
 

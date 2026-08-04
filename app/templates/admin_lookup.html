@@ -58,8 +58,96 @@
       </div>
     {% endmacro %}
 
-    {{ lookup_section("Clienti", "client", clients, used_client_ids) }}
-    {{ lookup_section("Gruppi", "group", groups, used_group_ids) }}
-    {{ lookup_section("Attività", "activity", activities, used_activity_ids) }}
+    {# Barra tab stile schedario #}
+    <nav class="lookup-tabs" role="tablist" aria-label="Sezioni lookup">
+      <button
+        class="lookup-tabs__btn is-active"
+        role="tab"
+        aria-selected="true"
+        aria-controls="tabpanel-client"
+        id="tab-client"
+        data-tab="client"
+      >Clienti</button>
+      <button
+        class="lookup-tabs__btn"
+        role="tab"
+        aria-selected="false"
+        aria-controls="tabpanel-group"
+        id="tab-group"
+        data-tab="group"
+        tabindex="-1"
+      >Gruppi</button>
+      <button
+        class="lookup-tabs__btn"
+        role="tab"
+        aria-selected="false"
+        aria-controls="tabpanel-activity"
+        id="tab-activity"
+        data-tab="activity"
+        tabindex="-1"
+      >Attività</button>
+    </nav>
+
+    {# Pannelli delle schede #}
+    <div class="lookup-tab-panels">
+      <div
+        class="lookup-tab-panel is-active"
+        role="tabpanel"
+        id="tabpanel-client"
+        aria-labelledby="tab-client"
+        data-tab="client"
+      >
+        {{ lookup_section("Clienti", "client", clients, used_client_ids) }}
+      </div>
+      <div
+        class="lookup-tab-panel"
+        role="tabpanel"
+        id="tabpanel-group"
+        aria-labelledby="tab-group"
+        data-tab="group"
+      >
+        {{ lookup_section("Gruppi", "group", groups, used_group_ids) }}
+      </div>
+      <div
+        class="lookup-tab-panel"
+        role="tabpanel"
+        id="tabpanel-activity"
+        aria-labelledby="tab-activity"
+        data-tab="activity"
+      >
+        {{ lookup_section("Attività", "activity", activities, used_activity_ids) }}
+      </div>
+    </div>
   </section>
+
+  <script>
+    (function () {
+      var tabs = document.querySelectorAll('.lookup-tabs__btn');
+      var panels = document.querySelectorAll('.lookup-tab-panel');
+
+      function activateTab(activeBtn) {
+        var tabName = activeBtn.getAttribute('data-tab');
+
+        /* Aggiorna bottoni tab */
+        tabs.forEach(function (btn) {
+          var isActive = btn === activeBtn;
+          btn.classList.toggle('is-active', isActive);
+          btn.setAttribute('aria-selected', String(isActive));
+          btn.setAttribute('tabindex', isActive ? '0' : '-1');
+        });
+
+        /* Aggiorna pannelli */
+        panels.forEach(function (panel) {
+          var isActive = panel.getAttribute('data-tab') === tabName;
+          panel.classList.toggle('is-active', isActive);
+        });
+      }
+
+      tabs.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          activateTab(btn);
+        });
+      });
+    })();
+  </script>
 {% endblock %}

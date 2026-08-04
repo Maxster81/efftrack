@@ -364,6 +364,16 @@ La Fase 13 (hardening) è stata scomposta in sottofasi. Fase 14 (produzione/docu
 - **Branch**: commit su `develop`, tag annotato `v0.19.0`. Niente `main`.
 - **Commit**: `feat(admin): phase 13a user disable and group assignment`.
 
+### S9 — Tab stile schedario per Gestione Lookup
+- **Stato**: ✅ completata il 2026-08-04.
+- **Obiettivo**: trasformare la pagina di Gestione Lookup da tre sezioni verticali a un'interfaccia a schede stile schedario con linguette colorate.
+- **Cosa è stato fatto**:
+  - **`app/templates/admin_lookup.html`**: introdotta barra `<nav class="lookup-tabs">` con 3 `<button>` (Clienti, Gruppi, Attività) con ruoli ARIA `tablist`/`tab`; pannelli `.lookup-tab-panel` con `role="tabpanel"` e `aria-labelledby`; JS vanilla inline per switch tab (click → attiva tab + pannello corrispondente). La macro `lookup_section` resta invariata.
+  - **`app/static/style.css`**: ~80 righe di stili per tab stile schedario: linguette con bordo arrotondato solo in alto, effetto "fogli sovrapposti" (ombre/z-index), tab attivo in primo piano con accento colorato differenziato (blu navy per Clienti, verde #2e7d32 per Gruppi, arancione #e67e22 per Attività), pannelli con card e bordo che si fonde visivamente al tab attivo. Responsive su viewport stretti.
+  - **`VERSION`**: `0.22.3` → `0.22.4` (PATCH: miglioramento UI senza nuove funzionalità).
+- **Verifiche**: il tema dark/light funziona senza modifiche (tutti i nuovi stili usano variabili CSS esistenti); nessuna modifica al backend o alla logica applicativa.
+- **Issue-Suggestion.md**: S9 rimossa dalle Future Features (risolta).
+
 ### Fase 13b — Sicurezza e robustezza (header HTTP, errori 404/500, ore 1-12)
 - **Stato**: ✅ completata il 2026-08-03.
 - **Obiettivo**: innalzare la sicurezza del servizio e migliorare la robustezza di fronte agli errori. Chiusura di Issue G (header di sicurezza HTTP), Issue A (pagine errore 404/500), Issue D + Suggestion 2 (validazione ore 1-12 step 0.50).

@@ -1,10 +1,10 @@
 # Active Context — Effort Tracking
 
 ## Stato corrente
-- **Ultimo task completato**: fix pagine errore ✅ (2026-08-04) — rimosso pulsante "Vai alla dashboard" (admin-only) dalle pagine 404/500/error: ora tutte le pagine di errore mostrano solo "Torna alla home", uguale per ogni ruolo.
+- **Ultimo task completato**: S9 — Tab stile schedario per Gestione Lookup ✅ (2026-08-04) — la pagina `/admin/lookup` ora mostra le tre sezioni (Clienti, Gruppi, Attività) come schede cliccabili con linguette colorate stile schedario, invece che una sotto l'altra. JS vanilla per switch tab, CSS con effetto "fogli sovrapposti" e accenti colorati differenziati (blu, verde, arancione). Funzionalità invariata.
 - **Fase in corso**: nessuna. Prossima: Fase 13d (hardening e sicurezza).
 - **Stato**: idle, pronto per nuovo task.
-- **Versione corrente**: `0.22.3`.
+- **Versione corrente**: `0.22.4`.
 - **Scomposizione Fase 12**: completata integralmente (12a-12d). Hardening = Fase 13, ora riorganizzata.
 - **Scomposizione Fase 13 (riorganizzata 2026-08-03, aggiornata 2026-08-03)**: 13a (funzionalità admin ✅), 13b (sicurezza headers/errori/ore ✅), 13c (fix stilistici e UX ✅), 13d (hardening sicurezza — da fare), 14 (produzione/documentazione — SEMPRE ultima, da fare). S4 spostata in "Future Features".
 - **DB di sviluppo**: rigenerato con dataset multi-gruppo (Fase 12c). 2 gruppi (SOC, NOC), 6 utenti di test con ~20 record ciascuno, password `test`. Admin resta utente di sola gestione (group_id NULL).
