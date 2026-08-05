@@ -4,7 +4,7 @@ Web server per la registrazione di **effort** (ore lavorate, attività giornalie
 gestionale CRUD. Sostituto moderno del vecchio tool aziendale, installabile su **Ubuntu** con
 **Python `venv`** (no Docker).
 
-> **Stato**: **v1.1.0** — versione stabile pronta per produzione.
+> **Stato**: **v1.1.1** — versione stabile pronta per produzione.
 > Autenticazione attiva, multiutente con ruoli (USER/MANAGER/ADMIN), hardening di sicurezza,
 > cambio password obbligatorio al primo login, suite di test completa (107 test verdi). La documentazione di stato dettagliata è in
 > [`memory-bank/`](./memory-bank/).
