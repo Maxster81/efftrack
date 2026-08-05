@@ -1,9 +1,9 @@
 # Active Context — Effort Tracking
 
 ## Stato corrente
-- **Fase in corso**: nessuna. **Progetto completo alla v1.1.0** (versione stabile pronta per produzione).
+- **Fase in corso**: nessuna. **Progetto completo alla v1.1.1** (versione stabile pronta per produzione).
 - **Stato**: idle, pronto per eventuali evoluzioni future.
-- **Versione corrente**: `1.1.0` (bump MINOR — cambio password obbligatorio al primo login, S11).
+- **Versione corrente**: `1.1.1` (bump PATCH — firma robusta listener SQLAlchemy `connect`, verifica Context7).
 - **Fasi complete**: 0–13d e 14 tutte completate. Vedi `activeContext.md` per la cronologia compatta versione/commit.
 - **Issue chiuse in Fase 14**: I (systemd già corretto), J (health pubblico), K (timeout — nessuna azione), L (middleware body limit), M (deploy.sh), H (test funzionali pytest+HTTPX), N (sessione senza scadenza — fix max_age 30 min). **S11** (cambio password obbligatorio al primo login) chiusa alla v1.1.0.
 - **DB di sviluppo**: dataset multi-gruppo (2 gruppi SOC/NOC, 6 utenti di test, ~20 record ciascuno, password `test`). Admin utente di sola gestione (group_id NULL).
@@ -60,6 +60,17 @@
 
 ## Fasi successive
 - **Progetto completo**: tutte le fasi (0–13d, 14) concluse. S11 risolta alla v1.1.0. Eventuali evoluzioni future (vedi `Issue-Suggestion.md`: S10, S4, S6) restano backlog opzionale, non assegnate a fasi correnti.
+
+## v1.1.1 — Firma robusta listener SQLAlchemy (2026-08-05)
+- **Audit Context7** (2026-08-05): l'utente ha chiesto una verifica rapida se Context7 (nuovo MCP) può aiutare a migliorare/modificare qualcosa. Analisi incrociata dello stack (FastAPI, SQLAlchemy, Pydantic, Starlette, Jinja2) con la documentazione aggiornata.
+- **Pattern già conformi** (nessuna azione): FastAPI `lifespan` (`@asynccontextmanager`), SQLAlchemy `expire_on_commit=False`, Pydantic v2 `@field_validator`, middleware sessione configurato, sanificazione input.
+- **Cambio applicato**: `_set_sqlite_pragmas` in `app/db.py` — firma robusta `(dbapi_connection, *_args)`.
+  - Il parametro `connection_record` dell'evento `connect` è deprecato in SQLAlchemy 2.0 e potrebbe essere rimosso in 3.x.
+  - La firma a 2 argomenti (1.1.0 e precedenti) è **obbligatoria** con SQLAlchemy 2.0.51 (senza il 2° parametro i test lanciano `TypeError`).
+  - La firma a 1 argomento (solo `dbapi_connection`) **rompe** i test con 2.0.51 (verificato).
+  - Soluzione adottata: `(dbapi_connection, *_args)` — accetta sia 2 che 1 argomento, compatibile con 2.0.x e future 3.x.
+- **Bump**: VERSION e `config.py` → `1.1.1` (PATCH). **107 test verdi.**
+- **Nota nuova (info)**: emesso `StarletteDeprecationWarning` nei test: `Using httpx with starlette.testclient is deprecated; install httpx2 instead`. Non è bloccante; da valutare in futuro se Starlette imporrà `httpx2`. Vedi `techContext.md`.
 
 ## Fase 14 — Attività chiuse (2026-08-04)
 - **Issue I**: service systemd già corretto (EnvironmentFile=/etc/efftrack.env, nessuna variabile hardcodata). Verificato.

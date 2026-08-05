@@ -27,8 +27,14 @@ engine: Engine = create_engine(
 
 
 @event.listens_for(engine, "connect")
-def _set_sqlite_pragmas(dbapi_connection: object, connection_record: object) -> None:
-    """Abilita WAL e foreign keys su ogni nuova connessione SQLite."""
+def _set_sqlite_pragmas(dbapi_connection: object, *_args: object) -> None:
+    """Abilita WAL e foreign keys su ogni nuova connessione SQLite.
+
+    `connection_record` non serve al listener: si usa solo `dbapi_connection`.
+    Dal 2.0 è deprecato passarlo; `*_args` mantiene la compatibilità sia
+    con le versioni che passano 2 argomenti (2.0.x) sia con future versioni
+    che ne passino uno solo.
+    """
     # L'import è qui per non forzare l'import di sqlite3 se il DB è Postgres.
     import sqlite3
 

@@ -1,9 +1,9 @@
 # Progress — Effort Tracking
 
 ## Stato globale
-- **Fase in corso**: nessuna. **Progetto completo alla v1.1.0** (versione stabile pronta per produzione).
+- **Fase in corso**: nessuna. **Progetto completo alla v1.1.1** (versione stabile pronta per produzione).
 - **Stato**: idle, pronto per eventuali evoluzioni future.
-- **Versione corrente**: `1.1.0` (bump MINOR — cambio password obbligatorio al primo login, S11).
+- **Versione corrente**: `1.1.1` (bump PATCH — firma robusta listener SQLAlchemy `connect`, verifica Context7).
 - **Fasi complete**: 0–13d e 14 tutte completate. Vedi `activeContext.md` per la cronologia compatta versione/commit.
 - **Fase 14 chiusa** (2026-08-04): produzione e documentazione conclusa. Vedi sotto e Issue-Suggestion.md.
 
@@ -59,8 +59,18 @@ Jinja2 autoescape attivo (nessun `|safe`); `hours` 1-12 step 0.50; header sicure
   - Documentazione: `.env.example`, `README.md`, `deploy.sh` (commento password temporanea), `.clinerules/09-post-change.md` (checklist Deploy).
   - **107 test totali verdi** (3 nuovi test in `tests/test_functional.py`). **S11 chiusa.**
 
+## v1.1.1 — Firma robusta listener SQLAlchemy (2026-08-05)
+- **Audit Context7**: verifica dello stack con documentazione aggiornata. Nessun altro pattern richiesto (lifespan, SQLAlchemy session, Pydantic v2 già conformi).
+- **Modifica**: `_set_sqlite_pragmas` in `app/db.py` firma `(dbapi_connection, *_args)`.
+  - `connection_record` deprecato in SQLAlchemy 2.0 (possibile rimozione in 3.x).
+  - Firma a 2 argomenti richiesta da 2.0.51 (1 argomento rompe i test con `TypeError`).
+  - `*_args` compatibile sia con 2 argomenti (2.0.x) sia con 1 (future 3.x).
+- **Bump** VERSION + `config.py` → `1.1.1` (PATCH). **107 test verdi.**
+
 ## Cose note / limitazioni accettate
 - Auth attiva (route business protette, `/health` pubblico).
+- **StarletteDeprecationWarning (2026-08-05)**: `Using httpx with starlette.testclient is deprecated; install httpx2 instead`. TestClient Starlette depreca il backend `httpx`. `httpx` usato solo come dipendenza dev per TestClient. Non bloccante oggi; da rivalutare se Starlette imporrà `httpx2`.
+- **SQLAlchemy evento `connect`**: firma `(dbapi_connection, *_args)` in `app/db.py` per compatibilità con versioni che passano 1 o 2 argomenti.
 - `bcrypt` pinnato `<4.1` per compatibilità passlib 1.7.4.
 - Toggle dark/light (Fase 9b), preferenza localStorage.
 - `pydantic-core` pinnato 2.46.4 per compatibilità pydantic 2.13.4.
