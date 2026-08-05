@@ -6,19 +6,133 @@
   <section class="form-card" aria-labelledby="admin-title">
     <div class="admin-hero">
       <h2 id="admin-title" class="card-title">Pannello di Amministrazione</h2>
-      <p>Benvenuto, <strong>{{ current_username }}</strong>. Da qui puoi gestire utenti e lookup.</p>
-      <p>Ciao a tutti, questa è la dashboard amministrativa.</p>
+      <p>Benvenuto, <strong>{{ current_username }}</strong>. Riepilogo della piattaforma.</p>
     </div>
   </section>
 
-  <section class="records-card" aria-labelledby="admin-links-title">
-    <div class="records-card__header">
-      <h2 id="admin-links-title" class="card-title">Vai a</h2>
+  <section class="dashboard-kpi" aria-label="Indicatori chiave">
+    <article class="kpi-card">
+      <span class="kpi-card__label">Utenti totali</span>
+      <span class="kpi-card__value">{{ kpi.total_users }}</span>
+    </article>
+    <article class="kpi-card">
+      <span class="kpi-card__label">Utenti attivi</span>
+      <span class="kpi-card__value">{{ kpi.active_users }}</span>
+    </article>
+    <article class="kpi-card">
+      <span class="kpi-card__label">Utenti disabilitati</span>
+      <span class="kpi-card__value">{{ kpi.disabled_users }}</span>
+    </article>
+    <article class="kpi-card">
+      <span class="kpi-card__label">Record totali</span>
+      <span class="kpi-card__value">{{ kpi.total_records }}</span>
+    </article>
+    <article class="kpi-card">
+      <span class="kpi-card__label">Ore {{ month_label }}</span>
+      <span class="kpi-card__value">{{ "%.1f"|format(kpi.hours_month) }}</span>
+    </article>
+    <article class="kpi-card">
+      <span class="kpi-card__label">Record oggi</span>
+      <span class="kpi-card__value">{{ kpi.records_today }}</span>
+    </article>
+  </section>
+
+  <section class="dashboard-grid" aria-label="Analisi per gruppo e attività utente">
+    <div class="records-card">
+      <div class="records-card__header">
+        <h2 class="card-title">Distribuzione per gruppo ({{ month_label }})</h2>
+      </div>
+      {% if group_stats %}
+      <table class="dashboard-table">
+        <thead>
+          <tr>
+            <th scope="col">Gruppo</th>
+            <th scope="col">Utenti attivi</th>
+            <th scope="col">Ore del mese</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for g in group_stats %}
+          <tr>
+            <td>{{ g.name }}</td>
+            <td>{{ g.users }}</td>
+            <td>{{ "%.1f"|format(g.hours) }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="dashboard-empty">Nessun gruppo presente.</p>
+      {% endif %}
     </div>
-    <ul class="admin-links">
-      <li><a class="filter-bar__export" href="/admin/records" role="button">Registrazioni (tutti i record)</a></li>
-      <li><a class="filter-bar__export" href="/admin/users" role="button">Gestione Utenti</a></li>
-      <li><a class="filter-bar__export" href="/admin/lookup" role="button">Gestione Lookup</a></li>
-    </ul>
+
+    <div class="records-card">
+      <div class="records-card__header">
+        <h2 class="card-title">Utenti senza attività (7+ giorni)</h2>
+      </div>
+      {% if inactive_users %}
+      <ul class="dashboard-inactive">
+        {% for username, days in inactive_users %}
+        <li>
+          <span class="dashboard-inactive__name">{{ username }}</span>
+          <span class="dashboard-inactive__days">
+            {% if days is none %}nessun record{% else %}ultimo {{ days }} gg fa{% endif %}
+          </span>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <p class="dashboard-empty">Tutti gli utenti attivi hanno registrato attività di recente.</p>
+      {% endif %}
+    </div>
+  </section>
+
+  <section class="records-card" aria-labelledby="recent-title">
+    <div class="records-card__header">
+      <h2 id="recent-title" class="card-title">Attività recente (ultimi {{ recent_records|length }} record)</h2>
+    </div>
+    {% if recent_records %}
+    <div class="table-scroll">
+      <table class="records-table">
+        <thead>
+          <tr>
+            <th scope="col">Data</th>
+            <th scope="col">Utente</th>
+            <th scope="col">Cliente</th>
+            <th scope="col">Gruppo</th>
+            <th scope="col">Attività</th>
+            <th scope="col">Ore</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in recent_records %}
+          <tr{% if r.hours_spent >= 12 %} class="is-high-hours"{% endif %}>
+            <td>{{ r.work_date.strftime("%d/%m/%Y") }}</td>
+            <td>{{ r.user.username if r.user else "—" }}</td>
+            <td>{{ r.client.name }}</td>
+            <td>{{ r.group.name }}</td>
+            <td>{{ r.activity.name }}</td>
+            <td>{{ "%.2f"|format(r.hours_spent) }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p class="dashboard-empty">Nessun record registrato.</p>
+    {% endif %}
+  </section>
+
+  <section class="system-status" aria-label="Stato del sistema">
+    <span>Versione <strong>{{ app_version }}</strong></span>
+    <span>Database <strong>{{ db_size }}</strong></span>
+    <span>
+      Ultimo record:
+      {% if last_record %}
+        <strong>{{ last_record.work_date.strftime("%d/%m/%Y") }}</strong>
+      {% else %}
+        <strong>nessuno</strong>
+      {% endif %}
+    </span>
   </section>
 {% endblock %}

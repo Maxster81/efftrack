@@ -443,6 +443,28 @@ a:hover { text-decoration: underline; }
   min-height: 72px;
 }
 
+/* ---------- "Giorno non lavorato" (S6) ----------
+   La riga ha la stessa struttura delle altre colonne del form: label sopra
+   e campo sotto. La scritta è la label; il checkbox sta nel wrapper
+   `.holiday-field`, che ha l'altezza di un input per allineare il controllo
+   in verticale coi campi accanto. */
+.form-group--holiday {
+  display: flex;
+  flex-direction: column;
+}
+.holiday-field {
+  display: flex;
+  align-items: center;
+  flex: 1 1 auto;
+  min-height: 38px; /* altezza di un campo input standard */
+}
+.holiday-field input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--color-primary);
+  cursor: pointer;
+}
+
 /* ---------- Azioni form ---------- */
 .form-actions {
   grid-column: 1 / -1;
@@ -611,6 +633,13 @@ a:hover { text-decoration: underline; }
   background: var(--color-surface-alt);
 }
 .records-table tbody tr:hover {
+  background: var(--color-accent);
+}
+/* Riga "giorno non lavorato": sfondo tenue per distinguerla subito. */
+.records-table tbody tr.is-holiday {
+  background: var(--color-surface-alt);
+}
+.records-table tbody tr.is-holiday:hover {
   background: var(--color-accent);
 }
 .records-table tbody tr.is-selected {
@@ -1099,5 +1128,133 @@ a:hover { text-decoration: underline; }
   .form-row--two {
     grid-template-columns: 1fr 1fr;
   }
+}
+
+/* ---------- Dashboard Admin ---------- */
+
+/* Griglia KPI: card affiancate, responsive. */
+.dashboard-kpi {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--space-md);
+  margin-bottom: var(--space-lg);
+}
+
+.kpi-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  padding: var(--space-md) var(--space-lg);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  border-left: 4px solid var(--color-primary);
+}
+
+.kpi-card__label {
+  font-size: 0.82rem;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.kpi-card__value {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--color-text);
+  line-height: 1.1;
+}
+
+/* Griglia a due colonne per le sezioni intermedie. */
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-lg);
+  margin-bottom: var(--space-lg);
+}
+@media (min-width: 900px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* Tabella compatta "distribuzione per gruppo". */
+.dashboard-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+.dashboard-table thead th {
+  background: var(--color-primary);
+  color: var(--color-text-on-primary);
+  padding: var(--space-sm) var(--space-md);
+  text-align: left;
+  font-weight: 600;
+}
+.dashboard-table tbody td {
+  padding: var(--space-sm) var(--space-md);
+  border-bottom: 1px solid var(--color-border);
+}
+.dashboard-table tbody tr:nth-child(even) {
+  background: var(--color-surface-alt);
+}
+
+/* Lista "utenti senza attività". */
+.dashboard-inactive {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+.dashboard-inactive li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-sm) var(--space-md);
+  background: var(--color-surface-alt);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+.dashboard-inactive__name {
+  font-weight: 600;
+  color: var(--color-text);
+}
+.dashboard-inactive__days {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+/* Messaggio vuoto nelle sezioni senza dati. */
+.dashboard-empty {
+  padding: var(--space-md);
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+
+/* Evidenzia nella tabella "attività recente" le ore elevate. */
+.records-table tbody tr.is-high-hours td {
+  background: rgba(212, 172, 13, 0.12);
+}
+
+/* Barra di stato del sistema in fondo. */
+.system-status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-md) var(--space-xl);
+  margin-top: var(--space-lg);
+  padding: var(--space-md) var(--space-lg);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+.system-status strong {
+  color: var(--color-text);
+  font-weight: 600;
 }
 

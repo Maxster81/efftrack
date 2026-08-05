@@ -75,7 +75,7 @@
           <label for="effort-client">Cliente</label>
           <select id="effort-client" name="client_id">
             <option value="">-- Seleziona --</option>
-            {% for c in clients %}
+            {% for c in clients if c.name != "NON LAVORATO" %}
               <option value="{{ c.id }}">{{ c.name }}</option>
             {% endfor %}
           </select>
@@ -87,7 +87,7 @@
           <label for="effort-activity">Attività</label>
           <select id="effort-activity" name="activity_id">
             <option value="">-- Seleziona --</option>
-            {% for a in activities %}
+            {% for a in activities if a.name != "NON LAVORATO" %}
               <option value="{{ a.id }}"
                       data-requires-description="{{ a.requires_description|lower }}">{{ a.name }}</option>
             {% endfor %}
@@ -98,6 +98,19 @@
           <label for="effort-hours">Ore Spese</label>
           <input type="number" id="effort-hours" name="hours"
                  min="1" max="12" step="0.50" placeholder="es. 7,50" />
+        </div>
+      </div>
+
+      {# Riga checkbox "Giorno non lavorato" (S6): quando attivo disabilita
+         i campi cliente, attività, ore, note e descrizione. Il flag
+         `is_holiday` viene inviato nella POST e la route forza i valori
+         sentinella (cliente/attività "NON LAVORATO", ore 8). #}
+      <div class="form-row">
+        <div class="form-group form-group--holiday">
+          <label for="effort-holiday">Giorno non lavorato</label>
+          <div class="holiday-field">
+            <input type="checkbox" id="effort-holiday" name="is_holiday" value="true" />
+          </div>
         </div>
       </div>
 
@@ -165,7 +178,7 @@
         <tbody>
           {% if records %}
             {% for record in records %}
-              <tr class="records-table__row{% if highlight_id is defined and record.id == highlight_id %} is-highlighted{% endif %}"
+              <tr class="records-table__row{% if record.client.name == 'NON LAVORATO' %} is-holiday{% endif %}{% if highlight_id is defined and record.id == highlight_id %} is-highlighted{% endif %}"
                   role="button" tabindex="0"
                   data-record-id="{{ record.id }}"
                   data-user="{{ record.user.username if record.user else '' }}"

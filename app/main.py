@@ -44,6 +44,7 @@ from app.core.security_headers import SecurityHeadersMiddleware
 from app.core.seed import (
     seed_admin_user,
     seed_lookup_tables,
+    seed_sentinel_lookup,
     seed_test_records,
     seed_test_users,
 )
@@ -87,8 +88,11 @@ async def lifespan(app: FastAPI):
     logger.info("Schema database verificato (create_all idempotente)")
 
     # Popola lookup, utente admin e (in sviluppo) utenti/record di test.
+    # `seed_sentinel_lookup` garantisce i lookup "NON LAVORATO" (S6) anche
+    # su DB già popolati, prima di generare i record di test.
     with SessionLocal() as db:
         seed_lookup_tables(db)
+        seed_sentinel_lookup(db)
         seed_admin_user(db)
         seed_test_users(db)
         seed_test_records(db)

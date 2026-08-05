@@ -30,19 +30,25 @@ class EffortEntryCreate(BaseModel):
 
     I nomi dei campi corrispondono ai `name` dei controlli del form HTML.
     `user` è il nome utente della sessione.
-    Le foreign key devono essere id numerici esistenti.
+
+    Per i **giorni non lavorati** (S6), `is_holiday=True`: i campi
+    `client_id`, `activity_id` e `hours` diventano opzionali, perché la
+    route li forza ai lookup sentinella "NON LAVORATO" (cliente/attività)
+    e a 8 ore. Il gruppo resta sempre quello reale dell'utente di sessione.
     """
 
     user: str = Field(min_length=1, max_length=64)
     date: date
-    client_id: int = Field(gt=0)
-    group_id: int = Field(gt=0)
-    activity_id: int = Field(gt=0)
-    # Range 1-12, step 0.50.
+    client_id: int | None = Field(default=None, gt=0)
+    group_id: int | None = Field(default=None, gt=0)
+    activity_id: int | None = Field(default=None, gt=0)
+    # Range 1-12, step 0.50 (obbligatorio solo per i giorni lavorativi).
     # Nessun vincolo speciale per Supporto Specialistico (possono esserci straordinari > 4).
-    hours: float = Field(ge=1, le=12)
+    hours: float | None = Field(default=None, ge=1, le=12)
     notes: str | None = Field(default=None, max_length=2000)
     description: str | None = Field(default=None, max_length=2000)
+    # Flag per i giorni non lavorati: la route forza i valori sentinella.
+    is_holiday: bool = False
 
     @field_validator("user")
     @classmethod
@@ -55,12 +61,15 @@ class EffortEntryCreate(BaseModel):
 
     @field_validator("hours")
     @classmethod
-    def hours_step_half(cls, value: float) -> float:
+    def hours_step_half(cls, value: float | None) -> float | None:
         """Le ore devono essere multiple di 0.50 (tolleranza floating point).
 
         Il range (1-12) è già garantito dal Field; qui si verifica solo il passo.
         Elimina anche i valori non multipli di 0.50 (es. 7.25).
+        Per i giorni non lavorati `hours` può essere None (la route forza 8).
         """
+        if value is None:
+            return None
         if abs(value * 2 - round(value * 2)) > 1e-6:
             raise ValueError("Le ore devono essere multiple di 0.50.")
         # Arrotonda per evitare errori floating point (es. 7.4999999 -> 7.5).

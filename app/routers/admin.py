@@ -17,7 +17,8 @@ from __future__ import annotations
 import csv
 import io
 import logging
-from datetime import datetime
+import os
+from datetime import date, datetime, timedelta
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Form, Request
@@ -26,7 +27,14 @@ from pydantic import ValidationError
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
-from app.config import APP_NAME, APP_VERSION, AUTH_ENABLED, TEMPLATES_DIR, USER_DELETE_GRACE_DAYS
+from app.config import (
+    APP_NAME,
+    APP_VERSION,
+    AUTH_ENABLED,
+    DATABASE_URL,
+    TEMPLATES_DIR,
+    USER_DELETE_GRACE_DAYS,
+)
 from app.core.permissions import require_admin
 from app.db import get_db
 from app.models import Activity, Client, EffortEntry, Group, User
@@ -72,17 +80,144 @@ def _base_context(request: Request, current_username: str, active: str = "") -> 
     }
 
 
+def _db_size_mb() -> str:
+    """Dimensione del file SQLite in MB (fallback a '—' se non è un file)."""
+    if not DATABASE_URL.startswith("sqlite:///"):
+        return "—"
+    db_path = DATABASE_URL.replace("sqlite:///", "", 1)
+    try:
+        size = os.path.getsize(db_path)
+        return f"{size / (1024 * 1024):.1f} MB"
+    except OSError:
+        return "—"
+
+
+def _month_bounds() -> tuple[date, date]:
+    """Estremi (primo e ultimo giorno) del mese corrente."""
+    today = date.today()
+    start = today.replace(day=1)
+    next_month = (start.replace(day=28) + timedelta(days=4)).replace(day=1)
+    return start, next_month - timedelta(days=1)
+
+
+def _inactive_users(db: Session, days: int = 7) -> list[tuple[str, int | None]]:
+    """Utenti non disabilitati che non registrano effort da almeno `days` giorni.
+
+    Restituisce coppie (username, giorni_dall_ultimo_record) ordinate per
+    inattività decrescente. Gli utenti senza alcun record sono considerati
+    inattivi con giorni = None.
+    """
+    cutoff = date.today() - timedelta(days=days)
+    users = db.execute(select(User)).scalars().all()
+    last_date_expr = (
+        select(func.max(EffortEntry.work_date))
+        .where(EffortEntry.user_id == User.id)
+        .scalar_subquery()
+    )
+    rows = []
+    for u in users:
+        if u.disabled:
+            continue
+        last = db.execute(
+            select(last_date_expr).where(User.id == u.id)
+        ).scalar()
+        if last is None:
+            rows.append((u.username, None))
+        elif last < cutoff:
+            rows.append((u.username, (date.today() - last).days))
+    rows.sort(key=lambda item: (item[1] is None, item[1] if item[1] is not None else 10**9), reverse=True)
+    return rows
+
+
 @router.get("", response_class=HTMLResponse, name="admin_dashboard")
 async def admin_dashboard(
     request: Request,
     db: Session = Depends(get_db),
     admin: User = Depends(require_admin),
 ) -> HTMLResponse:
-    """Dashboard admin (per ora benvenuto; statistiche future)."""
+    """Dashboard admin con KPI e metriche di sistema."""
+    today = date.today()
+    m_start, m_end = _month_bounds()
+
+    # --- KPI base -----------------------------------------------------------
+    total_users = db.execute(select(func.count()).select_from(User)).scalar() or 0
+    active_users = db.execute(
+        select(func.count()).select_from(User).where(User.disabled.is_(False))
+    ).scalar() or 0
+    disabled_users = total_users - active_users
+    total_records = db.execute(
+        select(func.count()).select_from(EffortEntry)
+    ).scalar() or 0
+
+    hours_month = db.execute(
+        select(func.coalesce(func.sum(EffortEntry.hours_spent), 0)).where(
+            EffortEntry.work_date >= m_start,
+            EffortEntry.work_date <= m_end,
+        )
+    ).scalar() or 0
+    records_today = db.execute(
+        select(func.count()).select_from(EffortEntry).where(
+            EffortEntry.work_date == today
+        )
+    ).scalar() or 0
+
+    # --- Distribuzione per gruppo (utenti + ore del mese) ------------------
+    group_rows = []
+    for g in db.execute(select(Group).order_by(Group.name)).scalars().all():
+        user_count = db.execute(
+            select(func.count()).select_from(User).where(
+                User.group_id == g.id,
+                User.disabled.is_(False),
+            )
+        ).scalar() or 0
+        hours = db.execute(
+            select(func.coalesce(func.sum(EffortEntry.hours_spent), 0)).where(
+                EffortEntry.group_id == g.id,
+                EffortEntry.work_date >= m_start,
+                EffortEntry.work_date <= m_end,
+            )
+        ).scalar() or 0
+        group_rows.append({"name": g.name, "users": user_count, "hours": float(hours)})
+
+    # --- Ultima attività ------------------------------------------------------
+    recent_records = (
+        db.execute(
+            select(EffortEntry)
+            .options(
+                selectinload(EffortEntry.client),
+                selectinload(EffortEntry.group),
+                selectinload(EffortEntry.activity),
+                selectinload(EffortEntry.user),
+            )
+            .order_by(EffortEntry.work_date.desc(), EffortEntry.created_at.desc())
+            .limit(20)
+        )
+        .scalars()
+        .all()
+    )
+    last_record = recent_records[0] if recent_records else None
+
+    ctx = _base_context(request, admin.username, "dashboard")
+    ctx.update({
+        "kpi": {
+            "total_users": total_users,
+            "active_users": active_users,
+            "disabled_users": disabled_users,
+            "total_records": total_records,
+            "hours_month": hours_month,
+            "records_today": records_today,
+        },
+        "group_stats": group_rows,
+        "inactive_users": _inactive_users(db, days=7),
+        "recent_records": recent_records,
+        "last_record": last_record,
+        "month_label": f"{_MESI_ITALIANI[today.month]} {today.year}",
+        "db_size": _db_size_mb(),
+    })
     return templates.TemplateResponse(
         request=request,
         name="admin_dashboard.html",
-        context=_base_context(request, admin.username, "dashboard"),
+        context=ctx,
     )
 
 

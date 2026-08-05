@@ -71,6 +71,35 @@ _TEST_USERS: list[dict[str, str | None]] = [
 _TEST_RECORDS_PER_USER: int = 20
 
 
+# Nome dei lookup sentinella usati per i giorni non lavorati (S6).
+SENTINEL_NAME: str = "NON LAVORATO"
+
+
+def seed_sentinel_lookup(db: Session) -> None:
+    """Garantisce la presenza dei lookup sentinella "NON LAVORATO".
+
+    Idempotente per nome: crea Cliente e Attività sentinella se assenti,
+    così funziona anche su DB già popolati (dove `seed_lookup_tables` non
+    interviene perché le tabelle non sono vuote). Il Gruppo non è incluso:
+    i giorni non lavorati usano sempre il gruppo reale dell'utente.
+    """
+    created: list[str] = []
+
+    if db.execute(select(Client).where(Client.name == SENTINEL_NAME)).scalar_one_or_none() is None:
+        db.add(Client(name=SENTINEL_NAME))
+        created.append("client")
+
+    if db.execute(select(Activity).where(Activity.name == SENTINEL_NAME)).scalar_one_or_none() is None:
+        db.add(Activity(name=SENTINEL_NAME, requires_description=False))
+        created.append("activity")
+
+    if created:
+        db.commit()
+        logger.info("Seed sentinella NON LAVORATO creati: %s", ", ".join(created))
+    else:
+        logger.debug("Lookup sentinella già presenti, seed non necessario")
+
+
 def seed_lookup_tables(db: Session) -> None:
     """Inserisce i dati di default se le tabelle lookup sono vuote."""
     seeded_clients = _is_empty(db, Client)
@@ -221,9 +250,15 @@ def seed_test_records(db: Session) -> None:
         logger.debug("Record di test già presenti, seed non necessario")
         return
 
-    clients = db.execute(select(Client).order_by(Client.name)).scalars().all()
+    # Esclude i lookup sentinella "NON LAVORATO" (S6) dai dati di test
+    # random: i giorni non lavorati non devono nascere dal seed casuale.
+    clients = db.execute(
+        select(Client).where(Client.name != SENTINEL_NAME).order_by(Client.name)
+    ).scalars().all()
     groups = {g.name: g.id for g in db.execute(select(Group)).scalars().all()}
-    activities = db.execute(select(Activity).order_by(Activity.name)).scalars().all()
+    activities = db.execute(
+        select(Activity).where(Activity.name != SENTINEL_NAME).order_by(Activity.name)
+    ).scalars().all()
     if not clients or not groups or not activities:
         logger.debug("Lookup mancanti: seed record di test non possibile")
         return

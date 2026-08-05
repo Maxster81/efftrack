@@ -27,6 +27,7 @@ from fastapi.templating import Jinja2Templates
 
 from app.config import APP_NAME, APP_VERSION, AUTH_ENABLED, TEMPLATES_DIR
 from app.core.permissions import is_admin, is_manager
+from app.core.seed import SENTINEL_NAME
 from app.db import get_db
 from app.dependencies import get_current_user
 from app.models import Activity, Client, EffortEntry, Group, User
@@ -222,6 +223,7 @@ async def save_entry(
     action: Annotated[str, Form()] = "single",
     record_id: Annotated[int | None, Form()] = None,
     month: Annotated[str | None, Form()] = None,
+    is_holiday: Annotated[bool, Form()] = False,
     current_user: User | None = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
@@ -259,10 +261,21 @@ async def save_entry(
             hours=hours,
             notes=notes,
             description=description,
+            is_holiday=is_holiday,
         )
     except ValidationError as exc:
         logger.warning("Validazione fallita nel form: %s", exc.errors())
         return RedirectResponse(_with_month("/?error=validazione", month), status_code=303)
+
+    # Giorno non lavorato (S6): forza i valori sentinella lato server.
+    # Cliente e Attività vengono impostati ai lookup "NON LAVORATO",
+    # le ore a 8.0 e le note a "NON LAVORATO". Il gruppo resta quello di
+    # sessione (già forzato sopra quando AUTH_ENABLED).
+    if payload.is_holiday:
+        payload = _force_holiday_values(payload, db)
+        if payload is None:
+            logger.warning("Lookup sentinella NON LAVORATO assenti nel DB")
+            return RedirectResponse(_with_month("/?error=validazione", month), status_code=303)
 
     activity = db.execute(
         select(Activity).where(Activity.id == payload.activity_id)
@@ -279,6 +292,38 @@ async def save_entry(
         return _save_week(payload, db, current_user, month)
 
     return _save_single(payload, db, current_user, record_id=record_id, month=month)
+
+
+def _force_holiday_values(
+    payload: EffortEntryCreate, db: Session
+) -> EffortEntryCreate | None:
+    """Forza i valori sentinella per un giorno non lavorato (S6).
+
+    Recupera i lookup "NON LAVORATO" per Cliente e Attività e imposta
+    `client_id`, `activity_id`, `hours=8.0` e `notes`. Ritorna `None` se
+    i lookup sentinella non esistono nel DB (seed non eseguito).
+    """
+    client = db.execute(
+        select(Client).where(Client.name == SENTINEL_NAME)
+    ).scalar_one_or_none()
+    activity = db.execute(
+        select(Activity).where(Activity.name == SENTINEL_NAME)
+    ).scalar_one_or_none()
+    if client is None or activity is None:
+        return None
+
+    # Nota: group_id resta quello di sessione (forzato in save_entry).
+    payload.client_id = client.id
+    payload.activity_id = activity.id
+    payload.hours = 8.0
+    payload.notes = SENTINEL_NAME
+    payload.description = None
+    return payload
+
+
+def _is_sentinel_entry(record: EffortEntry) -> bool:
+    """True se il record è un giorno non lavorato (cliente sentinella)."""
+    return record.client is not None and record.client.name == SENTINEL_NAME
 
 
 def _delete_entry(
@@ -452,6 +497,9 @@ def _build_csv(records: list[EffortEntry]) -> str:
     writer = csv.writer(buffer)
     writer.writerow(_CSV_HEADER)
     for record in records:
+        if _is_sentinel_entry(record):
+            # I giorni non lavorati non compaiono nell'export (S6).
+            continue
         writer.writerow(
             [
                 record.work_date.strftime("%d/%m/%Y"),

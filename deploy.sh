@@ -84,6 +84,8 @@ if [ "$INSTALL_MODE" = "1" ]; then
         --exclude '*.pyc' \
         --exclude '.env' \
         --exclude 'data' \
+        --exclude 'memory-bank' \
+        --exclude 'tests' \
         --exclude '.pytest_cache' \
         ./ "${DEPLOY_DIR}/"
 

@@ -16,6 +16,37 @@
   var descriptionGroup = document.getElementById("description-group");
   var descriptionInput = document.getElementById("effort-description");
 
+  // Campo "Giorno non lavorato" (S6).
+  var holidayCheckbox = document.getElementById("effort-holiday");
+  var clientSelect = document.getElementById("effort-client");
+  var hoursInput = document.getElementById("effort-hours");
+  var notesInput = document.getElementById("effort-notes");
+  // Campi disabilitati quando il giorno è non lavorativo.
+  var holidayFields = [clientSelect, activitySelect, hoursInput, notesInput, descriptionInput];
+
+  // --- Gestione "Giorno non lavorato" ---
+  // Quando attivo: disabilita cliente, attività, ore, note e descrizione,
+  // popolando i valori sentinella. Il server forza comunque i valori reali.
+  function setHolidayMode(active) {
+    Array.prototype.forEach.call(holidayFields, function (field) {
+      if (!field) { return; }
+      field.disabled = active;
+    });
+    if (active) {
+      if (clientSelect) { clientSelect.value = ""; }
+      if (activitySelect) { activitySelect.value = ""; }
+      if (hoursInput) { hoursInput.value = ""; }
+      if (notesInput) { notesInput.value = ""; }
+      if (descriptionInput) { descriptionInput.value = ""; }
+    }
+    // Ricalcola la visibilità della descrizione (disabilitata = non applicabile).
+    syncDescriptionVisibility();
+    // Pulisce eventuali errori sui campi disabilitati.
+    Array.prototype.forEach.call(holidayFields, function (field) {
+      if (field) { setInvalid(field, false); }
+    });
+  }
+
   // --- Utility: messaggio + gestione classe errore ---
   function showError(message) {
     if (!errorContainer) { return; }
@@ -108,9 +139,13 @@
     mark(date, ok);
     valid = valid && ok;
 
+    // Per i giorni non lavorati (S6) cliente, attività e ore non sono
+    // obbligatori: la route forza i valori sentinella lato server.
+    var holiday = holidayCheckbox && holidayCheckbox.checked;
+
     // Cliente
     var client = document.getElementById("effort-client");
-    ok = validateSelect(client, "Seleziona un Cliente.");
+    ok = holiday || validateSelect(client, "Seleziona un Cliente.");
     mark(client, ok);
     valid = valid && ok;
 
@@ -118,15 +153,15 @@
     // Il server forza il group_id della sessione.
 
     // Attività
-    ok = validateSelect(activitySelect, "Seleziona un Attività.");
+    ok = holiday || validateSelect(activitySelect, "Seleziona un Attività.");
     mark(activitySelect, ok);
     valid = valid && ok;
 
     // Ore Spese
     var hours = document.getElementById("effort-hours");
-    ok = isValidHours(hours.value);
+    ok = holiday || isValidHours(hours.value);
     setInvalid(hours, !ok);
-    if (!ok) {
+    if (!ok && !holiday) {
       if (!firstInvalid) { firstInvalid = hours; }
       showError("Inserisci le Ore Spese (da 1 a 12, step 0.50).");
     }
@@ -177,6 +212,9 @@
       var field = event.target;
       if (field.id === "effort-activity") {
         syncDescriptionVisibility();
+      }
+      if (field.id === "effort-holiday") {
+        setHolidayMode(field.checked);
       }
       if (field.classList && !field.classList.contains("is-invalid")) {
         setInvalid(field, false);
