@@ -5,9 +5,8 @@ gestionale CRUD. Sostituto moderno del vecchio tool aziendale, installabile su *
 **Python `venv`** (no Docker).
 
 > **Stato**: **v1.1.1** — versione stabile pronta per produzione.
-> Autenticazione attiva, multiutente con ruoli (USER/MANAGER/ADMIN), hardening di sicurezza,
-> cambio password obbligatorio al primo login, suite di test completa (107 test verdi). La documentazione di stato dettagliata è in
-> [`memory-bank/`](./memory-bank/).
+> Autenticazione attiva, multiutente con ruoli (USER/MANAGER/ADMIN), hardening di sicurezza
+> e cambio password obbligatorio al primo login.
 
 ---
 
@@ -105,7 +104,11 @@ Ci sono due strade: **script automatizzato** (consigliata) o **passi manuali**.
 Lo script `deploy.sh` (root del repo) automatizza: creazione utente/directory/venv, copia del
 codice, generazione di `/etc/efftrack.env` e installazione del servizio systemd.
 
+> **Prerequisito**: `deploy.sh` va eseguito **dalla directory root del repository clonato**. Sul server nuovo, clona prima il repository e poi avvia lo script da dentro la cartella del repo.
+
 ```bash
+git clone https://github.com/Maxster81/efftrack.git
+cd efftrack
 sudo ./deploy.sh           # deploy completo (consigliato)
 # oppure in step separati:
 sudo ./deploy.sh --install # solo installazione (venv + dipendenze + copia)
@@ -187,13 +190,10 @@ efftrack/
 │   └── static/         # CSS e JS
 ├── systemd/            # template unit systemd (NON attivato)
 ├── data/               # SQLite (gitignored)
-├── tests/              # pytest (unit + funzionali)
-├── memory-bank/        # documentazione persistente di progetto
 ├── deploy.sh           # script di deploy opzionale
 ├── .env.example
 ├── .gitignore
 ├── requirements.txt
-├── requirements-dev.txt
 ├── README.md
 └── VERSION             # versione del progetto (SemVer)
 ```
@@ -202,10 +202,9 @@ efftrack/
 
 ## Workflow del progetto
 
-Il progetto segue una roadmap a fasi documentata in [`memory-bank/`](./memory-bank/). Ogni fase
-si considera completata solo dopo conferma esplicita dell'utente. Lo stato corrente è riflesso in
-[`memory-bank/activeContext.md`](./memory-bank/activeContext.md) e
-[`memory-bank/progress.md`](./memory-bank/progress.md).
+Il progetto segue una roadmap a fasi. Ogni fase si considera completata solo dopo conferma
+esplicita dell'utente. La documentazione di progetto (roadmap, stato, decisioni tecniche) vive
+nel repository di sviluppo affiancato, non in questo repository di produzione.
 
 ---
 
