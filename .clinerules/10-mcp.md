@@ -2,7 +2,7 @@
 
 ## Principio Generale
 
-In questo workspace sono installati tre server MCP: **Filesystem**, **Memory** e **Playwright**.
+In questo workspace sono installati quattro server MCP: **Filesystem**, **Memory**, **Playwright** e **Context7**.
 
 Usali quando apportano un **beneficio reale** rispetto agli strumenti built-in (read_file, search_files, execute_command). Non usarli per operazioni banali o quando uno strumento nativo è più semplice e altrettanto efficace: l'overhead di un MCP deve essere giustificato.
 
@@ -76,6 +76,27 @@ Prima di usare un MCP, chiedersi:
 
 ---
 
+## Context7 MCP
+
+### Capacità
+- Documentazione aggiornata e version-specifica di librerie/framework, con esempi di codice estratti direttamente dalle fonti ufficiali.
+- Due tool: `resolve-library-id` (risolve un nome di libreria in un ID Context7) e `query-docs` (recupera documentazione per un ID libreria).
+- Eseguito localmente via `npx @upstash/context7-mcp` (server stdio), configurato in `cline_mcp_settings.json` come `github.com/upstash/context7-mcp`.
+
+### Pattern d'uso consigliato per efftrack
+- **Documentazione aggiornata dei framework in uso**: FastAPI, Starlette, Jinja2, vanilla JS, SQLite, ecc. quando serve una API/pattern recente e non ci si affida alla memoria di training.
+- **Scelta dello stack o escalation di decisioni tecniche** (regole `01-python.md`/`03-database.md`): recuperare documentazione ufficiale aggiornata prima di proporre una soluzione.
+- **Esempio di flusso**: `resolve-library-id` (query: "documentazione FastAPI", libraryName: "FastAPI") → ID `/websites/fastapi_tiangolo` → `query-docs` con quella library id e una domanda specifica.
+- **Specificare versione quando rilevante** (es. "Next.js 14") per documentazione esatta di quella versione.
+- **ID libreria noto**: se si conosce già l'ID (es. `/websites/fastapi_tiangolo`), passarlo direttamente a `query-docs` senza passare da `resolve-library-id`.
+
+### Quando NON usarlo
+- Quando la documentazione è già nota/stabile e la query non aggiunge valore rispetto alle conoscenze consolidate.
+- Per ricerche generiche sullo stack locale già ben documentato nel memory-bank (`techContext.md`, `systemPatterns.md`).
+- Non sostituisce la lettura dei sorgenti locali: per capire com'è fatto il codice di efftrack usare `read_file`/`search_files`.
+
+---
+
 ## Riepilogo: quale MCP per quale scenario
 
 | Scenario | MCP consigliato | Strumento alternativa |
@@ -85,6 +106,7 @@ Prima di usare un MCP, chiedersi:
 | Tracciare relazioni tra entità di dominio / architettura | Memory (create_entities/relations) | (memory-bank su file) |
 | Verifica visuale/accessibilità di una pagina | Playwright (snapshot, screenshot) | analisi statica del template |
 | Test di un flusso UI (form, toggle, selezione) | Playwright (navigate, fill_form, click) | (nessuna — serve il browser) |
+| Documentazione aggiornata di librerie/framework | Context7 (`resolve-library-id`, `query-docs`) | memoria di training (obsoleta) |
 | Lettura/modifica di un singolo file | — (usare tool built-in) | read_file / write_to_file |
 
 ---
@@ -96,3 +118,4 @@ Questa regola è **normativa sugli strumenti** (quando usare i MCP) e si integra
 - `08-workflow.md` → Playwright si inserisce nella checklist di verifica frontend (Fase 5), come mezzo per la "Verifica browser raccomandata".
 - `09-post-change.md` → la verifica frontend del controllo rapido post-modifica può usare Playwright.
 - `07-memory-bank.md` → il Memory MCP è complementare ma non sostituisce il memory-bank su file, che resta la fonte di verità.
+- `01-python.md` e `03-database.md` → prima di proporre un sotto-stack o una scelta di libreria, Context7 può fornire documentazione ufficiale aggiornata a supporto dell'analisi pro/contro.

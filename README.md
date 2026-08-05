@@ -4,9 +4,9 @@ Web server per la registrazione di **effort** (ore lavorate, attività giornalie
 gestionale CRUD. Sostituto moderno del vecchio tool aziendale, installabile su **Ubuntu** con
 **Python `venv`** (no Docker).
 
-> **Stato**: **v1.0.1** — versione stabile pronta per produzione.
+> **Stato**: **v1.1.1** — versione stabile pronta per produzione.
 > Autenticazione attiva, multiutente con ruoli (USER/MANAGER/ADMIN), hardening di sicurezza,
-> suite di test completa (104 test verdi). La documentazione di stato dettagliata è in
+> cambio password obbligatorio al primo login, suite di test completa (107 test verdi). La documentazione di stato dettagliata è in
 > [`memory-bank/`](./memory-bank/).
 
 ---
@@ -86,7 +86,7 @@ Variabili principali:
 | `EFFORT_TRACKING_HOST` / `EFFORT_TRACKING_PORT` | `0.0.0.0` / `8000` | Host e porta del web server. |
 | `EFFORT_TRACKING_LOG_LEVEL` | `INFO` | Livello dei log (DEBUG/INFO/WARNING/ERROR). |
 | `EFFORT_TRACKING_AUTH_ENABLED` | `true` | `true` login obbligatorio, `false` server pubblico. |
-| `EFFORT_TRACKING_ADMIN_USERNAME` / `EFFORT_TRACKING_ADMIN_PASSWORD` | `admin` / `admin` | Credenziali del primo admin. **In produzione vanno sovrascritte.** |
+| `EFFORT_TRACKING_ADMIN_USERNAME` / `EFFORT_TRACKING_ADMIN_PASSWORD` | `admin` / `admin` | Credenziali **temporanee** del primo admin (lette solo al primo seed). **In produzione vanno sovrascritte.** Al primo login l'admin è obbligato a cambiarle. |
 | `EFFORT_TRACKING_USER_DELETE_GRACE_DAYS` | `30` | Giorni di attesa prima che un utente disabilitato sia eliminabile. |
 | `EFFORT_TRACKING_SESSION_SAMESITE` / `EFFORT_TRACKING_SESSION_SECURE` | `lax` / `false` | Sicurezza cookie di sessione (in produzione dietro TLS: `true`). |
 | `EFFORT_TRACKING_SESSION_MAX_AGE_SECONDS` | `1800` | Durata massima sessione in secondi (30 min). Se l'utente chiude il browser senza logout, alla scadenza serve rilogin. |
@@ -116,6 +116,10 @@ sudo ./deploy.sh --help    # aiuto
 
 Lo script genera una `SECRET_KEY` robusta e crea `/etc/efftrack.env` con valori sicuri.
 **CAMBIA la password admin** (`EFFORT_TRACKING_ADMIN_PASSWORD`) prima di andare in produzione.
+La password admin è **temporanea**: viene letta solo al primo seed (tabella `users` vuota) e
+hashata nel DB. Al primo login l'admin è reindirizzato a `/profile` e **deve** cambiarla prima
+di poter navigare (stessa regola vale per i nuovi utenti creati dall'admin: la password impostata
+in fase di creazione è temporanea e va cambiata al primo accesso).
 
 ### Opzione B — Passi manuali
 
@@ -158,7 +162,7 @@ pip install -r requirements-dev.txt
 python -m pytest tests/ -v
 ```
 
-- **104 test**: `tests/test_models.py` (modelli, seed, validazione, segregazione) +
+- **107 test**: `tests/test_models.py` (modelli, seed, validazione, segregazione) +
   `tests/test_functional.py` (test end-to-end HTTP su route, auth, permessi, CRUD, export).
 - I test usano un database SQLite **dedicato e isolato** (non toccano `data/efftrack.db`).
 
@@ -173,7 +177,7 @@ efftrack/
 │   ├── config.py       # configurazione centralizzata (env vars)
 │   ├── db.py           # engine, sessione, dependency
 │   ├── dependencies.py # dependency di autenticazione
-│   ├── core/           # body_limit, logging, migrazioni, permissions, seed, security_headers
+│   ├── core/           # body_limit, logging, migrazioni, password_change, permissions, seed, security_headers
 │   ├── routers/        # web, auth, admin, profile, api
 │   ├── schemas/        # modelli Pydantic (validazione)
 │   ├── models/         # modelli ORM (SQLAlchemy)

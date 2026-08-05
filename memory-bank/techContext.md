@@ -79,6 +79,8 @@ Poi:
 
 ## Test
 - **Framework**: `pytest` (dalla Fase 9) e `httpx` (per TestClient), in `requirements-dev.txt` (solo sviluppo).
+- **Warning noto (2026-08-05)**: `StarletteDeprecationWarning: Using httpx with starlette.testclient is deprecated; install httpx2 instead`. Starlette depreca il backend `httpx` del proprio `TestClient`. `httpx` è usato solo come dipendenza dev per TestClient. Non bloccante oggi; monitorare e rivalutare `httpx2` se Starlette lo imporrà.
+- **SQLAlchemy evento `connect`**: il listener `_set_sqlite_pragmas` in `app/db.py` usa la firma `(dbapi_connection, *_args)`. `connection_record` è deprecato in SQLAlchemy 2.0 (possibile rimozione in 3.x), ma la firma a 2 argomenti è richiesta da 2.0.51; `*_args` garantisce compatibilità con versioni che passano 1 o 2 argomenti.
 - **Installazione**: `.venv/bin/pip install -r requirements-dev.txt`
 - **Esecuzione**: `.venv/bin/python -m pytest tests/ -v`
 - **DB di test isolato**:

@@ -1012,7 +1012,9 @@ class TestSeedProfileFields(DatabaseTestCase):
         self.assertEqual(admin.first_name, "Admin")
         self.assertEqual(admin.last_name, "Master")
         self.assertEqual(admin.email, "admin@efftrack.local")
-        self.assertFalse(admin.password_change_required)
+        # Da S11 (v1.1.0) l'admin al primo login è obbligato a cambiare la
+        # password temporanea di bootstrap.
+        self.assertTrue(admin.password_change_required)
 
     def test_test_users_have_profile_fields(self) -> None:
         seed_test_users(self.db)

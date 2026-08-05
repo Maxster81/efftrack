@@ -383,6 +383,9 @@ async def admin_users_create(
             password_hash=bcrypt.hash(payload.password),
             role="user",
             group_id=None,
+            # La password impostata dall'admin è temporanea: al primo login
+            # l'utente è obbligato a cambiarla.
+            password_change_required=True,
         )
     )
     db.commit()

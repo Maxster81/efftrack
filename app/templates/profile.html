@@ -3,6 +3,13 @@
 
 {% block content %}
 <section class="profile-page">
+  {% if password_change_required %}
+    <div class="profile-banner" role="alert">
+      <strong>Primo accesso:</strong> devi cambiare la password prima di
+      poter accedere alle altre pagine dell'applicazione.
+    </div>
+  {% endif %}
+
   <!-- Card Dati personali -->
   <div class="card profile-card">
     <h2 class="card-title">Dati personali</h2>

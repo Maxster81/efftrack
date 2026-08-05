@@ -39,6 +39,7 @@ from app.config import (
 from app.core.body_limit import RequestBodyLimitMiddleware
 from app.core.logging_config import setup_logging
 from app.core.migrations import run_schema_migrations
+from app.core.password_change import PasswordChangeRequiredMiddleware
 from app.core.security_headers import SecurityHeadersMiddleware
 from app.core.seed import (
     seed_admin_user,
@@ -102,6 +103,14 @@ app: FastAPI = FastAPI(
     version=APP_VERSION,
     lifespan=lifespan,
 )
+
+# Cambio password obbligatorio al primo login: redirige a /profile gli utenti
+# con password_change_required attivo. Registrato PRIMA di SessionMiddleware:
+# in Starlette `add_middleware` inserisce in testa, quindi l'ultimo aggiunto è
+# il più esterno (eseguito per primo). Aggiungendo questo PRIMA, in esecuzione
+# SessionMiddleware è più esterno e popola scope["session"] prima che questo
+# middleware (più interno) lo legga.
+app.add_middleware(PasswordChangeRequiredMiddleware)
 
 # Sessione HTTP firmata: abilita request.session.
 # Cookie con SameSite=Lax (anti-CSRF cross-site) e Secure configurabile

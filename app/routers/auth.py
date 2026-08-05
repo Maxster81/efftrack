@@ -97,6 +97,12 @@ async def login_submit(
     request.session["user_id"] = user.id
     request.session["username"] = user.username
     logger.info("Login riuscito: username=%s (role=%s)", user.username, user.role)
+
+    # Cambio password obbligatorio al primo login: l'utente va su /profile
+    # finché non cambia la password temporanea (vedi PasswordChangeRequiredMiddleware).
+    if user.password_change_required:
+        return RedirectResponse("/profile", status_code=303)
+
     # L'admin atterra sulla dashboard /admin.
     if is_admin(user):
         return RedirectResponse("/admin", status_code=303)

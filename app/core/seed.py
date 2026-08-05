@@ -115,7 +115,8 @@ def seed_admin_user(db: Session) -> None:
             first_name="Admin",
             last_name="Master",
             email="admin@efftrack.local",
-            password_change_required=False,
+            # Al primo login l'admin deve cambiare la password di bootstrap.
+            password_change_required=True,
         )
     )
     db.commit()

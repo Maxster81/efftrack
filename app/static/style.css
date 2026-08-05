@@ -1076,6 +1076,20 @@ a:hover { text-decoration: underline; }
   margin-bottom: var(--space-xl);
 }
 
+/* Banner di primo accesso: segnala il cambio password obbligatorio.
+   Stile warn coerente col tema (sfondo ambrato, bordo sinistro marcato). */
+.profile-banner {
+  margin-bottom: var(--space-xl);
+  padding: var(--space-md) var(--space-lg);
+  background: #fef9e7;
+  border: 1px solid #f1c40f;
+  border-left: 4px solid #d4ac0d;
+  border-radius: var(--radius-sm);
+  color: #7d6608;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
 /* Variante form-row a 2 colonne esplicita (già di default su desktop,
    ma serve per i form inline che non usano .effort-form). */
 .form-row--two {

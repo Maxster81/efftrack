@@ -10,17 +10,11 @@
 ### S10 — Self-creation utente
 Pagina di login: consentire l'auto-registrazione di un nuovo utente. Il modello `users` ha già `first_name`, `last_name`, `email`, `password_change_required`. La self-creation imposta `password_change_required=True` e `role="user"`.
 
-### S11 — Cambio password obbligatorio al primo login
-Se `password_change_required=True`, dopo il login l'utente viene rediretto a `/profile` finché non cambia la password. Flag e router `profile.py` già predisposti.
-
 ### S4 — Filtro per anno e mese separati
 Separare il filtro mensile in due dropdown distinti (Anno + Mese), così la lista dei mesi resta "bloccata" ai 12 valori.
 
 ### S6 — Giorno di ferie
 Checkbox/radio che rende i campi non obbligatori e non compilabili (solo data). Al SALVA crea un record con campi vuoti e "FERIE" nelle NOTE.
-
-### S9 — Refine grafico Gestione Lookup
-Affinare lo stile tabellare della pagina Lookup (ex Issue J).
 
 ## Storico voci risolte (compattato)
 - **Issue A** (pagine errore 404/500) → Fase 13b.
@@ -40,3 +34,5 @@ Affinare lo stile tabellare della pagina Lookup (ex Issue J).
 - **Issue N** (sessione senza scadenza: login persistente oltre il riavvio) → Fase 14, v1.0.1 (2026-08-04): `SessionMiddleware` con `max_age` 30 min (env `EFFORT_TRACKING_SESSION_MAX_AGE_SECONDS`).
 - **S7** (gruppo autopopolato, campo readonly) → 2026-08-04.
 - **S8** (finestra eliminazione utente) → 2026-08-04.
+- **S9** (lookup aggiornato a modalità schedario)
+- **S11** (cambio password obbligatorio al primo login) → v1.1.0 (2026-08-04): seed admin e nuovi utenti con `password_change_required=True`, middleware `PasswordChangeRequiredMiddleware` (whitelist), redirect post-login a `/profile`, banner profilo. 3 nuovi test (107 totali verdi).

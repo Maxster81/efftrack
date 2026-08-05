@@ -105,8 +105,16 @@ def test_login_disabled_user_rejected(client: TestClient, db_session) -> None:
     assert "Account disabilitato" in resp.text
 
 
-def test_login_admin_lands_on_dashboard(client: TestClient) -> None:
-    """L'admin arriva alla dashboard /admin dopo il login."""
+def test_login_admin_lands_on_dashboard(client: TestClient, db_session) -> None:
+    """L'admin arriva alla dashboard /admin dopo il login (pwd già cambiata)."""
+    # Il seed imposta password_change_required=True; per il test della dashboard
+    # simuliamo che l'admin abbia già cambiato la password.
+    admin = db_session.execute(
+        select(User).where(User.username == "admin")
+    ).scalar_one()
+    admin.password_change_required = False
+    db_session.commit()
+
     resp = client.post(
         "/login", data={"username": "admin", "password": "admin"},
         follow_redirects=False,
@@ -351,8 +359,15 @@ def test_manager_cannot_access_admin(client: TestClient) -> None:
     assert resp.status_code == 403
 
 
-def test_admin_can_access_dashboard(client: TestClient) -> None:
-    """L'ADMIN accede alla dashboard."""
+def test_admin_can_access_dashboard(client: TestClient, db_session) -> None:
+    """L'ADMIN accede alla dashboard (pwd già cambiata)."""
+    # Il seed imposta password_change_required=True per l'admin.
+    admin = db_session.execute(
+        select(User).where(User.username == "admin")
+    ).scalar_one()
+    admin.password_change_required = False
+    db_session.commit()
+
     _login(client, "admin", password="admin")
     resp = client.get("/admin")
     assert resp.status_code == 200
@@ -438,3 +453,88 @@ def test_change_password_flow(client: TestClient, db_session) -> None:
     _login(client, "mario", password="nuovapassword")
     resp = client.get("/")
     assert resp.status_code == 200
+
+
+def test_password_change_required_redirects_to_profile(
+    client: TestClient, db_session
+) -> None:
+    """Con password_change_required attivo, il login redirige a /profile."""
+    mario = db_session.execute(
+        select(User).where(User.username == "mario")
+    ).scalar_one()
+    mario.password_change_required = True
+    db_session.commit()
+
+    resp = client.post(
+        "/login",
+        data={"username": "mario", "password": "test"},
+        follow_redirects=False,
+    )
+    assert resp.status_code == 303
+    assert resp.headers["location"] == "/profile"
+
+
+def test_password_change_required_blocks_navigation(
+    client: TestClient, db_session
+) -> None:
+    """Con flag attivo, GET / e GET /admin redirigono a /profile."""
+    mario = db_session.execute(
+        select(User).where(User.username == "mario")
+    ).scalar_one()
+    mario.password_change_required = True
+    db_session.commit()
+
+    _login(client, "mario")
+
+    # La pagina principale e l'area admin sono bloccate dal middleware.
+    resp = client.get("/", follow_redirects=False)
+    assert resp.status_code == 303
+    assert resp.headers["location"] == "/profile"
+
+    resp = client.get("/admin", follow_redirects=False)
+    assert resp.status_code == 303
+    assert resp.headers["location"] == "/profile"
+
+
+def test_password_change_clears_flag_and_restores_navigation(
+    client: TestClient, db_session
+) -> None:
+    """Dopo il cambio password il flag si azzera e la navigazione torna libera."""
+    mario = db_session.execute(
+        select(User).where(User.username == "mario")
+    ).scalar_one()
+    mario.password_change_required = True
+    db_session.commit()
+
+    _login(client, "mario")
+
+    # La pagina profilo mostra il banner di primo accesso.
+    resp = client.get("/profile")
+    assert resp.status_code == 200
+    assert "Primo accesso" in resp.text
+
+    # Cambia la password: il flag deve azzerarsi.
+    resp = client.post(
+        "/profile/change-password",
+        data={
+            "current_password": "test",
+            "new_password": "nuovapassword",
+            "confirm_password": "nuovapassword",
+        },
+        follow_redirects=False,
+    )
+    assert resp.status_code == 303
+    assert "/profile?pwd_ok=1" in resp.headers["location"]
+
+    # Verifica che il flag sia stato azzerato nel DB (expire_all per
+    # rileggere l'oggetto modificato dal thread del TestClient).
+    db_session.expire_all()
+    mario = db_session.execute(
+        select(User).where(User.username == "mario")
+    ).scalar_one()
+    assert mario.password_change_required is False
+
+    # Ora la navigazione è tornata normale.
+    resp = client.get("/", follow_redirects=False)
+    assert resp.status_code == 200
+    assert "Registrazioni" in resp.text
