@@ -263,13 +263,15 @@ if [ "$UPDATE_MODE" = "1" ]; then
     log "Versione installata: ${INSTALLED_VERSION} — Minima per update: ${MIN_UPDATE_VERSION}"
 
     # Confronto semver (rust-style: confronto punto per punto i numeri).
-    ver_ok() {
+    # Ritorna 0 se a >= b, 1 altrimenti.
+    version_ok() {
         local a="$1" b="$2"
-        local ia ib
+        local ia ib na nb
         IFS='.' read -ra ia <<< "$a"
         IFS='.' read -ra ib <<< "$b"
         for i in 0 1 2; do
-            local na="${ia[$i]:-0}" nb="${ib[$i]:-0}"
+            na="${ia[$i]:-0}"
+            nb="${ib[$i]:-0}"
             if (( 10#$na > 10#$nb )); then return 0; fi
             if (( 10#$na < 10#$nb )); then return 1; fi
         done
@@ -280,10 +282,15 @@ if [ "$UPDATE_MODE" = "1" ]; then
         log "Update supportato."
     else
         echo ""
-        echo "ERRORE: update non supportato dalla versione ${INSTALLED_VERSION}." >&2
-        echo "La versione minima supportata per l'update è ${MIN_UPDATE_VERSION}." >&2
+        echo "==============================================================" >&2
+        echo "  ERRORE: update NON eseguito." >&2
+        echo "  Versione installata:        ${INSTALLED_VERSION}" >&2
+        echo "  Versione minima supportata: ${MIN_UPDATE_VERSION} (soglia in deploy.sh)" >&2
+        echo "==============================================================" >&2
         echo "" >&2
-        echo "Procedura di backup e reinstallazione:" >&2
+        echo "Lo script si è FERMATO qui: non ha modificato alcun file." >&2
+        echo "" >&2
+        echo "Procedura CONSIGLIATA — backup e reinstallazione (per versioni sotto soglia):" >&2
         echo "  1. Ferma il servizio:     sudo systemctl stop ${SERVICE_NAME}" >&2
         echo "  2. Backup del DB:         sudo cp ${DEPLOY_DIR}/data/efftrack.db /backup/sicuro/" >&2
         echo "  3. Backup env:            sudo cp ${ENV_FILE} /backup/sicuro/" >&2
@@ -291,6 +298,10 @@ if [ "$UPDATE_MODE" = "1" ]; then
         echo "  5. Clona nuovo repo ed esegui: sudo ./deploy.sh --install --dir ${DEPLOY_DIR} --env-file ${ENV_FILE}" >&2
         echo "  6. Ferma il servizio, ripristina DB ed env dai backup, riavvia" >&2
         echo "  7. Al primo avvio le migrazioni porteranno il DB alla versione corrente" >&2
+        echo "" >&2
+        echo "N.B. Se sei già a una versione >= 1.3.0, questo errore è un bug:" >&2
+        echo "     verifica che la versione installata (file DEPLOY_DIR/VERSION) sia" >&2
+        echo "     leggibile e formattata come semver (es. 1.3.2)." >&2
         exit 1
     fi
 
