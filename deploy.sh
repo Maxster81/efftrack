@@ -353,8 +353,8 @@ if [ "$UPDATE_MODE" = "1" ]; then
         update_dependencies
     fi
 
-    # --- 4.7 Diff nuove variabili d'ambiente ---
-    log "Controllo nuove variabili d'ambiente rispetto a ${ENV_FILE}..."
+    # --- 4.7 Diff nuove variabili d'ambiente (accumula nel report finale) ---
+    ENV_NOTICE=""
     if [ -f "${ENV_FILE}" ]; then
         nuove=0
         while IFS='=' read -r var default_val; do
@@ -362,52 +362,47 @@ if [ "$UPDATE_MODE" = "1" ]; then
             [[ "$var" =~ ^# ]] && continue
             if ! grep -q "^${var}=" "$ENV_FILE"; then
                 if [ "$nuove" = "0" ]; then
-                    echo ""
-                    echo "  Nuove variabili d'ambiente da aggiungere a ${ENV_FILE}:"
-                    echo ""
+                    ENV_NOTICE="  Nuove variabili d'ambiente da aggiungere a ${ENV_FILE}:"
                     nuove=1
                 fi
-                echo "    $var=${default_val}"
-                echo "      (default: ${default_val} — vedi .env.example per la documentazione)"
-                echo ""
+                ENV_NOTICE="${ENV_NOTICE}
+    ${var}=${default_val}
+      (default: ${default_val} — vedi .env.example per la documentazione)"
             fi
         done < "${DEPLOY_DIR}/.env.example"
-
         if [ "$nuove" = "0" ]; then
-            log "  Nessuna nuova variabile d'ambiente da segnalare."
-        else
-            log "  L'app usa già i default interni (config.py): il servizio funziona"
-            log "  anche senza aggiungerle. Aggiungile a ${ENV_FILE} solo se vuoi"
-            log "  personalizzarle, poi riavvia il servizio."
+            ENV_NOTICE="  Nessuna nuova variabile d'ambiente: nulla da aggiungere."
         fi
     else
-        log "  ⚠ ${ENV_FILE} non trovato — nessun confronto variabili possibile."
+        ENV_NOTICE="  ⚠ ${ENV_FILE} non trovato — nessun confronto variabili possibile."
     fi
 
-    # --- 4.8 Diff service systemd ---
+    # --- 4.8 Diff service systemd (accumula nel report finale) ---
+    SERVICE_NOTICE=""
     if [ -f "/etc/systemd/system/${SERVICE_NAME}" ]; then
         if ! diff -q "${SERVICE_SRC}" "/etc/systemd/system/${SERVICE_NAME}" > /dev/null 2>&1; then
-            echo ""
-            log "⚠️  ATTENZIONE: il file del servizio systemd è cambiato nella nuova versione."
-            log "⚠️  /etc/systemd/system/${SERVICE_NAME} (attuale)"
-            log "⚠️  differisce da ${SERVICE_SRC} (nuovo)."
-            log "⚠️  IL FILE NON È STATO MODIFICATO."
-            log "⚠️  Backup dell'attuale: ${BACKUP_DIR}/efftrack.service"
-            echo ""
-            log "Differenze:"
-            diff "${SERVICE_SRC}" "/etc/systemd/system/${SERVICE_NAME}" || true
-            echo ""
-            log "Nota: se usi una directory di installazione personalizzata (--dir)"
-            log "o un file env personalizzato (--env-file), aggiorna di conseguenza"
-            log "WorkingDirectory/ExecStart/EnvironmentFile nel service."
-            echo ""
-            log "Dopo aver aggiornato manualmente il file, esegui:"
-            log "  sudo systemctl daemon-reload"
-            log "  sudo systemctl restart ${SERVICE_NAME}"
-            echo ""
+            # Distingue differenze funzionali da soli commenti (#) nell'header.
+            # Una riga è "commento" se, dopo <>/spazi, inizia con '#'. Le righe
+            # di contesto (spazio) e '---'/'+++' non iniziano con < o >.
+            if diff "${SERVICE_SRC}" "/etc/systemd/system/${SERVICE_NAME}" | grep -qE '^[<>][[:space:]]*[^#[:space:]]'; then
+                SERVICE_NOTICE="  DIFFERISCE dal template. NON è stato modificato automaticamente.
+  Backup dell'attuale: ${BACKUP_DIR}/efftrack.service
+
+  Differenze:
+$(diff "${SERVICE_SRC}" "/etc/systemd/system/${SERVICE_NAME}" | sed 's/^/    /')
+
+  Se usi --dir/--env-file personalizzati, adatta WorkingDirectory/ExecStart/
+  EnvironmentFile. Se le differenze sono SOLO commenti (righe #) non serve aggiornarlo.
+  Dopo eventuali modifiche manuali: sudo systemctl daemon-reload && sudo systemctl restart ${SERVICE_NAME}"
+            else
+                SERVICE_NOTICE="  Differenze SOLO nei commenti (header): l'unità funzionale è identica,
+  non è necessario aggiornare /etc/systemd/system/${SERVICE_NAME}."
+            fi
         else
-            log "File del servizio systemd invariato. ✓"
+            SERVICE_NOTICE="  File del servizio systemd invariato rispetto al template."
         fi
+    else
+        SERVICE_NOTICE="  ⚠ ${SERVICE_NAME} non trovato in /etc/systemd/system/."
     fi
 
     # --- 4.9 Permessi finali ---
@@ -419,7 +414,7 @@ if [ "$UPDATE_MODE" = "1" ]; then
 
     health_check
 
-    # --- 4.11 Riepilogo ---
+    # --- 4.11 Riepilogo finale (con azioni da valutare) ---
     echo ""
     log "========================================"
     log " Update completato!"
@@ -429,6 +424,18 @@ if [ "$UPDATE_MODE" = "1" ]; then
     log " File env:             ${ENV_FILE}"
     log " Backup:               ${BACKUP_DIR}/"
     log "========================================"
+    echo ""
+    log "AZIONI DA VALUTARE:"
+    echo ""
+    log "  [ Variabili d'ambiente ]"
+    echo -e "${ENV_NOTICE}"
+    echo ""
+    log "  [ Servizio systemd ]"
+    echo -e "${SERVICE_NOTICE}"
+    echo ""
+    log "Il DB non è stato toccato: le migrazioni dello schema (compresa la tabella"
+    log "schema_version) girano da sole al primo avvio. Nessuna azione sul database."
+    echo ""
     log " Log: sudo journalctl -u ${SERVICE_NAME} -f"
 fi
 
