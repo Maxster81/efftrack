@@ -36,10 +36,14 @@ WorkingDirectory=/opt/efftrack
 EnvironmentFile=/etc/efftrack.env
 
 # Avvio con il venv del progetto. Adatta il path se installi altrove.
-ExecStart=/opt/efftrack/.venv/bin/uvicorn app.main:app \
-    --host 127.0.0.1 \
-    --port 8000 \
-    --workers 1
+# Host e porta NON sono hardcodati: vengono letti dall'EnvironmentFile
+# (/etc/efftrack.env) tramite le variabili EFFORT_TRACKING_HOST /
+# EFFORT_TRACKING_PORT, con default di produzione 127.0.0.1:8000.
+# In sviluppo .env.example li imposta a 0.0.0.0 per l'accesso da rete.
+ExecStart=/bin/bash -c 'exec /opt/efftrack/.venv/bin/uvicorn app.main:app \
+    --host "${EFFORT_TRACKING_HOST:-127.0.0.1}" \
+    --port "${EFFORT_TRACKING_PORT:-8000}" \
+    --workers 1'
 
 Restart=always
 RestartSec=3
