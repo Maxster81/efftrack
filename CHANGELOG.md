@@ -1,0 +1,67 @@
+# Changelog
+
+Tutte le modifiche rilevanti del progetto sono documentate qui.
+Il formato segue [Keep a Changelog](https://keepachangelog.com/) e il versioning [SemVer](https://semver.org/).
+
+## [1.3.2] - 2026-08-06
+
+### Fixed
+- **Installazione pulita**: il servizio systemd non partiva su una prima installazione
+  (`226/NAMESPACE`). Causa: `ReadWritePaths=/opt/efftrack/data` richiede che `data/`
+  esista **prima** dell'avvio del servizio; su installazione pulita non esisteva.
+  `deploy.sh --install` ora crea sempre `data/` (mkdir + chown) subito dopo la rsync.
+- **Host/porta**: l'`ExecStart` di `systemd/efftrack.service` usa ora `uvicorn` **diretto**
+  (niente wrapper `/bin/bash -c`, che rompeva il mount namespace di systemd, e niente
+  `--host`/`--port` hardcodati). Host e porta sono letti da uvicorn tramite le variabili
+  native `UVICORN_HOST` / `UVICORN_PORT` (default `127.0.0.1:8000`).
+- `.env.example` aggiornato: `UVICORN_HOST`/`UVICORN_PORT` sostituiscono
+  `EFFORT_TRACKING_HOST`/`EFFORT_TRACKING_PORT` come fonte per host/porta del server.
+
+## [1.3.1] - 2026-08-06
+
+### Changed (sostituito in 1.3.2)
+- Tentativo di rendere host/porta configurabili nel servizio systemd avvolgendo
+  `ExecStart` in `/bin/bash -c`. **Ritirato in 1.3.2** perché su installazione pulita
+  rompeva il mount namespace di systemd (`226/NAMESPACE`). Vedi 1.3.2 per la soluzione.
+
+## [1.3.0] - 2026-08-05
+
+### Added
+- **Dashboard admin** (`GET /admin`) con KPI e metriche di sistema: utenti
+  totali/attivi/disabilitati, record totali, ore del mese, record di oggi,
+  distribuzione per gruppo, utenti inattivi, attività recente, stato sistema.
+
+## [1.2.1] - 2026-08-05
+
+### Fixed
+- Allineamento verticale del campo "Giorno non lavorato" nel form.
+
+## [1.2.0] - 2026-08-05
+
+### Added
+- **Giorno non lavorato** (S6): checkbox nel form che crea un record con lookup
+  sentinella "NON LAVORATO". Gli export CSV escludono i giorni non lavorati.
+
+## [1.1.1] - 2026-08-05
+
+### Fixed
+- Firma robusta del listener di connettività SQLite per compatibilità con
+  SQLAlchemy 2.0.x e future 3.x.
+
+## [1.1.0] - 2026-08-04
+
+### Added
+- **Cambio password obbligatorio al primo login** (S11): seed admin e nuovi utenti
+  con `password_change_required=True`, redirect a `/profile`, banner di primo accesso.
+
+## [1.0.1] - 2026-08-04
+
+### Fixed
+- **Sessione con scadenza** (Issue N): il cookie di sessione ora scade dopo
+  `EFFORT_TRACKING_SESSION_MAX_AGE_SECONDS` (default 1800 s = 30 min).
+
+## [1.0.0] - 2026-08-04
+
+### Added
+- Fase 14 completata: documentazione README completa, `deploy.sh`, suite di test
+  funzionali (pytest + HTTPX).
