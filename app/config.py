@@ -101,7 +101,7 @@ LOG_FORMAT: str = "%(asctime)s %(levelname)s [%(name)s] %(message)s"
 # --- Costanti applicative -----------------------------------------------------
 
 APP_NAME: str = "Effort Tracking"
-APP_VERSION: str = "1.3.1"
+APP_VERSION: str = "1.3.2"
 
 
 # --- Path applicativi (templates, static) ------------------------------------

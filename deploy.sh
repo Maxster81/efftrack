@@ -89,6 +89,12 @@ if [ "$INSTALL_MODE" = "1" ]; then
         --exclude '.pytest_cache' \
         ./ "${DEPLOY_DIR}/"
 
+    # Ricrea sempre la cartella data/ (richiesta da ReadWritePaths del service
+    # systemd PRIMA dell'avvio, altrimenti errore 226/NAMESPACE) e i permessi.
+    log "Creazione directory dati ${DEPLOY_DIR}/data..."
+    mkdir -p "${DEPLOY_DIR}/data"
+    chown "${DEPLOY_USER}:${DEPLOY_GROUP}" "${DEPLOY_DIR}/data"
+
     log "Creazione venv (se assente)..."
     if [ ! -d "${VENV_DIR}" ]; then
         python3 -m venv "${VENV_DIR}"
@@ -115,8 +121,10 @@ if [ "$ENV_MODE" = "1" ]; then
 # Non committare questo file. Modifica i valori secondo necessità.
 EFFORT_TRACKING_SECRET_KEY=${SECRET}
 EFFORT_TRACKING_DB_URL=sqlite:///${DEPLOY_DIR}/data/efftrack.db
-EFFORT_TRACKING_HOST=127.0.0.1
-EFFORT_TRACKING_PORT=8000
+# Host e porta del web server (li legge uvicorn dalle variabili native
+# UVICORN_HOST / UVICORN_PORT, vedi systemd/efftrack.service).
+UVICORN_HOST=127.0.0.1
+UVICORN_PORT=8000
 EFFORT_TRACKING_LOG_LEVEL=INFO
 EFFORT_TRACKING_AUTH_ENABLED=true
 EFFORT_TRACKING_ADMIN_USERNAME=admin

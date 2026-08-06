@@ -7,12 +7,13 @@
 #      sudo cp systemd/efftrack.service /etc/systemd/system/efftrack.service
 #   2. Crea l'utente dedicato (una tantum):
 #      sudo useradd --system --home /opt/efftrack --shell /usr/sbin/nologin efftrack
-#   3. Crea la cartella di deploy e dai i permessi:
-#      sudo mkdir -p /opt/efftrack
+#   3. Crea la cartella di deploy e dai i permessi (inclusa data/,
+#      richiesta da ReadWritePaths PRIMA dell'avvio del servizio):
+#      sudo mkdir -p /opt/efftrack/data
 #      sudo chown -R efftrack:efftrack /opt/efftrack
 #   4. Crea /etc/efftrack.env con le variabili (vedi .env.example).
 #      Variabili: EFFORT_TRACKING_SECRET_KEY, EFFORT_TRACKING_DB_URL,
-#      EFFORT_TRACKING_HOST, EFFORT_TRACKING_PORT, EFFORT_TRACKING_LOG_LEVEL.
+#      UVICORN_HOST, UVICORN_PORT, EFFORT_TRACKING_LOG_LEVEL.
 #      Nota: in produzione NON si usa il file .env locale; le variabili
 #      arrivano esclusivamente da questo EnvironmentFile.
 #   5. Ricarica systemd, abilita e avvia:
@@ -36,14 +37,12 @@ WorkingDirectory=/opt/efftrack
 EnvironmentFile=/etc/efftrack.env
 
 # Avvio con il venv del progetto. Adatta il path se installi altrove.
-# Host e porta NON sono hardcodati: vengono letti dall'EnvironmentFile
-# (/etc/efftrack.env) tramite le variabili EFFORT_TRACKING_HOST /
-# EFFORT_TRACKING_PORT, con default di produzione 127.0.0.1:8000.
-# In sviluppo .env.example li imposta a 0.0.0.0 per l'accesso da rete.
-ExecStart=/bin/bash -c 'exec /opt/efftrack/.venv/bin/uvicorn app.main:app \
-    --host "${EFFORT_TRACKING_HOST:-127.0.0.1}" \
-    --port "${EFFORT_TRACKING_PORT:-8000}" \
-    --workers 1'
+# Host e porta NON sono hardcodati: uvicorn li legge dalle variabili native
+# UVICORN_HOST / UVICORN_PORT definite nell'EnvironmentFile (/etc/efftrack.env),
+# con default interni 127.0.0.1:8000. NON usare --host/--port qui e NON
+# avvolgere in /bin/bash -c: il wrapper rompe il mount namespace di systemd
+# (errore 226/NAMESPACE) sotto l'hardening ProtectSystem/ProtectHome.
+ExecStart=/opt/efftrack/.venv/bin/uvicorn app.main:app --workers 1
 
 Restart=always
 RestartSec=3
@@ -53,6 +52,9 @@ NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=full
 ProtectHome=true
+# NB: questa directory DEVE esistere prima dell'avvio del servizio, altrimenti
+# systemd fallisce con 226/NAMESPACE. La crea deploy.sh (--install) e le
+# istruzioni manuali del README. L'app la usa per SQLite e export temporanei.
 ReadWritePaths=/opt/efftrack/data
 
 [Install]

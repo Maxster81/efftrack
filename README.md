@@ -83,7 +83,7 @@ Variabili principali:
 |-----------|---------|-------------|
 | `EFFORT_TRACKING_SECRET_KEY` | placeholder dev | Chiave per firmare le sessioni. **In produzione genera una chiave robusta.** |
 | `EFFORT_TRACKING_DB_URL` | `sqlite:///./data/efftrack.db` | URL del database (SQLite oggi, PostgreSQL in futuro). |
-| `EFFORT_TRACKING_HOST` / `EFFORT_TRACKING_PORT` | `0.0.0.0` / `8000` | Host e porta del web server. In produzione il servizio systemd li legge da qui (default sicuri `127.0.0.1` / `8000`). |
+| `UVICORN_HOST` / `UVICORN_PORT` | `0.0.0.0` / `8000` | Host e porta del web server. Li legge direttamente uvicorn (funzionano anche con systemd). In produzione consigliato `127.0.0.1` dietro reverse proxy. |
 | `EFFORT_TRACKING_LOG_LEVEL` | `INFO` | Livello dei log (DEBUG/INFO/WARNING/ERROR). |
 | `EFFORT_TRACKING_AUTH_ENABLED` | `true` | `true` login obbligatorio, `false` server pubblico. |
 | `EFFORT_TRACKING_ADMIN_USERNAME` / `EFFORT_TRACKING_ADMIN_PASSWORD` | `admin` / `admin` | Credenziali **temporanee** del primo admin (lette solo al primo seed). **In produzione vanno sovrascritte.** Al primo login l'admin è obbligato a cambiarle. |
@@ -130,6 +130,9 @@ Viene documentato in testa al file; in sintesi:
 sudo cp systemd/efftrack.service /etc/systemd/system/efftrack.service
 sudo useradd --system --home /opt/efftrack --shell /usr/sbin/nologin efftrack
 sudo mkdir -p /opt/efftrack
+# IMPORTANTE: crea anche data/ (richiesta da ReadWritePaths del service PRIMA
+# dell'avvio, altrimenti error 226/NAMESPACE) e dai i permessi:
+sudo mkdir -p /opt/efftrack/data
 sudo chown -R efftrack:efftrack /opt/efftrack
 # copia il codice in /opt/efftrack (es. rsync), crea il venv e installa le dipendenze
 sudo cp .env.example /etc/efftrack.env   # poi personalizza (vedi config)
@@ -139,11 +142,11 @@ sudo systemctl status efftrack.service
 sudo journalctl -u efftrack -f            # log
 ```
 
-> **Nota**: il template NON hardcoda host/porta: li legge dall'EnvironmentFile `/etc/efftrack.env`
-> tramite `EFFORT_TRACKING_HOST` / `EFFORT_TRACKING_PORT`, con default di produzione
-> `127.0.0.1:8000` (in produzione si usa un **reverse proxy** nginx/Caddy davanti a Uvicorn).
-> Per ascoltare su un'altra interfaccia/porta (es. pre-prod su `0.0.0.0:8010`) basta impostare le
-> variabili in `/etc/efftrack.env` e riavviare: `sudo systemctl restart efftrack`.
+> **Nota**: il template NON hardcoda host/porta: uvicorn li legge dalle variabili native
+> `UVICORN_HOST` / `UVICORN_PORT` definite in `/etc/efftrack.env` (default interni
+> `127.0.0.1:8000`). In produzione si usa un **reverse proxy** nginx/Caddy davanti a Uvicorn.
+> Per ascoltare su un'altra interfaccia/porta (es. pre-prod su `0.0.0.0:8010`) basta impostare
+> quelle variabili in `/etc/efftrack.env` e riavviare: `sudo systemctl restart efftrack`.
 > I log escono su **journald**.
 
 ---
