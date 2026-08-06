@@ -49,6 +49,11 @@ ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
 # Attivazione auth. Se False, il web server resta pubblico (utile in sviluppo/test).
 AUTH_ENABLED: bool = os.environ.get("EFFORT_TRACKING_AUTH_ENABLED", "true").lower() in ("1", "true", "yes", "on")
 
+# Modalità demo (seed dati di esempio: lookup, gruppi, utenti e record di test).
+# In produzione resta False (DB pulito, solo admin). L'opzione --demo di
+# deploy.sh imposta questa variabile a true per ambienti di demo/test.
+DEMO_MODE: bool = os.environ.get("EFFORT_TRACKING_DEMO_MODE", "false").lower() in ("1", "true", "yes", "on")
+
 # Credenziali del primo utente amministratore creato al bootstrap.
 # Usate solo se la tabella users è vuota. In produzione vanno sovrascritte via env.
 ADMIN_USERNAME: str = os.environ.get("EFFORT_TRACKING_ADMIN_USERNAME", "admin")
@@ -101,7 +106,7 @@ LOG_FORMAT: str = "%(asctime)s %(levelname)s [%(name)s] %(message)s"
 # --- Costanti applicative -----------------------------------------------------
 
 APP_NAME: str = "Effort Tracking"
-APP_VERSION: str = "1.3.2"
+APP_VERSION: str = "1.5.1"
 
 
 # --- Path applicativi (templates, static) ------------------------------------

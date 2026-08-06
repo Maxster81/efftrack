@@ -86,9 +86,10 @@ Variabili principali:
 | `UVICORN_HOST` / `UVICORN_PORT` | `0.0.0.0` / `8000` | Host e porta del web server. Li legge direttamente uvicorn (funzionano anche con systemd). In produzione consigliato `127.0.0.1` dietro reverse proxy. |
 | `EFFORT_TRACKING_LOG_LEVEL` | `INFO` | Livello dei log (DEBUG/INFO/WARNING/ERROR). |
 | `EFFORT_TRACKING_AUTH_ENABLED` | `true` | `true` login obbligatorio, `false` server pubblico. |
+| `EFFORT_TRACKING_DEMO_MODE` | `false` | `true` = seed dati di esempio (gruppi, utenti, record di test). In produzione resta `false` (DB pulito, solo admin). |
 | `EFFORT_TRACKING_ADMIN_USERNAME` / `EFFORT_TRACKING_ADMIN_PASSWORD` | `admin` / `admin` | Credenziali **temporanee** del primo admin (lette solo al primo seed). **In produzione vanno sovrascritte.** Al primo login l'admin è obbligato a cambiarle. |
 | `EFFORT_TRACKING_USER_DELETE_GRACE_DAYS` | `30` | Giorni di attesa prima che un utente disabilitato sia eliminabile. |
-| `EFFORT_TRACKING_SESSION_SAMESITE` / `EFFORT_TRACKING_SESSION_SECURE` | `lax` / `false` | Sicurezza cookie di sessione (in produzione dietro TLS: `true`). |
+| `EFFORT_TRACKING_SESSION_SAMESITE` / `EFFORT_TRACKING_SESSION_SECURE` | `lax` / `false` | Sicurezza cookie di sessione. `SECURE=true` richiede HTTPS (il browser scarta il cookie di sessione su HTTP): su pre-prod/sviluppo senza TLS impostare `false`; in produzione dietro reverse proxy con TLS impostare `true`. |
 | `EFFORT_TRACKING_SESSION_MAX_AGE_SECONDS` | `1800` | Durata massima sessione in secondi (30 min). Se l'utente chiude il browser senza logout, alla scadenza serve rilogin. |
 | `EFFORT_TRACKING_MAX_BODY_BYTES` | `1048576` (1 MiB) | Limite massimo del body delle richieste. |
 
@@ -111,15 +112,85 @@ sudo ./deploy.sh           # deploy completo (consigliato)
 sudo ./deploy.sh --install # solo installazione (venv + dipendenze + copia)
 sudo ./deploy.sh --env     # solo generazione /etc/efftrack.env
 sudo ./deploy.sh --service # solo installazione/avvio del servizio systemd
+sudo ./deploy.sh --update  # aggiornamento in-place di un'installazione esistente
+# Directory di installazione e file env personalizzati (valgono per TUTTE le modalità):
+sudo ./deploy.sh --install --dir /home/efftrack --env-file /home/efftrack/efftrack.env
 sudo ./deploy.sh --help    # aiuto
 ```
 
 Lo script genera una `SECRET_KEY` robusta e crea `/etc/efftrack.env` con valori sicuri.
 **CAMBIA la password admin** (`EFFORT_TRACKING_ADMIN_PASSWORD`) prima di andare in produzione.
+
+> **Nota sui path personalizzati (`--dir` / `--env-file`)**: il template
+> `systemd/efftrack.service` usa i path **standard** `/opt/efftrack` e `/etc/efftrack.env`
+> (in `WorkingDirectory`, `ExecStart`, `ReadWritePaths`, `EnvironmentFile`). Se installi in
+> una directory diversa o con un file env personalizzato, `deploy.sh` copia il template così
+> com'è: **devi adattare a mano** il tuo `/etc/systemd/system/efftrack.service` prima di
+> avviare il servizio, altrimenti punterà a path inesistenti. In modalità `--update` il
+> `.service` **non viene mai sovrascritto**: lo script lo segnala e mostri il diff.
+>
+> Con
+> `--dir /home/efftrack` ed `EFFORT_TRACKING_DB_URL=sqlite:////home/efftrack/data/efftrack.db`
+> nell'env custom, un esempio di `ReadWritePaths` corretto è `/home/efftrack/data`.
+
+Con il flag `--demo` (es. `sudo ./deploy.sh --demo`) il DB viene popolato con dati di
+esempio (gruppi "Gruppo 1"/"Gruppo 2", utenti e record di test): da usare SOLO per
+ambiente demo/test. Di default (senza flag) il deploy crea un DB **pulito** con il solo
+utente admin.
 La password admin è **temporanea**: viene letta solo al primo seed (tabella `users` vuota) e
 hashata nel DB. Al primo login l'admin è reindirizzato a `/profile` e **deve** cambiarla prima
 di poter navigare (stessa regola vale per i nuovi utenti creati dall'admin: la password impostata
 in fase di creazione è temporanea e va cambiata al primo accesso).
+
+### Opzione A1 — Aggiornamento in-place (`--update`)
+
+Per aggiornare un'installazione già esistente (senza perdere dati né configurazioni):
+
+```bash
+sudo ./deploy.sh --update                            # aggiorna in /opt/efftrack
+sudo ./deploy.sh --update --dir /home/efftrack       # se hai installato altrove
+sudo ./deploy.sh --update --env-file /etc/efftrack.env  # se hai un env personalizzato
+```
+
+Cosa fa `--update`:
+
+1. Verifica che esista un'installazione (directory + servizio systemd).
+2. Controlla la versione installata (`DEPLOY_DIR/VERSION`): se è sotto la soglia minima
+   (`1.3.0`, costante `MIN_UPDATE_VERSION` in `deploy.sh`) blocca e stampa la procedura
+   di **backup + reinstallazione**.
+3. Crea un backup automatico in `DEPLOY_DIR/backups/YYYYMMDD-HHMMSS/` di:
+   - il database (`data/efftrack.db`),
+   - il file env (default `/etc/efftrack.env`, o il percorso passato con `--env-file`),
+   - l'unità systemd (`/etc/systemd/system/efftrack.service`).
+4. Ferma il servizio, copia il nuovo codice (escludendo `data/`, `.venv`, `backups/`, ecc.),
+   aggiorna le dipendenze Python (`pip install -r requirements.txt`).
+5. **Non sovrascrive** i file personalizzati:
+   - Segnala le **nuove variabili d'ambiente** (presenti in `.env.example` ma assenti nel
+     tuo file env). L'app usa già i default interni in `config.py`, quindi puoi ignorarle
+     o aggiungerle a mano in base alla documentazione in `.env.example`.
+   - Se l'unità systemd è cambiata nella nuova versione, mostra il **diff** e ti istruisce
+     su come aggiornarla manualmente (importante se usi `--dir` o `--env-file` personalizzati:
+     devi adattare `WorkingDirectory`, `ExecStart`, `EnvironmentFile` nel service).
+6. Riavvia il servizio ed esegue l'health check.
+
+> **Database**: il DB non viene mai toccato da `--update`. Le modifiche allo schema (nuove
+> tabelle/colonne) vengono applicate a runtime alla prima accensione tramite le migrazioni
+> idempotenti in `app/core/migrations.py`. La versione schema viene tracciata nella tabella
+> `schema_version` (un solo record con la versione dell'app che ha eseguito l'ultima migrazione).
+> Se hai impostato un percorso DB completamente fuori da `data/`, il backup automatico potrebbe
+> non trovarlo: in quel caso fai un backup manuale prima dell'update.
+
+### Soglia minima e reinstallazione
+
+Se l'update non è consentito (versione installata < `MIN_UPDATE_VERSION`), esegui il **backup
+manuale** e la **reinstallazione** seguendo le istruzioni stampate da `--update`, oppure:
+
+1. `sudo systemctl stop efftrack`
+2. Copia in un posto sicuro: `DEPLOY_DIR/data/efftrack.db`, l'env file, la unità systemd.
+3. `sudo rm -rf DEPLOY_DIR`
+4. Clona il nuovo repo ed esegui `sudo ./deploy.sh --install --dir ... --env-file ...`.
+5. Ferma il servizio, ripristina DB ed env dai backup, riavvia.
+6. Al primo avvio le migrazioni portano il DB alla versione corrente.
 
 ### Opzione B — Passi manuali
 

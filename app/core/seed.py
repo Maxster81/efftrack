@@ -18,7 +18,7 @@ from passlib.hash import bcrypt
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.config import ADMIN_PASSWORD, ADMIN_USERNAME
+from app.config import ADMIN_PASSWORD, ADMIN_USERNAME, DEMO_MODE
 from app.models import Activity, Client, EffortEntry, Group, User
 
 logger: logging.Logger = logging.getLogger(__name__)
@@ -31,39 +31,39 @@ _CLIENTS: list[dict[str, str]] = [
 ]
 
 _GROUPS: list[dict[str, str]] = [
-    {"name": "GRUPPO SOC"},
-    {"name": "GRUPPO NOC"},
+    {"name": "Gruppo 1"},
+    {"name": "Gruppo 2"},
 ]
 
 _ACTIVITIES: list[dict[str, object]] = [
     {
-        "name": "SOC-Conduzione",
+        "name": "Conduzione",
         "requires_description": False,
     },
     {
-        "name": "SOC-Supporto Specialistico",
+        "name": "Supporto Specialistico",
         "requires_description": True,
     },
 ]
 
-# Utenti di test per verificare segregazione dati e ruoli.
+# Utenti di test per verificare segregazione dati e ruoli (solo in DEMO_MODE).
 # La colonna `group` è il nome del gruppo di appartenenza (mappato a group_id
 # da seed_test_users); `group_none=True` lascia il group_id a None (es. admin).
 # Profilo utente: vengono colonne `first_name`, `last_name`, `email`.
 _TEST_USERS: list[dict[str, str | None]] = [
-    # 2 MANAGER: uno per SOC, uno per NOC.
-    {"username": "giulia", "password": "test", "role": "manager", "group": "GRUPPO SOC",
+    # 2 MANAGER: uno per Gruppo 1, uno per Gruppo 2.
+    {"username": "giulia", "password": "test", "role": "manager", "group": "Gruppo 1",
      "first_name": "Giulia", "last_name": "Verdi", "email": "giulia@efftrack.local"},
-    {"username": "marco", "password": "test", "role": "manager", "group": "GRUPPO NOC",
+    {"username": "marco", "password": "test", "role": "manager", "group": "Gruppo 2",
      "first_name": "Marco", "last_name": "Neri", "email": "marco@efftrack.local"},
-    # 4 USER: 2 per SOC, 2 per NOC.
-    {"username": "mario", "password": "test", "role": "user", "group": "GRUPPO SOC",
+    # 4 USER: 2 per Gruppo 1, 2 per Gruppo 2.
+    {"username": "mario", "password": "test", "role": "user", "group": "Gruppo 1",
      "first_name": "Mario", "last_name": "Bianchi", "email": "mario@efftrack.local"},
-    {"username": "paolo", "password": "test", "role": "user", "group": "GRUPPO SOC",
+    {"username": "paolo", "password": "test", "role": "user", "group": "Gruppo 1",
      "first_name": "Paolo", "last_name": "Gialli", "email": "paolo@efftrack.local"},
-    {"username": "anna", "password": "test", "role": "user", "group": "GRUPPO NOC",
+    {"username": "anna", "password": "test", "role": "user", "group": "Gruppo 2",
      "first_name": "Anna", "last_name": "Rossi", "email": "anna@efftrack.local"},
-    {"username": "elisa", "password": "test", "role": "user", "group": "GRUPPO NOC",
+    {"username": "elisa", "password": "test", "role": "user", "group": "Gruppo 2",
      "first_name": "Elisa", "last_name": "Marroni", "email": "elisa@efftrack.local"},
 ]
 
@@ -160,12 +160,17 @@ def _username_list() -> list[str]:
 def seed_test_users(db: Session) -> None:
     """Crea/aggiorna gli utenti di test (2 MANAGER + 4 USER su 2 gruppi).
 
+    Solo in DEMO_MODE: in produzione (False) non inserisce utenti di test.
     Idempotente per username. Ogni utente ha `role` e `group_id` derivati
     dalla configurazione `_TEST_USERS`, mappando il nome del gruppo al suo id.
     Gli utenti esistenti vengono aggiornati (upsert) per allineare ruolo/gruppo.
-    Password di default "test" (solo sviluppo).
+    Password di default "test" (solo demo/development).
     """
-    # Mappa nome gruppo → id (SOC e NOC).
+    if not DEMO_MODE:
+        logger.debug("DEMO_MODE disattivato: seed utenti di test saltato")
+        return
+
+    # Mappa nome gruppo → id (Gruppo 1 e Gruppo 2).
     groups = {g.name: g.id for g in db.execute(select(Group)).scalars().all()}
 
     updated: list[str] = []
@@ -228,10 +233,15 @@ def seed_test_users(db: Session) -> None:
 def seed_test_records(db: Session) -> None:
     """Crea ~20 record di effort per ciascun utente di test.
 
+    Solo in DEMO_MODE: in produzione (False) non inserisce record di test.
     Idempotente: se esistono già record con `user_id` associati agli utenti
     di test, non fa nulla. Ogni record usa il `group_id` del gruppo di
     appartenenza dell'utente (così la vista manager per gruppo ha senso).
     """
+    if not DEMO_MODE:
+        logger.debug("DEMO_MODE disattivato: seed record di test saltato")
+        return
+
     usernames = _username_list()
     test_users = db.execute(
         select(User).where(User.username.in_(usernames))

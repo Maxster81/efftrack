@@ -2,7 +2,13 @@
 # Effort Tracking — systemd service unit (TEMPLATE, NON ATTIVATO)
 # =============================================================================
 # Questo file è un template documentale. NON viene attivato automaticamente.
-# Per usarlo in produzione:
+# I path qui sotto (WorkingDirectory, ExecStart, ReadWritePaths, EnvironmentFile)
+# sono pensati per l'installazione STANDARD in /opt/efftrack con file env
+# /etc/efftrack.env. Se usi il deploy.sh con --dir o --env-file personalizzati,
+# ADATTA questi path di conseguenza (non sovrascriverà mai il tuo .service
+# in modalità --update: te lo segnala e lo aggiorni a mano).
+#
+# Per usarlo in produzione (path standard):
 #   1. Copialo in /etc/systemd/system/efftrack.service
 #      sudo cp systemd/efftrack.service /etc/systemd/system/efftrack.service
 #   2. Crea l'utente dedicato (una tantum):

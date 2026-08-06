@@ -10,6 +10,7 @@ import logging
 from sqlalchemy import inspect, text
 from sqlalchemy.engine import Engine
 
+from app.config import APP_VERSION
 from app.db import Base
 
 logger: logging.Logger = logging.getLogger(__name__)
@@ -154,12 +155,62 @@ def _migrate_users_profile(engine: Engine) -> None:
         logger.info("Colonna users.%s aggiunta", col_name)
 
 
+def _ensure_schema_version_table(engine: Engine) -> None:
+    """Crea la tabella `schema_version` se non esiste.
+
+    Contiene un solo record (id=1) che traccia la versione dell'app che ha
+    eseguito l'ultima migrazione. Serve come tracciamento per capire da che
+    versione proviene un DB; le migrazioni restano comunque idempotenti.
+    """
+    inspector = inspect(engine)
+    if "schema_version" in inspector.get_table_names():
+        logger.debug("Tabella schema_version già presente, creazione non necessaria")
+        return
+
+    logger.info("Migrazione: creazione tabella schema_version")
+    with engine.begin() as connection:
+        connection.execute(
+            text(
+                "CREATE TABLE schema_version ("
+                "  id INTEGER PRIMARY KEY CHECK (id = 1),"
+                "  version TEXT NOT NULL,"
+                "  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP"
+                ")"
+            )
+        )
+    logger.info("Tabella schema_version creata")
+
+
+def _update_schema_version(engine: Engine) -> None:
+    """Inserisce o aggiorna il record di versione schema con la versione app."""
+    with engine.begin() as connection:
+        result = connection.execute(
+            text("SELECT 1 FROM schema_version WHERE id = 1")
+        ).fetchone()
+        if result:
+            connection.execute(
+                text(
+                    "UPDATE schema_version SET version = :ver, "
+                    "updated_at = CURRENT_TIMESTAMP WHERE id = 1"
+                ),
+                {"ver": APP_VERSION},
+            )
+            logger.info("schema_version aggiornata a %s", APP_VERSION)
+        else:
+            connection.execute(
+                text("INSERT INTO schema_version (id, version) VALUES (1, :ver)"),
+                {"ver": APP_VERSION},
+            )
+            logger.info("schema_version impostata a %s", APP_VERSION)
+
+
 def run_schema_migrations(engine: Engine) -> None:
     """Applica le migrazioni controllate dello schema all'avvio.
 
     Gestisce: rimozione legacy in `effort_entries` e aggiunta delle colonne
     `last_login`, `group_id`, `disabled`, `disabled_at` e dei dati profilo
     a `users`. Idempotente: se lo schema è già allineato, non fa nulla.
+    Effettua anche il tracciamento della versione schema in `schema_version`.
     """
     _migrate_effort_entries(engine)
     _migrate_users_last_login(engine)
@@ -167,3 +218,5 @@ def run_schema_migrations(engine: Engine) -> None:
     _migrate_users_disabled_at(engine)
     _migrate_users_disabled(engine)
     _migrate_users_profile(engine)
+    _ensure_schema_version_table(engine)
+    _update_schema_version(engine)

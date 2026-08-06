@@ -36,6 +36,7 @@ from app.config import (
     USER_DELETE_GRACE_DAYS,
 )
 from app.core.permissions import require_admin
+from app.core.seed import SENTINEL_NAME
 from app.db import get_db
 from app.models import Activity, Client, EffortEntry, Group, User
 from app.models.effort_entry import utcnow
@@ -760,6 +761,15 @@ async def admin_lookup_create(
         logger.warning("Creazione lookup non valida: %s", exc.errors())
         return RedirectResponse("/admin/lookup?err=Dati non validi", status_code=303)
 
+    # La voce sentinella "NON LAVORATO" (S6) non può essere creata via UI:
+    # è gestita esclusivamente dal seed. Evita collisioni col meccanismo giorni
+    # non lavorati.
+    if payload.name.upper() == SENTINEL_NAME:
+        logger.warning("Creazione lookup '%s' bloccata (sentinella)", payload.name)
+        return RedirectResponse(
+            "/admin/lookup?err=Nome riservato", status_code=303
+        )
+
     model = _lookup_model(payload.type)
     existing = db.execute(
         select(model).where(model.name == payload.name)
@@ -793,6 +803,16 @@ async def admin_lookup_edit(
     target = db.get(model, lookup_id)
     if target is None:
         return RedirectResponse("/admin/lookup?err=Elemento inesistente", status_code=303)
+
+    # La voce sentinella "NON LAVORATO" non è rinominabile: è un meccanismo
+    # interno usato per i giorni non lavorati (S6). Rinomarla romperebbe
+    # l'allineamento dell'app con il nome sentinella.
+    if target.name.upper() == SENTINEL_NAME:
+        logger.warning("Rinomina lookup sentinella '%s' bloccata", target.name)
+        return RedirectResponse(
+            "/admin/lookup?err=Elemento sentinella non modificabile", status_code=303
+        )
+
     target.name = payload.name
     db.commit()
     logger.info("Lookup %s id=%s rinominato in %s", payload.type, lookup_id, payload.name)
@@ -816,6 +836,14 @@ async def admin_lookup_delete(
     target = db.get(model, lookup_id)
     if target is None:
         return RedirectResponse("/admin/lookup?err=Elemento inesistente", status_code=303)
+
+    # La voce sentinella "NON LAVORATO" non è eliminabile: è un meccanismo
+    # interno (S6). Protezione esplicita, oltre al blocco per record associati.
+    if target.name.upper() == SENTINEL_NAME:
+        logger.warning("Eliminazione lookup sentinella '%s' bloccata", target.name)
+        return RedirectResponse(
+            "/admin/lookup?err=Elemento sentinella non eliminabile", status_code=303
+        )
 
     # Colonna FK che collega il lookup a effort_entries.
     fk_col = {

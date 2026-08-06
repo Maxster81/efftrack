@@ -3,6 +3,27 @@
 Tutte le modifiche rilevanti del progetto sono documentate qui.
 Il formato segue [Keep a Changelog](https://keepachangelog.com/) e il versioning [SemVer](https://semver.org/).
 
+## [1.4.1] - 2026-08-06
+
+### Fixed
+- **Voce sentinella "NON LAVORATO"** (S13): nella pagina `admin/lookup` non è più possibile
+  rinominare né eliminare la voce sentinella usata per i giorni non lavorati (S6). Lato UI la
+  riga è renderizzata come statica (con etichetta "sentinella"); lato server sono bloccate
+  `create`/`edit`/`delete` sul nome "NON LAVORATO". Protegge il meccanismo dei giorni non
+  lavorati da rinominazioni/eliminazioni accidentali da parte dell'admin.
+
+## [1.4.0] - 2026-08-06
+
+### Added
+- **Deploy con DB pulito**: `deploy.sh` di default crea un database **vuoto** con il solo
+  utente admin. La nuova variabile `EFFORT_TRACKING_DEMO_MODE` (default `false`) controlla il
+  seed dei dati demo.
+- **Opzione `--demo`** in `deploy.sh`: `sudo ./deploy.sh --demo` popola il DB con dati di
+  esempio (gruppi "Gruppo 1"/"Gruppo 2", utenti e record di test). Da usare SOLO per ambienti
+  demo/test, non in produzione.
+- Rinominati i gruppi di demo da "GRUPPO SOC"/"GRUPPO NOC" a "Gruppo 1"/"Gruppo 2" e le
+  attività da "SOC-Conduzione"/"SOC-Supporto Specialistico" a "Conduzione"/"Supporto Specialistico".
+
 ## [1.3.2] - 2026-08-06
 
 ### Fixed

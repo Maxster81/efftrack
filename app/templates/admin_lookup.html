@@ -33,23 +33,30 @@
           {% for item in items %}
             <li class="lookup-item">
               <span class="lookup-name">{{ item.name }}</span>
-              <div class="admin-actions">
-                <form method="post" action="/admin/lookup/{{ item.id }}/edit">
-                  <input type="hidden" name="lookup_type" value="{{ type }}" />
-                  <label class="visually-hidden" for="edit-{{ type }}-{{ item.id }}">Nuovo nome</label>
-                  <input type="text" id="edit-{{ type }}-{{ item.id }}" name="name" value="{{ item.name }}" />
-                  <button type="submit" class="btn-secondary">Rinomina</button>
-                </form>
-                {% if item.id in used_ids %}
-                  <span class="text-muted" title="Elemento con record associati">In uso</span>
-                {% else %}
-                  <form method="post" action="/admin/lookup/{{ item.id }}/delete"
-                        onsubmit="return confirm('Eliminare {{ item.name }}?')">
+              {% if item.name|upper == "NON LAVORATO" %}
+                {# Voce sentinella (S6): non modificabile né eliminabile.
+                   Renderizzata come statica per evitare che l'admin la
+                   rinomin/i o la elimini via UI (protezione anche lato server). #}
+                <span class="text-muted" title="Voce sentinella gestita dal sistema">sentinella</span>
+              {% else %}
+                <div class="admin-actions">
+                  <form method="post" action="/admin/lookup/{{ item.id }}/edit">
                     <input type="hidden" name="lookup_type" value="{{ type }}" />
-                    <button type="submit" class="btn-danger">Elimina</button>
+                    <label class="visually-hidden" for="edit-{{ type }}-{{ item.id }}">Nuovo nome</label>
+                    <input type="text" id="edit-{{ type }}-{{ item.id }}" name="name" value="{{ item.name }}" />
+                    <button type="submit" class="btn-secondary">Rinomina</button>
                   </form>
-                {% endif %}
-              </div>
+                  {% if item.id in used_ids %}
+                    <span class="text-muted" title="Elemento con record associati">In uso</span>
+                  {% else %}
+                    <form method="post" action="/admin/lookup/{{ item.id }}/delete"
+                          onsubmit="return confirm('Eliminare {{ item.name }}?')">
+                      <input type="hidden" name="lookup_type" value="{{ type }}" />
+                      <button type="submit" class="btn-danger">Elimina</button>
+                    </form>
+                  {% endif %}
+                </div>
+              {% endif %}
             </li>
           {% else %}
             <li class="lookup-item text-muted">Nessun elemento.</li>
