@@ -36,7 +36,9 @@ SERVICE_NAME="efftrack.service"
 
 # Versione minima da cui è supportato l'update in-place.
 # Sotto questa versione bisogna fare backup + reinstallazione.
-MIN_UPDATE_VERSION="1.3.0"
+# ⚠️ 1.6.0 = prima versione con la dipendenza di sistema `xmlsec1` (SAML).
+# Gli update da versioni anteriori richiedono reinstallazione consapevole.
+MIN_UPDATE_VERSION="1.6.0"
 
 # Versione corrente letto dal repo (per il riepilogo).
 NEW_VERSION="$(cat VERSION 2>/dev/null || echo '?')"
@@ -97,6 +99,107 @@ fi
 
 log() { echo -e "\n\033[1;32m[deploy]\033[0m $*"; }
 
+# Helper di input per il wizard: mostra prompt con default, legge la risposta.
+# Usa /dev/tty per leggere l'input anche quando lo script è usato con pipe.
+# Se /dev/tty non è disponibile (ambiente non interattivo), usa il default.
+prompt() {
+    local msg="$1" default="$2" answer
+    printf "%s [%s]: " "$msg" "$default" >/dev/tty
+    if IFS= read -r answer </dev/tty; then
+        answer="${answer//[[:space:]]/}"
+        echo "${answer:-$default}"
+    else
+        echo "$default"
+    fi
+}
+
+prompt_yes() {
+    local msg="$1" default="$2" answer
+    printf "%s [%s]: " "$msg" "$default" >/dev/tty
+    if IFS= read -r answer </dev/tty; then
+        answer="$(echo "${answer:-$default}" | tr '[:upper:]' '[:lower:]')"
+        case "$answer" in
+            s|si|sì|y|yes|1) echo "1" ;;
+            *) echo "0" ;;
+        esac
+    else
+        case "$default" in
+            Sì|Si|S|YES|Y|1) echo "1" ;;
+            *) echo "0" ;;
+        esac
+    fi
+}
+
+# Wizard interattivo: raccoglie le preferenze di configurazione (directory,
+# networking, password admin, SAML). Usato durante la creazione del file env.
+# Le variabili raccolte vengono usate sia dall'installazione sia dalla
+# generazione di /etc/efftrack.env.
+wizard_collect() {
+    local proxy_host pwd_new
+    log "=== Configurazione guidata ==="
+
+    # 1) Directory di installazione (se non specificata con --dir).
+    if [ -z "${DEPLOY_DIR_ORIGIN:-}" ] || [ "$DEPLOY_DIR" = "/opt/efftrack" ]; then
+        local dir_answer
+        dir_answer="$(prompt "Directory di installazione" "${DEPLOY_DIR}")"
+        if [ -n "$dir_answer" ] && [ "$dir_answer" != "/opt/efftrack" ]; then
+            DEPLOY_DIR="$dir_answer"
+            VENV_DIR="${DEPLOY_DIR}/.venv"
+        fi
+    fi
+
+    # 2) Networking: reverse proxy + porta.
+    local proxy_yn
+    proxy_yn="$(prompt_yes "L'app sarà dietro un reverse proxy (nginx/Caddy)?" "Sì")"
+    if [ "$proxy_yn" = "1" ]; then
+        proxy_host="127.0.0.1"
+        WIZARD_SESSION_SECURE="true"
+    else
+        proxy_host="0.0.0.0"
+        WIZARD_SESSION_SECURE="false"
+    fi
+    WIZARD_UVICORN_HOST="$proxy_host"
+    WIZARD_UVICORN_PORT="$(prompt "Porta di ascolto" "8000")"
+
+    # 3) Password admin: username fisso "admin", password auto-generata.
+    #    La password viene mostrata a video e scritta nel file env come
+    #    TEMPORANEA: al primo login l'admin è obbligato a cambiarla.
+    WIZARD_ADMIN_USERNAME="admin"
+    pwd_new="$(python3 -c 'import secrets,string
+alphabet=string.ascii_letters+string.digits+"!@#$%&*+-.=?^"
+print("".join(secrets.choice(alphabet) for _ in range(16)))')"
+    WIZARD_ADMIN_PASSWORD="$pwd_new"
+    echo ""
+    echo -e "\033[1;33m  Password temporanea dell'admin generata:\033[0m $pwd_new"
+    echo -e "  (copiala per la prima acceduta; al primo login dovrai cambiarla)"
+    echo ""
+
+    # 4) SAML / Microsoft Entra ID (opzionale).
+    local saml_yn
+    saml_yn="$(prompt_yes "Abilitare il login SAML/Microsoft Entra ID?" "No")"
+    if [ "$saml_yn" = "1" ]; then
+        WIZARD_SAML_ENABLED="true"
+        WIZARD_SAML_IDP_ENTITY_ID="$(prompt "Entity ID dell'IdP Microsoft (es. https://sts.windows.net/<tenant-id>/)" "")"
+        WIZARD_SAML_IDP_METADATA_URL="$(prompt "URL del metadata XML dell'IdP (federationmetadata.xml)" "")"
+        local public_host
+        public_host="$(prompt "Hostname pubblico dell'app (es. efftrack.azienda.it)" "")"
+        WIZARD_SAML_ENTITY_ID="https://${public_host}/saml/metadata"
+        WIZARD_SAML_ACS_URL="https://${public_host}/saml/acs"
+        WIZARD_SAML_CERT_FILE=""
+        WIZARD_SAML_KEY_FILE=""
+    else
+        WIZARD_SAML_ENABLED="false"
+        WIZARD_SAML_IDP_ENTITY_ID=""
+        WIZARD_SAML_IDP_METADATA_URL=""
+        WIZARD_SAML_ENTITY_ID="https://efftrack.example.com/saml/metadata"
+        WIZARD_SAML_ACS_URL="https://efftrack.example.com/saml/acs"
+        WIZARD_SAML_CERT_FILE=""
+        WIZARD_SAML_KEY_FILE=""
+    fi
+
+    log "Configurazione raccolta."
+}
+
 # --- Funzioni condivise ------------------------------------------------------
 
 rsync_code() {
@@ -146,6 +249,29 @@ get_installed_version() {
     fi
 }
 
+# Installa/verifica la dipendenza di sistema `xmlsec1` (richiesta dalla feature
+# SAML/MFA: pysaml2 firma/verifica documenti XML-Signature). È una libreria C a
+# livello di SISTEMA OPERATIVO, NON coperta da `pip install`: va installata via
+# apt. Idempotente: se già presente, non fa nulla.
+ensure_xmlsec1() {
+    if command -v xmlsec1 >/dev/null 2>&1; then
+        log "xmlsec1 già presente ($(xmlsec1 --version 2>/dev/null || echo '?'))."
+        return
+    fi
+    log "Installazione dipendenza di sistema xmlsec1 (per SAML/MFA)..."
+    apt-get update -qq
+    DEBIAN_FRONTEND=noninteractive apt-get install -y xmlsec1 libxml2-dev libxmlsec1-dev
+    log "xmlsec1 installato."
+}
+
+# --- 0) Wizard interattivo (prima di installazione ed env) --------------------
+# Avvia la raccolta guidata quando si installa o si crea il file env
+# (deploy completo, --demo, --install, --env). Non parte per --update,
+# --service da solo, o --help.
+if [ "${INSTALL_MODE}${ENV_MODE}" != "00" ] && [ "$UPDATE_MODE" = "0" ]; then
+    wizard_collect
+fi
+
 # --- 1) Installazione (venv + dipendenze + copia file) -----------------------
 if [ "$INSTALL_MODE" = "1" ]; then
     log "Creazione utente di sistema ${DEPLOY_USER} (se non esiste)..."
@@ -158,6 +284,10 @@ if [ "$INSTALL_MODE" = "1" ]; then
     chown -R "${DEPLOY_USER}:${DEPLOY_GROUP}" "${DEPLOY_DIR}"
 
     rsync_code
+
+    # Dipendenza di sistema XML-Signature (feature SAML/MFA): va installata a
+    # livello OS, NON è coperta da pip. Idempotente.
+    ensure_xmlsec1
 
     log "Creazione venv (se assente)..."
     if [ ! -d "${VENV_DIR}" ]; then
@@ -183,36 +313,48 @@ if [ "$ENV_MODE" = "1" ]; then
         log "  ${ENV_FILE} esiste già: non lo sovrascrivo."
     else
         # Genera una SECRET_KEY robusta e imposta valori di produzione sicuri.
+        # Le variabili WIZARD_* sono state raccolte dalla configurazione guidata.
         SECRET="$(python3 -c 'import secrets; print(secrets.token_urlsafe(48))')"
         cat > "${ENV_FILE}" <<EOF
-# Effort Tracking — ambiente di produzione (generato da deploy.sh)
+# Effort Tracking — ambiente di produzione (generato da deploy.sh + wizard)
 # Non committare questo file. Modifica i valori secondo necessità.
 EFFORT_TRACKING_SECRET_KEY=${SECRET}
 EFFORT_TRACKING_DB_URL=sqlite:///${DEPLOY_DIR}/data/efftrack.db
 # Host e porta del web server (li legge uvicorn dalle variabili native
 # UVICORN_HOST / UVICORN_PORT, vedi systemd/efftrack.service).
-UVICORN_HOST=127.0.0.1
-UVICORN_PORT=8000
+UVICORN_HOST=${WIZARD_UVICORN_HOST:-127.0.0.1}
+UVICORN_PORT=${WIZARD_UVICORN_PORT:-8000}
 EFFORT_TRACKING_LOG_LEVEL=INFO
 EFFORT_TRACKING_AUTH_ENABLED=true
 # Modalità demo: true → seed dati di esempio (gruppi, utenti, record di test).
 # In produzione (default) resta false → DB pulito con solo l'admin.
 EFFORT_TRACKING_DEMO_MODE=${DEMO_VALUE}
-EFFORT_TRACKING_ADMIN_USERNAME=admin
-# CAMBIA QUESTA PASSWORD PRIMA DI ANDARE IN PRODUZIONE!
-# NOTA (S11): questa password è TEMPORANEA, letta solo al primo seed.
-# Al primo login l'admin è obbligato a cambiarla prima di navigare.
-EFFORT_TRACKING_ADMIN_PASSWORD=cambia-questa-password
+EFFORT_TRACKING_ADMIN_USERNAME=${WIZARD_ADMIN_USERNAME:-admin}
+# Password TEMPORANEA (generata dal wizard): letta solo al primo seed.
+# Al primo login l'admin è obbligato a cambiarla prima di navigare (S11).
+EFFORT_TRACKING_ADMIN_PASSWORD=${WIZARD_ADMIN_PASSWORD:-cambia-questa-password}
 EFFORT_TRACKING_USER_DELETE_GRACE_DAYS=30
 EFFORT_TRACKING_SESSION_SAMESITE=lax
-# NOTA: SESSION_SECURE=true richiede HTTPS (il browser scarta il cookie di
-# sessione su HTTP). Su pre-prod/sviluppo senza TLS impostarlo a false.
-# In produzione dietro reverse proxy con TLS (es. NetScaler) va rimesso a true.
-EFFORT_TRACKING_SESSION_SECURE=true
+# Durata massima della sessione in secondi (default 30 min).
+EFFORT_TRACKING_SESSION_MAX_AGE_SECONDS=1800
+# SESSION_SECURE=true richiede HTTPS (il browser scarta il cookie di sessione
+# su HTTP). Derivato dal wizard: dietro reverse proxy (127.0.0.1) → true.
+EFFORT_TRACKING_SESSION_SECURE=${WIZARD_SESSION_SECURE:-true}
 EFFORT_TRACKING_MAX_BODY_BYTES=1048576
+# --- SAML / Microsoft Entra ID (opzionale, configurato dal wizard) ---
+EFFORT_TRACKING_SAML_ENABLED=${WIZARD_SAML_ENABLED:-false}
+EFFORT_TRACKING_SAML_ENTITY_ID=${WIZARD_SAML_ENTITY_ID:-https://efftrack.example.com/saml/metadata}
+EFFORT_TRACKING_SAML_ACS_URL=${WIZARD_SAML_ACS_URL:-https://efftrack.example.com/saml/acs}
+EFFORT_TRACKING_SAML_IDP_ENTITY_ID=${WIZARD_SAML_IDP_ENTITY_ID:-}
+EFFORT_TRACKING_SAML_IDP_METADATA_URL=${WIZARD_SAML_IDP_METADATA_URL:-}
+EFFORT_TRACKING_SAML_CERT_FILE=${WIZARD_SAML_CERT_FILE:-}
+EFFORT_TRACKING_SAML_KEY_FILE=${WIZARD_SAML_KEY_FILE:-}
 EOF
         chmod 600 "${ENV_FILE}"
-        log "  Creata ${ENV_FILE} con SECRET_KEY generata. RIVEDI la password admin!"
+        log "  Creata ${ENV_FILE} con SECRET_KEY generata e configurazione del wizard."
+        if [ "${WIZARD_SAML_ENABLED:-false}" = "true" ]; then
+            log "  SAML ABILITATO: verifica di aver configurato Entity ID e metadata correttamente in Azure."
+        fi
     fi
 fi
 
@@ -299,9 +441,9 @@ if [ "$UPDATE_MODE" = "1" ]; then
         echo "  6. Ferma il servizio, ripristina DB ed env dai backup, riavvia" >&2
         echo "  7. Al primo avvio le migrazioni porteranno il DB alla versione corrente" >&2
         echo "" >&2
-        echo "N.B. Se sei già a una versione >= 1.3.0, questo errore è un bug:" >&2
+        echo "N.B. Se sei già a una versione >= 1.6.0, questo errore è un bug:" >&2
         echo "     verifica che la versione installata (file DEPLOY_DIR/VERSION) sia" >&2
-        echo "     leggibile e formattata come semver (es. 1.3.2)." >&2
+        echo "     leggibile e formattata come semver (es. 1.6.1)." >&2
         exit 1
     fi
 
@@ -344,7 +486,10 @@ if [ "$UPDATE_MODE" = "1" ]; then
     # --- 4.5 Copia nuovo codice (esclude anche backups/) ---
     rsync_code "backups"
 
-    # --- 4.6 Aggiorna dipendenze ---
+    # --- 4.6 Dipendenza di sistema xmlsec1 + aggiorna dipendenze ---
+    # xmlsec1 (XML-Signature per SAML) è una dipendenza di sistema NON coperta
+    # da pip: la installa se manca (idempotente).
+    ensure_xmlsec1
     if [ -d "${VENV_DIR}" ]; then
         update_dependencies
     else

@@ -21,6 +21,8 @@ import os
 from datetime import date, datetime, timedelta
 from typing import Annotated
 
+from urllib.parse import urlencode
+
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
 from pydantic import ValidationError
@@ -35,14 +37,15 @@ from app.config import (
     TEMPLATES_DIR,
     USER_DELETE_GRACE_DAYS,
 )
+from app.core.password import generate_password, hash_password
 from app.core.permissions import require_admin
 from app.core.seed import SENTINEL_NAME
 from app.db import get_db
 from app.models import Activity, Client, EffortEntry, Group, User
 from app.models.effort_entry import utcnow
+from app.routers.web import _resolve_month
 from app.schemas.effort import LookupCreate, PasswordChange, RoleChange, UserCreate
 from fastapi.templating import Jinja2Templates
-from passlib.hash import bcrypt
 
 logger: logging.Logger = logging.getLogger(__name__)
 
@@ -228,18 +231,19 @@ async def admin_records(
     db: Session = Depends(get_db),
     admin: User = Depends(require_admin),
     month: str | None = None,
+    year: str | None = None,
+    month_num: str | None = None,
 ) -> HTMLResponse:
-    """Tabella di tutti i record del sistema (no form, con filtro/export)."""
-    month_stmt = (
-        select(func.strftime("%Y-%m", EffortEntry.work_date).label("month"))
+    """Tabella di tutti i record del sistema (no form, con filtro anno/mese)."""
+    filter_month = _resolve_month(year, month_num, month)
+
+    # Anni distinti presenti (ordinati desc).
+    year_stmt = (
+        select(func.strftime("%Y", EffortEntry.work_date).label("year"))
         .distinct()
-        .order_by(func.strftime("%Y-%m", EffortEntry.work_date).desc())
+        .order_by(func.strftime("%Y", EffortEntry.work_date).desc())
     )
-    month_rows = db.execute(month_stmt).scalars().all()
-    month_options: list[tuple[str, str]] = []
-    for m in month_rows:
-        anno, num = m.split("-")
-        month_options.append((m, f"{_MESI_ITALIANI[int(num)]} {anno}"))
+    year_options = db.execute(year_stmt).scalars().all()
 
     stmt = (
         select(EffortEntry)
@@ -251,12 +255,25 @@ async def admin_records(
         )
         .order_by(EffortEntry.work_date.desc())
     )
-    if month:
-        stmt = stmt.where(func.strftime("%Y-%m", EffortEntry.work_date) == month)
+    if filter_month:
+        stmt = stmt.where(func.strftime("%Y-%m", EffortEntry.work_date) == filter_month)
     records = db.execute(stmt).scalars().all()
 
+    selected_year: str = ""
+    selected_month_num: str = ""
+    if filter_month and len(filter_month) == 7:
+        y, m = filter_month.split("-")
+        selected_year = y
+        selected_month_num = m
+
     ctx = _base_context(request, admin.username, "records")
-    ctx.update({"records": records, "month_options": month_options, "selected_month": month})
+    ctx.update({
+        "records": records,
+        "year_options": year_options,
+        "month_options": _MESI_ITALIANI,
+        "selected_year": selected_year,
+        "selected_month_num": selected_month_num,
+    })
     return templates.TemplateResponse(
         request=request,
         name="admin_records.html",
@@ -270,8 +287,12 @@ async def admin_records_export(
     db: Session = Depends(get_db),
     admin: User = Depends(require_admin),
     month: str | None = None,
+    year: str | None = None,
+    month_num: str | None = None,
 ) -> StreamingResponse:
     """Esporta in CSV tutti i record del sistema (solo admin)."""
+    filter_month = _resolve_month(year, month_num, month)
+
     stmt = (
         select(EffortEntry)
         .options(
@@ -282,12 +303,12 @@ async def admin_records_export(
         )
         .order_by(EffortEntry.work_date.asc())
     )
-    if month:
-        stmt = stmt.where(func.strftime("%Y-%m", EffortEntry.work_date) == month)
+    if filter_month:
+        stmt = stmt.where(func.strftime("%Y-%m", EffortEntry.work_date) == filter_month)
     records = db.execute(stmt).scalars().all()
 
-    filename = f"effort_admin_{month or 'tutti'}.csv"
-    logger.info("Export CSV admin (record=%d, mese=%s)", len(records), month or "tutti")
+    filename = f"effort_admin_{filter_month or 'tutti'}.csv"
+    logger.info("Export CSV admin (record=%d, mese=%s)", len(records), filter_month or "tutti")
     return StreamingResponse(
         iter([_build_csv(records)]),
         media_type="text/csv; charset=utf-8",
@@ -367,11 +388,15 @@ async def admin_users(
     admin: User = Depends(require_admin),
     ok: str | None = None,
     err: str | None = None,
+    form_ok: str | None = None,
+    form_err: str | None = None,
 ) -> HTMLResponse:
     """Pagina di gestione utenti (lista + form creazione).
 
     La tabella è di sola visualizzazione: ogni riga ha un pulsante "Modifica"
     che porta alla pagina dedicata `/admin/users/{id}/edit`.
+    `ok`/`err` alimentano il banner nella card "Utenti" (operazioni sulla lista);
+    `form_ok`/`form_err` alimentano il banner nella card "Nuovo utente" (creazione).
     """
     users = db.execute(select(User).order_by(User.username)).scalars().all()
     groups = db.execute(select(Group).order_by(Group.name)).scalars().all()
@@ -379,6 +404,8 @@ async def admin_users(
         {
             "id": u.id,
             "username": u.username,
+            "first_name": u.first_name or "",
+            "last_name": u.last_name or "",
             "role": u.role,
             "record_count": _user_stats(db, u.id),
             "last_login": _format_last_login(u.last_login),
@@ -396,6 +423,8 @@ async def admin_users(
         "admin_count": admin_count,
         "ok": ok,
         "err": err,
+        "form_ok": form_ok,
+        "form_err": form_err,
     })
     return templates.TemplateResponse(request=request, name="admin_users.html", context=ctx)
 
@@ -427,6 +456,9 @@ async def admin_users_edit(
     user_data = {
         "id": target.id,
         "username": target.username,
+        "first_name": target.first_name or "",
+        "last_name": target.last_name or "",
+        "email": target.email or "",
         "role": target.role,
         "disabled": target.disabled,
         "disabled_at": _format_last_login(target.disabled_at),
@@ -487,46 +519,119 @@ async def admin_users_disable(
 async def admin_users_create(
     request: Request,
     username: Annotated[str | None, Form()] = None,
-    password: Annotated[str | None, Form()] = None,
+    first_name: Annotated[str | None, Form()] = None,
+    last_name: Annotated[str | None, Form()] = None,
     db: Session = Depends(get_db),
     admin: User = Depends(require_admin),
 ) -> RedirectResponse:
-    """Crea un nuovo utente (username + password, ruolo 'user').
+    """Crea un nuovo utente (username email + nome/cognome, ruolo 'user').
 
-    Il gruppo non viene richiesto in creazione; l'admin lo assegna successivamente
-    dalla pagina di modifica utente.
+    La password viene modificata automaticamente in modo robusto e mostrata
+    UNA SOLA volta nel banner di conferma dopo il redirect. Il gruppo non
+    viene richiesto in creazione; l'admin lo assegna successivamente dalla
+    pagina di modifica utente.
 
     Nota: usa campi Form() individuali (non Annotated[UserCreate, Form()])
     perché FastAPI non supporta modelli Form() misti ad altri Form() separati.
     Il modello UserCreate viene costruito qui.
     """
     try:
-        payload: UserCreate = UserCreate(username=username, password=password)
+        payload: UserCreate = UserCreate(
+            username=username, first_name=first_name, last_name=last_name
+        )
     except ValidationError as exc:
         logger.warning("Creazione utente non valida: %s", exc.errors())
-        return RedirectResponse("/admin/users?err=Dati non validi", status_code=303)
+        return RedirectResponse("/admin/users?form_err=Dati non validi", status_code=303)
 
     existing = db.execute(
         select(User).where(User.username == payload.username)
     ).scalar_one_or_none()
     if existing is not None:
         logger.warning("Tentativo di creare utente già esistente %s", payload.username)
-        return RedirectResponse("/admin/users?err=Username già esistente", status_code=303)
+        return RedirectResponse("/admin/users?form_err=Username già esistente", status_code=303)
 
+    # Genera una password robusta e la mostra una sola volta nel banner.
+    generated_password = generate_password()
     db.add(
         User(
             username=payload.username,
-            password_hash=bcrypt.hash(payload.password),
+            password_hash=hash_password(generated_password),
+            first_name=payload.first_name,
+            last_name=payload.last_name,
+            email=payload.username,
             role="user",
             group_id=None,
-            # La password impostata dall'admin è temporanea: al primo login
-            # l'utente è obbligato a cambiarla.
+            # La password generata è temporanea: al primo login l'utente è
+            # obbligato a cambiarla (password_change_required).
             password_change_required=True,
         )
     )
     db.commit()
     logger.info("Utente creato da admin: %s", payload.username)
-    return RedirectResponse("/admin/users?ok=Utente creato", status_code=303)
+    # URL-encode del messaggio: la password generata contiene caratteri
+    # speciali (es. &, =, ?) che, non encodati, romperebbero il parametro
+    # `form_ok` della query string. FastAPI decodifica il parametro e il
+    # banner mostra la password originale. `form_ok`/`form_err` alimentano
+    # il banner nella card "Nuovo utente", distinto da `ok`/`err` della lista.
+    ok_msg = f"Utente creato. Password temporanea: {generated_password}"
+    return RedirectResponse(
+        f"/admin/users?{urlencode({'form_ok': ok_msg})}",
+        status_code=303,
+    )
+
+
+@router.post("/users/{user_id}/profile", name="admin_users_profile")
+async def admin_users_profile(
+    request: Request,
+    user_id: int,
+    username: Annotated[str | None, Form()] = None,
+    first_name: Annotated[str | None, Form()] = None,
+    last_name: Annotated[str | None, Form()] = None,
+    email: Annotated[str | None, Form()] = None,
+    db: Session = Depends(get_db),
+    admin: User = Depends(require_admin),
+) -> RedirectResponse:
+    """Aggiorna i dati anagrafici di un utente (username, nome, cognome, email).
+
+    Dopo l'azione torna alla pagina di modifica dell'utente.
+    """
+    try:
+        payload: UserCreate = UserCreate(
+            username=username, first_name=first_name, last_name=last_name
+        )
+    except ValidationError as exc:
+        logger.warning("Dati anagrafici non validi per utente id=%s", user_id)
+        return RedirectResponse(
+            f"/admin/users/{user_id}/edit?err=Dati non validi", status_code=303
+        )
+
+    target = db.get(User, user_id)
+    if target is None:
+        return RedirectResponse("/admin/users?err=Utente inesistente", status_code=303)
+
+    # Eventuale email distinta dall'username (se non fornita, usa l'username).
+    stripped_email = (email or "").strip()
+    new_email = stripped_email if stripped_email else payload.username
+
+    # Controllo duplicazione username (escluso l'utente stesso).
+    existing = db.execute(
+        select(User).where(User.username == payload.username, User.id != user_id)
+    ).scalar_one_or_none()
+    if existing is not None:
+        logger.warning("Tentativo di usare username già esistente %s", payload.username)
+        return RedirectResponse(
+            f"/admin/users/{user_id}/edit?err=Username già esistente", status_code=303
+        )
+
+    target.username = payload.username
+    target.first_name = payload.first_name
+    target.last_name = payload.last_name
+    target.email = new_email
+    db.commit()
+    logger.info("Dati anagrafici aggiornati per %s da admin", target.username)
+    return RedirectResponse(
+        f"/admin/users/{user_id}/edit?ok=Dati anagrafici aggiornati", status_code=303
+    )
 
 
 @router.post("/users/{user_id}/group", name="admin_users_group")
@@ -581,7 +686,7 @@ async def admin_users_password(
     target = db.get(User, user_id)
     if target is None:
         return RedirectResponse("/admin/users?err=Utente inesistente", status_code=303)
-    target.password_hash = bcrypt.hash(payload.password)
+    target.password_hash = hash_password(payload.password)
     db.commit()
     logger.info("Password cambiata per %s da admin", target.username)
     return RedirectResponse(

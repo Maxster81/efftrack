@@ -38,18 +38,19 @@
          Valorizzato da row-select.js al click su una riga della tabella.
          Deve stare dentro il <form> per essere incluso nella POST. #}
       <input type="hidden" id="record-id" name="record_id" value="" />
-      {# Persistenza filtro mese: il valore del mese selezionato viene
-         inviato con la POST e preservato nel redirect. #}
-      <input type="hidden" id="effort-month" name="month" value="{{ selected_month or '' }}" />
+      {# Persistenza filtro anno/mese: i valori selezionati vengono
+         inviati con la POST e preservati nel redirect. #}
+      <input type="hidden" id="effort-year" name="year" value="{{ selected_year or '' }}" />
+      <input type="hidden" id="effort-month" name="month_num" value="{{ selected_month_num or '' }}" />
 
       <div class="form-row">
         <div class="form-group">
-          <label for="effort-user">User</label>
+          <label for="effort-user">Nome</label>
           <input type="text" id="effort-user" name="user"
-                 {% if auth_enabled and current_username %}readonly value="{{ current_username }}"
+                 {% if auth_enabled and current_username %}readonly value="{{ current_full_name or current_username }}"
                  {% elif auth_enabled %}readonly
                  {% else %}placeholder="Inserisci utente"{% endif %}
-                 autocomplete="off" />
+                 autocomplete="off" title="{{ current_username }}" />
         </div>
 
         {# Gruppo autopopolato come User — campo readonly, valore dal DB.
@@ -143,18 +144,25 @@
       </span>
     </div>
 
-    {% if month_options %}
-      <form class="filter-bar" method="get" action="/" aria-label="Filtra registrazioni per mese">
-        <label class="filter-bar__label" for="month-filter">Filtra per mese</label>
-        <select id="month-filter" name="month" class="filter-bar__select"
+    {% if year_options %}
+      <form class="filter-bar" method="get" action="/" aria-label="Filtra registrazioni per anno e mese">
+        <label class="filter-bar__label" for="year-filter">Anno</label>
+        <select id="year-filter" name="year" class="filter-bar__select">
+          <option value="">Tutti gli anni</option>
+          {% for y in year_options %}
+            <option value="{{ y }}" {% if y == selected_year %}selected{% endif %}>{{ y }}</option>
+          {% endfor %}
+        </select>
+        <label class="filter-bar__label" for="month-filter">Mese</label>
+        <select id="month-filter" name="month_num" class="filter-bar__select"
                 onchange="this.form.submit()">
           <option value="">Tutti i mesi</option>
-          {% for value, label in month_options %}
-            <option value="{{ value }}" {% if value == selected_month %}selected{% endif %}>{{ label }}</option>
+          {% for m in range(1, 13) %}
+            <option value="{{ m }}" {% if m|string == selected_month_num %}selected{% endif %}>{{ month_options[m] }}</option>
           {% endfor %}
         </select>
         <span class="filter-bar__spacer" aria-hidden="true"></span>
-        <a class="filter-bar__export" href="/export{% if selected_month %}?month={{ selected_month }}{% endif %}"
+        <a class="filter-bar__export" href="/export{% if selected_year and selected_month_num %}?year={{ selected_year }}&month_num={{ selected_month_num }}{% endif %}"
            role="button">Esporta CSV</a>
       </form>
     {% endif %}

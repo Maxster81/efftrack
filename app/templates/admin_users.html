@@ -5,21 +5,32 @@
 {% block content %}
   <section class="form-card" aria-labelledby="create-user-title">
     <h2 id="create-user-title" class="card-title">Nuovo utente</h2>
+    {% if form_ok %}
+      <div class="form-success" role="status">{{ form_ok }}</div>
+    {% endif %}
+    {% if form_err %}
+      <div class="form-error" role="alert">{{ form_err }}</div>
+    {% endif %}
     <form class="effort-form" method="post" action="/admin/users/create">
-      <div class="form-row">
+      <div class="form-row form-row--three">
         <div class="form-group">
-          <label for="new-username">Username</label>
-          <input type="text" id="new-username" name="username" autocomplete="off" required />
+          <label for="new-username">Username (email)</label>
+          <input type="email" id="new-username" name="username" placeholder="nome.cognome@azienda.it" autocomplete="off" required />
         </div>
         <div class="form-group">
-          <label for="new-password">Password</label>
-          <input type="password" id="new-password" name="password" autocomplete="new-password" required />
+          <label for="new-first-name">Nome</label>
+          <input type="text" id="new-first-name" name="first_name" autocomplete="off" required />
+        </div>
+        <div class="form-group">
+          <label for="new-last-name">Cognome</label>
+          <input type="text" id="new-last-name" name="last_name" autocomplete="off" required />
         </div>
       </div>
       <div class="form-actions">
         <button type="submit" class="btn-primary">Crea utente</button>
       </div>
     </form>
+    <p class="text-muted">La password verrà generata automaticamente e mostrata una sola volta nel banner di conferma.</p>
   </section>
 
   <section class="records-card" aria-labelledby="users-title">
@@ -39,7 +50,7 @@
       <table class="records-table">
         <thead>
           <tr>
-            <th scope="col">Username</th>
+            <th scope="col">Nome e Cognome</th>
             <th scope="col">Ruolo</th>
             <th scope="col">Gruppo</th>
             <th scope="col">Record</th>
@@ -51,7 +62,7 @@
         <tbody>
           {% for u in users %}
             <tr class="records-table__row{% if u.disabled %} is-disabled{% endif %}">
-              <td>{{ u.username }}</td>
+              <td title="{{ u.username }}">{{ u.first_name ~ " " ~ u.last_name if (u.first_name or u.last_name) else u.username }}</td>
               <td>{{ u.role }}</td>
               <td>{{ u.group_name or "—" }}</td>
               <td class="col-hours">{{ u.record_count }}</td>

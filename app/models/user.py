@@ -20,8 +20,15 @@ class User(Base):
     __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    username: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
+    # username: con la login SAML (SAML-D1) può essere l'email/UPN di Entra ID,
+    # quindi serve più spazio rispetto a un semplice username (String(128)).
+    username: Mapped[str] = mapped_column(String(128), unique=True, nullable=False)
     password_hash: Mapped[str] = mapped_column(String(128), nullable=False)
+    # --- Campi per l'autenticazione SAML (feature MFA, branch MFA) ---
+    # Identificatore univoco fornito dall'IdP (NameID, es. UPN dell'utente).
+    saml_name_id: Mapped[str | None] = mapped_column(String(256), nullable=True, index=True)
+    # Entity ID dell'IdP che ha fornito l'identità (per supportare più IdP in futuro).
+    saml_entity_id: Mapped[str | None] = mapped_column(String(256), nullable=True)
     role: Mapped[str] = mapped_column(String(20), nullable=False, default="user")
     # Ultimo accesso dell'utente (popolato da auth.py).
     last_login: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
@@ -46,6 +53,12 @@ class User(Base):
 
     # Relazione verso il gruppo (per leggere il nome nel template).
     group: Mapped["Group | None"] = relationship()  # noqa: F821
+
+    @property
+    def full_name(self) -> str:
+        """Nome e cognome concatenati (fallback sullo username se mancano)."""
+        name = " ".join(p for p in (self.first_name, self.last_name) if p)
+        return name if name else (self.username or "")
 
     def __repr__(self) -> str:
         return f"<User {self.username} ({self.role})>"

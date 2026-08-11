@@ -49,8 +49,12 @@
                   {% if item.id in used_ids %}
                     <span class="text-muted" title="Elemento con record associati">In uso</span>
                   {% else %}
+                    {# La conferma di eliminazione è gestita da JS tramite
+                       data-attribute: l'autoescape HTML di Jinja protegge il
+                       nome nel contesto attributo (a differenza della stringa
+                       JS inline in onsubmit, che era vulnerabile a XSS). #}
                     <form method="post" action="/admin/lookup/{{ item.id }}/delete"
-                          onsubmit="return confirm('Eliminare {{ item.name }}?')">
+                          class="js-confirm-delete" data-name="{{ item.name }}">
                       <input type="hidden" name="lookup_type" value="{{ type }}" />
                       <button type="submit" class="btn-danger">Elimina</button>
                     </form>
@@ -153,6 +157,17 @@
       tabs.forEach(function (btn) {
         btn.addEventListener('click', function () {
           activateTab(btn);
+        });
+      });
+
+      /* Conferma di eliminazione dei lookup: legge il nome dal data-attribute
+         (stringa sicura) invece di interpolarlo in un onsubmit JS inline. */
+      document.querySelectorAll('.js-confirm-delete').forEach(function (form) {
+        form.addEventListener('submit', function (ev) {
+          var name = form.getAttribute('data-name') || '';
+          if (!window.confirm('Eliminare ' + name + '?')) {
+            ev.preventDefault();
+          }
         });
       });
     })();

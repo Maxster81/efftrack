@@ -203,10 +203,7 @@ a:hover { text-decoration: underline; }
 .app-header__user-icon {
   display: block;
 }
-.app-header__user-name {
-  font-weight: 600;
-}
-/* Menu a discesa utente: toggle + menu con Profilo/ESCI. */
+/* Menu a discesa utente: toggle avatar + menu con Profilo/ESCI. */
 .user-dropdown {
   position: relative;
   display: inline-flex;
@@ -226,12 +223,32 @@ a:hover { text-decoration: underline; }
   transition: background-color 0.15s ease, opacity 0.15s ease;
   font-family: var(--font-sans);
 }
+/* Toggle solo-avatar: quadrato compatto (icona persona), non cresce con
+   email lunghe. */
+.user-dropdown__toggle--avatar {
+  padding: var(--space-sm);
+  border-radius: 50%;
+}
 .user-dropdown__toggle:hover {
   background: rgba(255, 255, 255, 0.12);
   opacity: 1;
 }
 .user-dropdown__caret {
   display: block;
+}
+/* Blocco identità in cima al menu: mostra l'username/email in piccolo. */
+.user-dropdown__identity {
+  padding: var(--space-sm) var(--space-md);
+}
+.user-dropdown__username {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  word-break: break-all;
+}
+.user-dropdown__separator {
+  border-top: 1px solid var(--color-border);
+  margin: var(--space-xs) 0;
 }
 .user-dropdown__menu {
   position: absolute;
@@ -399,9 +416,14 @@ a:hover { text-decoration: underline; }
     grid-template-columns: 1fr 1fr;
   }
 }
-/* Variante a 3 colonne per il form "Nuovo utente" (admin). */
+/* Variante a 3 colonne per il form "Nuovo utente" (admin).
+   grid-column: 1 / -1 fa sì che la riga occupi TUTTA la larghezza
+   del form genitore (`.effort-form` è un grid a 2 colonne): senza,
+   la riga starebbe solo nella metà sinistra e i 3 campi risulterebbero
+   schiacciati verso sinistra. */
 .form-row--three {
   grid-template-columns: 1fr;
+  grid-column: 1 / -1;
 }
 @media (min-width: 720px) {
   .form-row--three {
@@ -686,6 +708,28 @@ a:hover { text-decoration: underline; }
 .login-form {
   display: grid;
   gap: var(--space-md);
+}
+.login-saml-divider {
+  margin: var(--space-md) 0 var(--space-sm);
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+}
+.btn-saml {
+  display: block;
+  width: 100%;
+  text-align: center;
+  padding: var(--space-sm) var(--space-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-alt);
+  color: var(--color-text);
+  text-decoration: none;
+  font-weight: 500;
+}
+.btn-saml:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
 }
 
 /* ---------- Form: stato nascosto, errori ---------- */

@@ -37,7 +37,7 @@ _WHITELIST_EXACT: frozenset[str] = frozenset({
     "/openapi.json",
 })
 
-_WHITELIST_PREFIXES: tuple[str, ...] = ("/static/", "/docs/")
+_WHITELIST_PREFIXES: tuple[str, ...] = ("/static/", "/docs/", "/saml/")
 
 
 def _is_whitelisted(path: str) -> bool:

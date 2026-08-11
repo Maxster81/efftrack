@@ -28,5 +28,11 @@
         <button type="submit" class="btn-primary">Accedi</button>
       </div>
     </form>
+
+    {% if saml_enabled %}
+      <div class="login-saml-divider" role="separator">oppure</div>
+      <a class="btn-saml" href="/saml/login" role="button"
+         aria-label="Accedi con Microsoft">Accedi con Microsoft</a>
+    {% endif %}
   </section>
 {% endblock %}

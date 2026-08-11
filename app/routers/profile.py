@@ -13,12 +13,12 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
-from passlib.hash import bcrypt
 from pydantic import ValidationError
 from sqlalchemy.orm import Session
 from fastapi.templating import Jinja2Templates
 
 from app.config import APP_NAME, APP_VERSION, AUTH_ENABLED, TEMPLATES_DIR
+from app.core.password import hash_password, validate_password_complexity, verify_password
 from app.core.permissions import is_admin, is_manager
 from app.db import get_db
 from app.dependencies import get_current_user
@@ -171,7 +171,7 @@ async def profile_change_password(
         )
 
     # Verifica che la password attuale sia corretta.
-    if not bcrypt.verify(current_password, fresh_user.password_hash):
+    if not verify_password(current_password, fresh_user.password_hash):
         logger.warning(
             "Cambio password fallito (password attuale errata) per utente=%s",
             fresh_user.username,
@@ -200,8 +200,18 @@ async def profile_change_password(
             "/profile?pwd_err=Le due password non coincidono.", status_code=303,
         )
 
+    # Verifica la complessità minima della nuova password.
+    ok, msg = validate_password_complexity(data.new_password)
+    if not ok:
+        logger.warning(
+            "Cambio password fallito (complessità) per utente=%s", fresh_user.username,
+        )
+        return RedirectResponse(
+            f"/profile?pwd_err={msg}", status_code=303,
+        )
+
     # Aggiorna l'hash della password.
-    fresh_user.password_hash = bcrypt.hash(data.new_password)
+    fresh_user.password_hash = hash_password(data.new_password)
     # Se il flag password_change_required era attivo, lo azzera
     # (il cambio è avvenuto con successo).
     if fresh_user.password_change_required:

@@ -19,18 +19,25 @@
       </span>
     </div>
 
-    {% if month_options %}
-      <form class="filter-bar" method="get" action="/group" aria-label="Filtra registrazioni del gruppo per mese">
-        <label class="filter-bar__label" for="month-filter">Filtra per mese</label>
-        <select id="month-filter" name="month" class="filter-bar__select"
+    {% if year_options %}
+      <form class="filter-bar" method="get" action="/group" aria-label="Filtra registrazioni del gruppo per anno e mese">
+        <label class="filter-bar__label" for="year-filter">Anno</label>
+        <select id="year-filter" name="year" class="filter-bar__select">
+          <option value="">Tutti gli anni</option>
+          {% for y in year_options %}
+            <option value="{{ y }}" {% if y == selected_year %}selected{% endif %}>{{ y }}</option>
+          {% endfor %}
+        </select>
+        <label class="filter-bar__label" for="month-filter">Mese</label>
+        <select id="month-filter" name="month_num" class="filter-bar__select"
                 onchange="this.form.submit()">
           <option value="">Tutti i mesi</option>
-          {% for value, label in month_options %}
-            <option value="{{ value }}" {% if value == selected_month %}selected{% endif %}>{{ label }}</option>
+          {% for m in range(1, 13) %}
+            <option value="{{ m }}" {% if m|string == selected_month_num %}selected{% endif %}>{{ month_options[m] }}</option>
           {% endfor %}
         </select>
         <span class="filter-bar__spacer" aria-hidden="true"></span>
-        <a class="filter-bar__export" href="/group/export{% if selected_month %}?month={{ selected_month }}{% endif %}"
+        <a class="filter-bar__export" href="/group/export{% if selected_year and selected_month_num %}?year={{ selected_year }}&month_num={{ selected_month_num }}{% endif %}"
            role="button">Esporta CSV</a>
       </form>
     {% endif %}
@@ -43,7 +50,7 @@
             <th scope="col">Cliente</th>
             <th scope="col">Gruppo</th>
             <th scope="col">Attività</th>
-            <th scope="col">Utente</th>
+            <th scope="col">Nome e Cognome</th>
             <th scope="col" class="col-hours">Ore</th>
             <th scope="col">Note</th>
             <th scope="col">Descrizione attività</th>
@@ -57,7 +64,7 @@
                 <td>{{ record.client.name }}</td>
                 <td>{{ record.group.name }}</td>
                 <td>{{ record.activity.name }}</td>
-                <td>{{ record.user.username if record.user else '' }}</td>
+                <td title="{{ record.user.username if record.user else '' }}">{{ record.user.full_name if record.user else '' }}</td>
                 <td class="col-hours">{{ record.hours_spent }}</td>
                 <td>{{ record.notes or '' }}</td>
                 <td>{{ record.description or '' }}</td>

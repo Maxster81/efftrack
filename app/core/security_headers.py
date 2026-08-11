@@ -24,7 +24,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         "img-src 'self' data:; "
         "object-src 'none'; "
         "base-uri 'self'; "
-        "form-action 'self'"
+        "form-action 'self' https://login.microsoftonline.com"
     )
 
     _HEADERS: dict[str, str] = {

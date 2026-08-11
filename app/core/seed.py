@@ -14,11 +14,11 @@ import logging
 from datetime import date, timedelta
 from random import Random
 
-from passlib.hash import bcrypt
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.config import ADMIN_PASSWORD, ADMIN_USERNAME, DEMO_MODE
+from app.core.password import hash_password
 from app.models import Activity, Client, EffortEntry, Group, User
 
 logger: logging.Logger = logging.getLogger(__name__)
@@ -51,19 +51,20 @@ _ACTIVITIES: list[dict[str, object]] = [
 # da seed_test_users); `group_none=True` lascia il group_id a None (es. admin).
 # Profilo utente: vengono colonne `first_name`, `last_name`, `email`.
 _TEST_USERS: list[dict[str, str | None]] = [
+    # Nota convenzione SAML-D1: username = email aziendale (campo unico).
     # 2 MANAGER: uno per Gruppo 1, uno per Gruppo 2.
-    {"username": "giulia", "password": "test", "role": "manager", "group": "Gruppo 1",
+    {"username": "giulia@efftrack.local", "password": "test", "role": "manager", "group": "Gruppo 1",
      "first_name": "Giulia", "last_name": "Verdi", "email": "giulia@efftrack.local"},
-    {"username": "marco", "password": "test", "role": "manager", "group": "Gruppo 2",
+    {"username": "marco@efftrack.local", "password": "test", "role": "manager", "group": "Gruppo 2",
      "first_name": "Marco", "last_name": "Neri", "email": "marco@efftrack.local"},
     # 4 USER: 2 per Gruppo 1, 2 per Gruppo 2.
-    {"username": "mario", "password": "test", "role": "user", "group": "Gruppo 1",
+    {"username": "mario@efftrack.local", "password": "test", "role": "user", "group": "Gruppo 1",
      "first_name": "Mario", "last_name": "Bianchi", "email": "mario@efftrack.local"},
-    {"username": "paolo", "password": "test", "role": "user", "group": "Gruppo 1",
+    {"username": "paolo@efftrack.local", "password": "test", "role": "user", "group": "Gruppo 1",
      "first_name": "Paolo", "last_name": "Gialli", "email": "paolo@efftrack.local"},
-    {"username": "anna", "password": "test", "role": "user", "group": "Gruppo 2",
+    {"username": "anna@efftrack.local", "password": "test", "role": "user", "group": "Gruppo 2",
      "first_name": "Anna", "last_name": "Rossi", "email": "anna@efftrack.local"},
-    {"username": "elisa", "password": "test", "role": "user", "group": "Gruppo 2",
+    {"username": "elisa@efftrack.local", "password": "test", "role": "user", "group": "Gruppo 2",
      "first_name": "Elisa", "last_name": "Marroni", "email": "elisa@efftrack.local"},
 ]
 
@@ -135,7 +136,7 @@ def seed_admin_user(db: Session) -> None:
         logger.debug("Utenti già presenti, seed admin non necessario")
         return
 
-    password_hash: str = bcrypt.hash(ADMIN_PASSWORD)
+    password_hash: str = hash_password(ADMIN_PASSWORD)
     db.add(
         User(
             username=ADMIN_USERNAME,
@@ -192,7 +193,7 @@ def seed_test_users(db: Session) -> None:
             db.add(
                 User(
                     username=username,
-                    password_hash=bcrypt.hash(data["password"]),
+                    password_hash=hash_password(data["password"]),
                     role=role,
                     group_id=group_id,
                     first_name=first_name,

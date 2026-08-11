@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
    <title>{% block title %}{{ app_name }}{% endblock %}</title>
+   <link rel="icon" type="image/svg+xml" href="{{ url_for('static', path='favicon.svg') }}" />
    <link rel="stylesheet" href="{{ url_for('static', path='style.css') }}" />
    <!-- Applica il tema salvato prima del rendering per evitare il flash
         del tema chiaro all'avvio. -->
@@ -39,19 +40,24 @@
                 aria-label="Passa al tema scuro" title="Tema chiaro attivo — passa allo scuro">
           <span class="app-header__theme-icon" id="theme-toggle-icon" aria-hidden="true">🌙</span>
         </button>
-        {% if auth_enabled and current_username %}
+         {% if auth_enabled and current_username %}
            <div class="user-dropdown" data-user-menu>
-             <button type="button" class="user-dropdown__toggle" id="user-menu-toggle"
+             <button type="button" class="user-dropdown__toggle user-dropdown__toggle--avatar"
+                     id="user-menu-toggle"
                      aria-haspopup="true" aria-expanded="false"
-                     aria-label="Menu utente">
-               <span class="app-header__user-name">{{ current_username }}</span>
-               <svg class="user-dropdown__caret" width="12" height="12" viewBox="0 0 24 24"
+                     aria-label="Menu utente" title="{{ current_username }}">
+               <svg class="app-header__user-icon" width="28" height="28" viewBox="0 0 24 24"
                     fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-                 <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2"
-                       stroke-linecap="round" stroke-linejoin="round"/>
+                 <circle cx="12" cy="8" r="4" fill="currentColor" />
+                 <path d="M4 20c0-3.3 3.6-6 8-6s8 2.7 8 6" stroke="currentColor" stroke-width="2"
+                       stroke-linecap="round" fill="none" />
                </svg>
              </button>
              <div class="user-dropdown__menu" id="user-menu">
+               <div class="user-dropdown__identity" aria-hidden="true">
+                 <span class="user-dropdown__username">{{ current_username }}</span>
+               </div>
+               <div class="user-dropdown__separator"></div>
                <a class="user-dropdown__item" href="/profile">Profilo</a>
                <a class="user-dropdown__item" href="/logout">Esci</a>
              </div>

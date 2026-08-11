@@ -5,7 +5,10 @@ sqlalchemy>=2.0.0
 pydantic>=2.5.0
 python-multipart>=0.0.9
 python-dotenv>=1.0.0
-passlib[bcrypt]>=1.7
-# bcrypt pinnato <4.1 per compatibilità con passlib 1.7.4 (vedi clinerules 06-security).
-bcrypt<4.1
+# Hashing password: bcrypt diretto (passlib è abbandonato e non supporta
+# Python 3.13+/3.14). Vedere app/core/password.py. Formato `$2b$` invariato.
+bcrypt>=4.0.1
 itsdangerous>=2.0.0
+# Autenticazione SAML 2.0 (Microsoft Entra ID / Azure AD) — feature MFA (branch MFA, SAML-1).
+# Richiede la dipendenza di sistema `xmlsec1` (es. `apt install xmlsec1 libxml2-dev libxmlsec1-dev`).
+pysaml2>=7.3.0

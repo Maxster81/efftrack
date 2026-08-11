@@ -51,6 +51,33 @@
     </dl>
   </section>
 
+  <section class="form-card" aria-labelledby="profile-edit-title">
+    <h2 id="profile-edit-title" class="card-title">Dati anagrafici</h2>
+    <form class="user-edit-form" method="post" action="/admin/users/{{ user.id }}/profile">
+      <div class="form-row">
+        <div class="form-group">
+          <label for="edit-username">Username (email)</label>
+          <input type="email" id="edit-username" name="username" value="{{ user.username }}" required />
+        </div>
+        <div class="form-group">
+          <label for="edit-first-name">Nome</label>
+          <input type="text" id="edit-first-name" name="first_name" value="{{ user.first_name }}" required />
+        </div>
+        <div class="form-group">
+          <label for="edit-last-name">Cognome</label>
+          <input type="text" id="edit-last-name" name="last_name" value="{{ user.last_name }}" required />
+        </div>
+        <div class="form-group">
+          <label for="edit-email">Email</label>
+          <input type="email" id="edit-email" name="email" value="{{ user.email }}" />
+        </div>
+      </div>
+      <div class="form-actions">
+        <button type="submit" class="btn-secondary">Salva dati</button>
+      </div>
+    </form>
+  </section>
+
   <section class="form-card" aria-labelledby="group-edit-title">
     <h2 id="group-edit-title" class="card-title">Modifica gruppo</h2>
     <form class="user-edit-form" method="post" action="/admin/users/{{ user.id }}/group">

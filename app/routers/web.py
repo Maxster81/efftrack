@@ -77,11 +77,57 @@ def _filter_by_user(stmt: Select, user: User) -> Select:
     return stmt.where(EffortEntry.user_id == user.id)
 
 
-def _with_month(base_url: str, month: str | None) -> str:
-    """Aggiunge il parametro month a un URL se presente."""
+def _resolve_month(
+    year: str | None, month_num: str | None, month: str | None = None
+) -> str | None:
+    """Deriva il filtro mese in formato `YYYY-MM` da anno + mese separati.
+
+    Priorità: 1) `month` esplicito (retrocompatibilità con URL/form vecchi
+    che passavano già `YYYY-MM`); 2) `year` + `month_num` (nuovo filtro S4).
+    Ritorna `None` se non c'è un filtro valido.
+
+    Parametri:
+        year: anno (4 cifre) o None.
+        month_num: numero mese (1-12) o None.
+        month: valore legacy `YYYY-MM` (opzionale, fallback).
+
+    Ritorna:
+        La stringa `YYYY-MM` da usare nel filtro, oppure None.
+    """
     if month and month != "None":  # "None" (stringa) = mese non valido
+        return month
+    if year and month_num:
+        try:
+            y = int(year)
+            m = int(month_num)
+            if 1 <= m <= 12:
+                return f"{y:04d}-{m:02d}"
+        except (TypeError, ValueError):
+            return None
+    return None
+
+
+def _with_month(base_url: str, filter_month: str | None) -> str:
+    """Aggiunge i parametri anno/mese a un URL se il filtro è attivo.
+
+    Riceve un filtro in formato `YYYY-MM` (già risolto) e lo converte in
+    `?year=YYYY&month_num=MM` per coerenza col nuovo filtro S4.
+
+    Parametri:
+        base_url: URL di base.
+        filter_month: filtro `YYYY-MM` (None se non filtrato).
+
+    Ritorna:
+        L'URL con `?year=...&month_num=...` se il filtro è attivo, altrimenti
+        l'URL di partenza.
+    """
+    if filter_month and filter_month != "None":  # "None" = mese non valido
+        if len(filter_month) == 7 and filter_month[4] == "-":
+            year, month_num = filter_month.split("-")
+        else:
+            return base_url
         separator: str = "&" if "?" in base_url else "?"
-        return f"{base_url}{separator}month={month}"
+        return f"{base_url}{separator}year={year}&month_num={month_num}"
     return base_url
 
 
@@ -117,6 +163,8 @@ async def index(
     success: int | None = None,
     error: str | None = None,
     month: str | None = None,
+    year: str | None = None,
+    month_num: str | None = None,
     highlight_id: int | None = None,
 ) -> HTMLResponse:
     """Pagina principale: form di inserimento + tabella elenco (protetta)."""
@@ -143,19 +191,18 @@ async def index(
             current_group_name = group.name
             current_group_id = group.id
 
-    # Mesi distinti limitati ai record visibili all'utente.
-    month_stmt = (
-        select(func.strftime("%Y-%m", EffortEntry.work_date).label("month"))
-        .distinct()
-        .order_by(func.strftime("%Y-%m", EffortEntry.work_date).desc())
-    )
-    month_stmt = _filter_by_user(month_stmt, user)
-    month_rows = db.execute(month_stmt).scalars().all()
+    # Filtro mese risolto da anno + mese separati (S4), con fallback sul
+    # vecchio parametro `month` per retrocompatibilità.
+    filter_month = _resolve_month(year, month_num, month)
 
-    month_options: list[tuple[str, str]] = []
-    for m in month_rows:
-        anno, num = m.split("-")
-        month_options.append((m, f"{_MESI_ITALIANI[int(num)]} {anno}"))
+    # Anni distinti limitati ai record visibili all'utente (ordinati desc).
+    year_stmt = (
+        select(func.strftime("%Y", EffortEntry.work_date).label("year"))
+        .distinct()
+        .order_by(func.strftime("%Y", EffortEntry.work_date).desc())
+    )
+    year_stmt = _filter_by_user(year_stmt, user)
+    year_options = db.execute(year_stmt).scalars().all()
 
     stmt = (
         select(EffortEntry)
@@ -168,8 +215,8 @@ async def index(
         .order_by(EffortEntry.work_date.desc())
     )
     stmt = _filter_by_user(stmt, user)
-    if month:
-        stmt = stmt.where(func.strftime("%Y-%m", EffortEntry.work_date) == month)
+    if filter_month:
+        stmt = stmt.where(func.strftime("%Y-%m", EffortEntry.work_date) == filter_month)
     records = db.execute(stmt).scalars().all()
 
     success_message: str | None = None
@@ -181,6 +228,17 @@ async def index(
         success_message = "Registrazione eliminata correttamente."
 
     current_username: str = user.username
+
+    # Nome e cognome per il campo User readonly del form (visualizzazione).
+    current_full_name: str = user.full_name
+
+    # Anno e mese selezionati per i dropdown (per riempire i `selected`).
+    selected_year: str = ""
+    selected_month_num: str = ""
+    if filter_month and len(filter_month) == 7:
+        y, m = filter_month.split("-")
+        selected_year = y
+        selected_month_num = m
 
     return templates.TemplateResponse(
         request=request,
@@ -194,12 +252,15 @@ async def index(
             "current_group_name": current_group_name,
             "current_group_id": current_group_id,
             "records": records,
-            "month_options": month_options,
-            "selected_month": month,
+            "year_options": year_options,
+            "month_options": _MESI_ITALIANI,  # indice 0 vuoto, 1..12
+            "selected_year": selected_year,
+            "selected_month_num": selected_month_num,
             "today": date.today().isoformat(),
             "success_message": success_message,
             "error": error,
             "current_username": current_username,
+            "current_full_name": current_full_name,
             "auth_enabled": AUTH_ENABLED,
             "is_admin": is_admin(user),
             "sidebar_items": _sidebar_items(user),
@@ -223,6 +284,8 @@ async def save_entry(
     action: Annotated[str, Form()] = "single",
     record_id: Annotated[int | None, Form()] = None,
     month: Annotated[str | None, Form()] = None,
+    year: Annotated[str | None, Form()] = None,
+    month_num: Annotated[str | None, Form()] = None,
     is_holiday: Annotated[bool, Form()] = False,
     current_user: User | None = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -231,13 +294,17 @@ async def save_entry(
 
     Con auth attiva, il campo User viene forzato lato server allo username
     della sessione, indipendentemente da quanto inviato dal browser.
-    `month` preserva il filtro mese nel redirect. `user_id` viene
-    valorizzato con l'utente della sessione.
+    `month`/`year`/`month_num` preservano il filtro mese/anno nel redirect.
+    `user_id` viene valorizzato con l'utente della sessione.
     """
     redirect = _require_auth(current_user)
     if redirect is not None:
         return redirect
     assert current_user is not None
+
+    # Filtro mese risolto da anno + mese separati (S4), con fallback sul
+    # vecchio parametro `month` per retrocompatibilità.
+    filter_month = _resolve_month(year, month_num, month)
 
     # Con auth attiva, rispetta sempre l'utente della sessione (il campo
     # User è readonly lato client, ma qui se ne garantisce l'integrità).
@@ -249,7 +316,7 @@ async def save_entry(
 
     # Eliminazione definitiva: richiede solo `record_id`.
     if action == "delete":
-        return _delete_entry(record_id, db, current_user, month)
+        return _delete_entry(record_id, db, current_user, filter_month)
 
     try:
         payload = EffortEntryCreate(
@@ -265,7 +332,7 @@ async def save_entry(
         )
     except ValidationError as exc:
         logger.warning("Validazione fallita nel form: %s", exc.errors())
-        return RedirectResponse(_with_month("/?error=validazione", month), status_code=303)
+        return RedirectResponse(_with_month("/?error=validazione", filter_month), status_code=303)
 
     # Giorno non lavorato (S6): forza i valori sentinella lato server.
     # Cliente e Attività vengono impostati ai lookup "NON LAVORATO",
@@ -275,7 +342,7 @@ async def save_entry(
         payload = _force_holiday_values(payload, db)
         if payload is None:
             logger.warning("Lookup sentinella NON LAVORATO assenti nel DB")
-            return RedirectResponse(_with_month("/?error=validazione", month), status_code=303)
+            return RedirectResponse(_with_month("/?error=validazione", filter_month), status_code=303)
 
     activity = db.execute(
         select(Activity).where(Activity.id == payload.activity_id)
@@ -283,15 +350,15 @@ async def save_entry(
 
     if activity is not None and activity.requires_description and not payload.description:
         logger.warning("Descrizione mancante per attività che la richiede")
-        return RedirectResponse(_with_month("/?error=descrizione", month), status_code=303)
+        return RedirectResponse(_with_month("/?error=descrizione", filter_month), status_code=303)
 
     if action == "week" and record_id is not None:
-        return RedirectResponse(_with_month("/?error=validazione", month), status_code=303)
+        return RedirectResponse(_with_month("/?error=validazione", filter_month), status_code=303)
 
     if action == "week":
-        return _save_week(payload, db, current_user, month)
+        return _save_week(payload, db, current_user, filter_month)
 
-    return _save_single(payload, db, current_user, record_id=record_id, month=month)
+    return _save_single(payload, db, current_user, record_id=record_id, month=filter_month)
 
 
 def _force_holiday_values(
@@ -455,12 +522,18 @@ async def export_csv(
     db: Session = Depends(get_db),
     user: User | None = Depends(get_current_user),
     month: str | None = None,
+    year: str | None = None,
+    month_num: str | None = None,
 ) -> StreamingResponse:
     """Esporta i record di effort in formato CSV (protetta, segregata)."""
     redirect = _require_auth(user)
     if redirect is not None:
         return redirect
     assert user is not None
+
+    # Filtro mese risolto da anno + mese separati (S4), con fallback sul
+    # vecchio parametro `month` per retrocompatibilità.
+    filter_month = _resolve_month(year, month_num, month)
 
     stmt = (
         select(EffortEntry)
@@ -473,12 +546,12 @@ async def export_csv(
         .order_by(EffortEntry.work_date.asc())
     )
     stmt = _filter_by_user(stmt, user)
-    if month:
-        stmt = stmt.where(func.strftime("%Y-%m", EffortEntry.work_date) == month)
+    if filter_month:
+        stmt = stmt.where(func.strftime("%Y-%m", EffortEntry.work_date) == filter_month)
     records = db.execute(stmt).scalars().all()
 
-    filename = f"effort_{month}.csv" if month else "effort_tutti.csv"
-    logger.info("Export CSV generato (record=%d, mese=%s)", len(records), month or "tutti")
+    filename = f"effort_{filter_month}.csv" if filter_month else "effort_tutti.csv"
+    logger.info("Export CSV generato (record=%d, mese=%s)", len(records), filter_month or "tutti")
     return StreamingResponse(
         iter([_build_csv(records)]),
         media_type="text/csv; charset=utf-8",
@@ -553,23 +626,19 @@ def _records_in_group(db: Session, group_id: int, month: str | None) -> list[Eff
     return db.execute(stmt).scalars().all()
 
 
-def _month_options_in_group(db: Session, group_id: int) -> list[tuple[str, str]]:
-    """Calcola le opzioni mese (YYYY-MM, label italiana) per i record del gruppo."""
-    month_stmt = (
-        select(func.strftime("%Y-%m", EffortEntry.work_date).label("month"))
+def _year_options_in_group(db: Session, group_id: int) -> list[str]:
+    """Calcola gli anni distinti (desc) dei record del gruppo del manager."""
+    year_stmt = (
+        select(func.strftime("%Y", EffortEntry.work_date).label("year"))
         .distinct()
-        .order_by(func.strftime("%Y-%m", EffortEntry.work_date).desc())
+        .order_by(func.strftime("%Y", EffortEntry.work_date).desc())
         .where(
             EffortEntry.user_id.in_(
                 select(User.id).where(User.group_id == group_id)
             )
         )
     )
-    month_rows = db.execute(month_stmt).scalars().all()
-    return [
-        (m, f"{_MESI_ITALIANI[int(m.split('-')[1])]} {m.split('-')[0]}")
-        for m in month_rows
-    ]
+    return db.execute(year_stmt).scalars().all()
 
 
 @router.get("/group", response_class=HTMLResponse, name="group_view")
@@ -578,11 +647,13 @@ async def group_view(
     db: Session = Depends(get_db),
     user: User | None = Depends(get_current_user),
     month: str | None = None,
+    year: str | None = None,
+    month_num: str | None = None,
 ) -> HTMLResponse:
     """Pagina del gruppo per il manager: solo visualizzazione/esportazione.
 
     Il manager vede i record di tutti gli utenti del gruppo che gestisce,
-    con filtro mese/anno. Non c'è il form di inserimento: la vista è read-only.
+    con filtro mese/anno (S4). Non c'è il form di inserimento: vista read-only.
     """
     redirect = _require_auth(user)
     if redirect is not None:
@@ -592,9 +663,18 @@ async def group_view(
         logger.warning("Accesso negato a /group per utente %s (ruolo=%s)", user.username, user.role)
         return RedirectResponse("/", status_code=303)
 
+    filter_month = _resolve_month(year, month_num, month)
+
     group = db.get(Group, user.group_id)
-    records = _records_in_group(db, user.group_id, month)
-    month_options = _month_options_in_group(db, user.group_id)
+    records = _records_in_group(db, user.group_id, filter_month)
+    year_options = _year_options_in_group(db, user.group_id)
+
+    selected_year: str = ""
+    selected_month_num: str = ""
+    if filter_month and len(filter_month) == 7:
+        y, m = filter_month.split("-")
+        selected_year = y
+        selected_month_num = m
 
     return templates.TemplateResponse(
         request=request,
@@ -605,8 +685,10 @@ async def group_view(
             "phase": "Vista gruppo (manager)",
             "group_name": group.name if group else "Gruppo",
             "records": records,
-            "month_options": month_options,
-            "selected_month": month,
+            "year_options": year_options,
+            "month_options": _MESI_ITALIANI,
+            "selected_year": selected_year,
+            "selected_month_num": selected_month_num,
             "current_username": user.username,
             "auth_enabled": AUTH_ENABLED,
             "is_admin": is_admin(user),
@@ -621,6 +703,8 @@ async def group_export_csv(
     db: Session = Depends(get_db),
     user: User | None = Depends(get_current_user),
     month: str | None = None,
+    year: str | None = None,
+    month_num: str | None = None,
 ) -> StreamingResponse:
     """Esporta in CSV i record del gruppo gestito dal manager."""
     redirect = _require_auth(user)
@@ -631,14 +715,16 @@ async def group_export_csv(
         logger.warning("Export negato per utente %s (ruolo=%s)", user.username, user.role)
         return RedirectResponse("/", status_code=303)
 
+    filter_month = _resolve_month(year, month_num, month)
+
     group = db.get(Group, user.group_id)
     stmt = _records_in_group_statement(db, user.group_id)
-    if month:
-        stmt = stmt.where(func.strftime("%Y-%m", EffortEntry.work_date) == month)
+    if filter_month:
+        stmt = stmt.where(func.strftime("%Y-%m", EffortEntry.work_date) == filter_month)
     records = db.execute(stmt.order_by(EffortEntry.work_date.asc())).scalars().all()
 
-    filename = f"effort_{group.name if group else 'gruppo'}_{month or 'tutti'}.csv"
-    logger.info("Export CSV gruppo generato (record=%d, mese=%s)", len(records), month or "tutti")
+    filename = f"effort_{group.name if group else 'gruppo'}_{filter_month or 'tutti'}.csv"
+    logger.info("Export CSV gruppo generato (record=%d, mese=%s)", len(records), filter_month or "tutti")
     return StreamingResponse(
         iter([_build_csv(records)]),
         media_type="text/csv; charset=utf-8",

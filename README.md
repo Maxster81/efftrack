@@ -4,10 +4,11 @@ Web server per la registrazione di **effort** (ore lavorate, attività giornalie
 gestionale CRUD. Sostituto moderno del vecchio tool aziendale, installabile su **Ubuntu** con
 **Python `venv`** (no Docker).
 
-> **Stato**: **v1.1.1** — versione stabile pronta per produzione.
-> Autenticazione attiva, multiutente con ruoli (USER/MANAGER/ADMIN), hardening di sicurezza,
-> cambio password obbligatorio al primo login, suite di test completa (107 test verdi). La documentazione di stato dettagliata è in
-> [`memory-bank/`](./memory-bank/).
+> **Stato**: **v1.8.4** — versione stabile pronta per produzione.
+> Autenticazione attiva (locale + login federato **SAML/MFA** con Microsoft Entra ID),
+> multiutente con ruoli (USER/MANAGER/ADMIN), hardening di sicurezza, cambio password
+> obbligatorio al primo login, suite di test completa (129 test + 5 subtests verdi).
+> La documentazione di stato dettagliata è in [`memory-bank/`](./memory-bank/).
 
 ---
 
@@ -18,6 +19,7 @@ gestionale CRUD. Sostituto moderno del vecchio tool aziendale, installabile su *
 - **Filtro per mese** nell'elenco e negli export.
 - **Export CSV** (UTF-8 con BOM) con segregazione dati per utente.
 - **Autenticazione** locale con sessione firmata e password hashate (bcrypt).
+- **Login federato SAML 2.0** con **Microsoft Entra ID** (MFA gestita da Microsoft), accanto al login locale.
 - **Multiutente**: ogni utente vede/cambia/elimina solo i propri record.
 - **Ruoli**: `USER`, `MANAGER` (vista gruppo), `ADMIN` (pannello di gestione).
 - **Pannello admin**: dashboard, registrazioni globali, gestione utenti, gestione lookup.
@@ -36,6 +38,12 @@ gestionale CRUD. Sostituto moderno del vecchio tool aziendale, installabile su *
 sudo apt update
 sudo apt install -y python3 python3-venv python3-pip
 ```
+
+Per l'**autenticazione SAML/Microsoft** (opzionale) serve anche la dipendenza di sistema `xmlsec1`:
+```bash
+sudo apt install -y xmlsec1 libxml2-dev libxmlsec1-dev
+```
+Vedi [`docs/saml-autenticazione.md`](docs/saml-autenticazione.md) per i dettagli.
 
 ---
 
@@ -92,6 +100,12 @@ Variabili principali:
 | `EFFORT_TRACKING_SESSION_SAMESITE` / `EFFORT_TRACKING_SESSION_SECURE` | `lax` / `false` | Sicurezza cookie di sessione. `SECURE=true` richiede HTTPS (il browser scarta il cookie di sessione su HTTP): su pre-prod/sviluppo senza TLS impostare `false`; in produzione dietro reverse proxy con TLS impostare `true`. |
 | `EFFORT_TRACKING_SESSION_MAX_AGE_SECONDS` | `1800` | Durata massima sessione in secondi (30 min). Se l'utente chiude il browser senza logout, alla scadenza serve rilogin. |
 | `EFFORT_TRACKING_MAX_BODY_BYTES` | `1048576` (1 MiB) | Limite massimo del body delle richieste. |
+| `EFFORT_TRACKING_SAML_ENABLED` | `false` | Abilita il login federato SAML/Microsoft. Disattivato di default. |
+| `EFFORT_TRACKING_SAML_ENTITY_ID` | `https://efftrack.example.com/saml/metadata` | Entity ID SP (da far combaciare con l'Identifier in Azure). |
+| `EFFORT_TRACKING_SAML_ACS_URL` | `https://efftrack.example.com/saml/acs` | Endpoint ACS pubblico (Reply URL in Azure). |
+| `EFFORT_TRACKING_SAML_IDP_ENTITY_ID` | *(vuoto)* | Entity ID dell'IdP Microsoft (`https://sts.windows.net/<tenant>/`). |
+| `EFFORT_TRACKING_SAML_IDP_METADATA_URL` | *(vuoto)* | URL/path del metadata XML dell'IdP. |
+| `EFFORT_TRACKING_SAML_CERT_FILE` / `EFFORT_TRACKING_SAML_KEY_FILE` | *(vuoto)* | Certificato/chiave SP (firma AuthnRequest opzionale). |
 
 Il file `.env` reale **non** va committato (è coperto da `.gitignore`).
 
@@ -105,6 +119,13 @@ Ci sono due strade: **script automatizzato** (consigliata) o **passi manuali**.
 
 Lo script `deploy.sh` (root del repo) automatizza: creazione utente/directory/venv, copia del
 codice, generazione di `/etc/efftrack.env` e installazione del servizio systemd.
+
+> ⚠️ **Wizard di configurazione**: durante l'installazione (`deploy.sh`, `--install`, `--env`
+> o `--demo`) lo script pone una serie di **domande guidate** (directory di installazione,
+> reverse proxy/host, porta, generazione password admin, attivazione SAML) e genera
+> automaticamente `/etc/efftrack.env` con tutti i valori, evitando di dover modificare a
+> mano i file successivamente. In ambienti non interattivi senza `/dev/tty` vengono usati
+> i default sicuri.
 
 ```bash
 sudo ./deploy.sh           # deploy completo (consigliato)
@@ -156,8 +177,9 @@ Cosa fa `--update`:
 
 1. Verifica che esista un'installazione (directory + servizio systemd).
 2. Controlla la versione installata (`DEPLOY_DIR/VERSION`): se è sotto la soglia minima
-   (`1.3.0`, costante `MIN_UPDATE_VERSION` in `deploy.sh`) blocca e stampa la procedura
-   di **backup + reinstallazione**.
+   (`1.6.0`, costante `MIN_UPDATE_VERSION` in `deploy.sh` — la prima versione con la
+   dipendenza di sistema `xmlsec1`) blocca e stampa la procedura di
+   **backup + reinstallazione**.
 3. Crea un backup automatico in `DEPLOY_DIR/backups/YYYYMMDD-HHMMSS/` di:
    - il database (`data/efftrack.db`),
    - il file env (default `/etc/efftrack.env`, o il percorso passato con `--env-file`),
@@ -240,9 +262,24 @@ pip install -r requirements-dev.txt
 python -m pytest tests/ -v
 ```
 
-- **107 test**: `tests/test_models.py` (modelli, seed, validazione, segregazione) +
-  `tests/test_functional.py` (test end-to-end HTTP su route, auth, permessi, CRUD, export).
+- **Test**: `tests/test_models.py` (modelli, seed, validazione, segregazione),
+  `tests/test_functional.py` (test end-to-end HTTP su route, auth, permessi, CRUD, export)
+  e `tests/test_saml.py` (flusso SAML con client mockato: creazione/associazione utente,
+  errori di validazione, messaggi leggibili).
 - I test usano un database SQLite **dedicato e isolato** (non toccano `data/efftrack.db`).
+
+---
+
+## Documentazione
+
+- [**Guida all'installazione e gestione del server**](docs/installazione.md) — per chi
+  installa e amministra EffTrack su Ubuntu (deploy, configurazione, aggiornamento, backup,
+  troubleshooting).
+- [**Autenticazione SAML con Microsoft Entra ID**](docs/saml-autenticazione.md) — guida
+  per amministratori di sistema alla configurazione del login federato SAML (Azure ed
+  EffTrack, firme, testing).
+- [**Guida utente**](docs/guida-utente.md) — manuale d'uso del prodotto per gli utenti
+  finali (registrazione effort, filtro, export, ruoli e permessi).
 
 ---
 

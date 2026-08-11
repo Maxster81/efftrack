@@ -8,13 +8,13 @@ from __future__ import annotations
 import logging
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Form, Request
+from fastapi import APIRouter, Depends, Form, Query, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
-from passlib.hash import bcrypt
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.config import APP_NAME, APP_VERSION, AUTH_ENABLED, TEMPLATES_DIR
+from app.config import APP_NAME, APP_VERSION, AUTH_ENABLED, SAML_ENABLED, TEMPLATES_DIR
+from app.core.password import verify_password
 from app.core.permissions import is_admin
 from app.db import get_db
 from app.models import User
@@ -27,6 +27,25 @@ templates: Jinja2Templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
 router: APIRouter = APIRouter(tags=["auth"])
 
+# Messaggi utente leggibili per gli errori del flusso SAML (SAML-8).
+# Il parametro `?error=...` usato nei redirect SAML è una chiave tecnica;
+# qui la traduciamo in testo chiaro per il login.html.
+_SAML_ERROR_MESSAGES: dict[str, str] = {
+    "saml-non-configurato": "Il login Microsoft non è configurato. Contatta l'amministratore.",
+    "saml-generazione": "Errore nel collegamento con Microsoft. Riprova.",
+    "saml-validazione": "La risposta di Microsoft non può essere verificata. Riprova.",
+    "saml-utente-non-attivo": "Questo account non è autorizzato al login.",
+    "saml-interno": "Errore interno nel login Microsoft. Riprova.",
+}
+
+
+def _login_error_message(error_key: str) -> str:
+    """Traduce una chiave di errore (query string) in messaggio leggibile.
+
+    Se la chiave non è nota, la restituisce tale e quale (fallback sicuro).
+    """
+    return _SAML_ERROR_MESSAGES.get(error_key, error_key)
+
 
 def _login_context(error: str = "") -> dict:
     """Contesto minimo per il template di login (base.html lo richiede)."""
@@ -35,6 +54,9 @@ def _login_context(error: str = "") -> dict:
         "app_version": APP_VERSION,
         "phase": "Autenticazione",
         "auth_enabled": AUTH_ENABLED,
+        # Mostra il pulsante "Accedi con Microsoft" se il login SAML è attivo
+        # (feature MFA, branch MFA).
+        "saml_enabled": SAML_ENABLED,
         "current_username": "",
         "error": error,
         "sidebar_items": [],
@@ -44,12 +66,19 @@ def _login_context(error: str = "") -> dict:
 
 
 @router.get("/login", response_class=HTMLResponse, name="login")
-async def login_page(request: Request) -> HTMLResponse:
-    """Pagina di login (form username/password)."""
+async def login_page(
+    request: Request,
+    error: str | None = Query(None),
+) -> HTMLResponse:
+    """Pagina di login (form username/password).
+
+    Accetta `?error=<chiave>` (es. usata dai redirect SAML) e la traduce in
+    un messaggio leggibile per l'utente.
+    """
     return templates.TemplateResponse(
         request=request,
         name="login.html",
-        context=_login_context(),
+        context=_login_context(_login_error_message(error) if error else ""),
     )
 
 
@@ -73,7 +102,7 @@ async def login_submit(
         )
 
     user = db.execute(select(User).where(User.username == username)).scalar_one_or_none()
-    if user is None or not bcrypt.verify(password, user.password_hash):
+    if user is None or not verify_password(password, user.password_hash):
         logger.warning("Tentativo di login fallito per username=%s", username)
         return templates.TemplateResponse(
             request=request,

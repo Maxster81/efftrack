@@ -88,17 +88,37 @@ class EffortEntryCreate(BaseModel):
 
 
 class UserCreate(BaseModel):
-    """Input per la creazione di un utente da parte dell'admin."""
+    """Input per la creazione di un utente da parte dell'admin.
 
-    username: str = Field(min_length=1, max_length=64)
-    password: str = Field(min_length=1, max_length=128)
+    La password NON viene più richiesta all'admin: viene generata
+    automaticamente (robusta) e mostrata una sola volta nel banner di
+    conferma. `username` deve essere un indirizzo email (SAML-D1).
+    """
+
+    username: str = Field(min_length=1, max_length=128)
+    first_name: str = Field(min_length=1, max_length=64)
+    last_name: str = Field(min_length=1, max_length=64)
 
     @field_validator("username")
     @classmethod
-    def username_not_blank(cls, value: str) -> str:
+    def username_valid_email(cls, value: str) -> str:
+        """L'username deve essere un indirizzo email valido (SAML-D1)."""
         stripped = value.strip()
         if not stripped:
             raise ValueError("Il campo username è obbligatorio.")
+        stripped = _strip_control_chars(stripped)
+        # Verifica formato email di base (deve contenere @ e un punto dopo).
+        if "@" not in stripped or "." not in stripped.split("@")[-1]:
+            raise ValueError("Il campo username deve essere un indirizzo email valido.")
+        return stripped.lower()
+
+    @field_validator("first_name", "last_name")
+    @classmethod
+    def name_not_blank(cls, value: str) -> str:
+        """Nome e cognome non possono essere vuoti o solo spazi."""
+        stripped = value.strip()
+        if not stripped:
+            raise ValueError("Il campo è obbligatorio.")
         return _strip_control_chars(stripped)
 
 

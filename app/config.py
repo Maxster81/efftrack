@@ -87,6 +87,38 @@ MAX_BODY_BYTES: int = int(
 )
 
 
+# --- SAML (Microsoft Entra ID / Azure AD) ------------------------------------
+
+# Attivazione del login SAML. Se False, il login resta solo locale
+# (nessun impatto sugli ambienti esistenti). Feature in sviluppo su branch MFA.
+SAML_ENABLED: bool = os.environ.get(
+    "EFFORT_TRACKING_SAML_ENABLED", "false"
+).lower() in ("1", "true", "yes", "on")
+
+# Entity ID dello SP (EffTrack): deve combaciare con l'Identifier configurato in Azure.
+SAML_ENTITY_ID: str = os.environ.get(
+    "EFFORT_TRACKING_SAML_ENTITY_ID",
+    "https://efftrack.example.com/saml/metadata",
+)
+
+# Endpoint ACS pubblico di EffTrack (Reply URL in Azure).
+SAML_ACS_URL: str = os.environ.get(
+    "EFFORT_TRACKING_SAML_ACS_URL",
+    "https://efftrack.example.com/saml/acs",
+)
+
+# Entity ID dell'IdP (Microsoft). Forma tipica: https://sts.windows.net/<tenant-id>/
+SAML_IDP_ENTITY_ID: str = os.environ.get("EFFORT_TRACKING_SAML_IDP_ENTITY_ID", "")
+
+# Metadata dell'IdP: URL remoto o percorso file locale (il metadata XML contiene
+# endpoint SSO, entity ID e certificati di Microsoft).
+SAML_IDP_METADATA_URL: str = os.environ.get("EFFORT_TRACKING_SAML_IDP_METADATA_URL", "")
+
+# Certificato e chiave dello SP (per firmare AuthnRequest, se richiesto).
+SAML_CERT_FILE: str = os.environ.get("EFFORT_TRACKING_SAML_CERT_FILE", "")
+SAML_KEY_FILE: str = os.environ.get("EFFORT_TRACKING_SAML_KEY_FILE", "")
+
+
 # --- Server -------------------------------------------------------------------
 
 HOST: str = os.environ.get("EFFORT_TRACKING_HOST", "0.0.0.0")
@@ -106,7 +138,7 @@ LOG_FORMAT: str = "%(asctime)s %(levelname)s [%(name)s] %(message)s"
 # --- Costanti applicative -----------------------------------------------------
 
 APP_NAME: str = "Effort Tracking"
-APP_VERSION: str = "1.5.3"
+APP_VERSION: str = "1.8.4"
 
 
 # --- Path applicativi (templates, static) ------------------------------------

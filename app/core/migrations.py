@@ -155,6 +155,47 @@ def _migrate_users_profile(engine: Engine) -> None:
         logger.info("Colonna users.%s aggiunta", col_name)
 
 
+def _migrate_users_saml(engine: Engine) -> None:
+    """Aggiunge le colonne SAML (`saml_name_id`, `saml_entity_id`) a `users`.
+
+    Idempotente: se le colonne esistono già, non fa nulla. `saml_name_id` ha
+    un indice per una ricerca rapida all'accesso SAML (feature MFA, branch MFA).
+    Nota: l'allargamento di `username` a String(128) NON richiede migrazione
+    su SQLite (VARCHAR non vincola la lunghezza).
+    """
+    inspector = inspect(engine)
+    if "users" not in inspector.get_table_names():
+        return
+
+    columns = {col["name"] for col in inspector.get_columns("users")}
+    new_columns = [
+        ("saml_name_id", "ALTER TABLE users ADD COLUMN saml_name_id VARCHAR(256)"),
+        ("saml_entity_id", "ALTER TABLE users ADD COLUMN saml_entity_id VARCHAR(256)"),
+    ]
+    for col_name, sql in new_columns:
+        if col_name in columns:
+            logger.debug("Colonna users.%s già presente, migrazione non necessaria", col_name)
+            continue
+        logger.info("Migrazione SAML: aggiunta colonna users.%s", col_name)
+        with engine.begin() as connection:
+            connection.execute(text(sql))
+        logger.info("Colonna users.%s aggiunta", col_name)
+
+    # Indice su saml_name_id per la ricerca utente all'accesso SAML (idempotente).
+    with engine.connect() as connection:
+        existing_indexes = {
+            ix["name"]
+            for ix in connection.execute(text("PRAGMA index_list('users')")).mappings()
+        }
+    if "ix_users_saml_name_id" not in existing_indexes:
+        logger.info("Migrazione SAML: creazione indice su users.saml_name_id")
+        with engine.begin() as connection:
+            connection.execute(
+                text("CREATE INDEX ix_users_saml_name_id ON users (saml_name_id)")
+            )
+        logger.info("Indice su users.saml_name_id creato")
+
+
 def _ensure_schema_version_table(engine: Engine) -> None:
     """Crea la tabella `schema_version` se non esiste.
 
@@ -218,5 +259,6 @@ def run_schema_migrations(engine: Engine) -> None:
     _migrate_users_disabled_at(engine)
     _migrate_users_disabled(engine)
     _migrate_users_profile(engine)
+    _migrate_users_saml(engine)
     _ensure_schema_version_table(engine)
     _update_schema_version(engine)
