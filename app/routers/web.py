@@ -11,8 +11,6 @@ viene valorizzato su ogni nuovo record con l'utente della sessione.
 """
 from __future__ import annotations
 
-import csv
-import io
 import logging
 from datetime import date, timedelta
 from typing import Annotated
@@ -32,6 +30,7 @@ from app.db import get_db
 from app.dependencies import get_current_user
 from app.models import Activity, Client, EffortEntry, Group, User
 from app.schemas.effort import EffortEntryCreate
+from app.services.export_csv import MESI_ITALIANI, build_csv
 
 logger: logging.Logger = logging.getLogger(__name__)
 
@@ -40,25 +39,6 @@ templates: Jinja2Templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
 
 router: APIRouter = APIRouter(tags=["web"])
-
-# Nomi dei mesi in italiano (indice 0 vuoto, 1..12).
-_MESI_ITALIANI = [
-    "", "Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno",
-    "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre",
-]
-
-# Header del CSV di export, coerente con le colonne della tabella.
-_CSV_HEADER = [
-    "Data",
-    "Cliente",
-    "Gruppo",
-    "Attività",
-    "Utente",
-    "Ore",
-    "Note",
-    "Descrizione attività",
-]
-
 
 def _require_auth(user: User | None) -> RedirectResponse | None:
     """Se l'auth è attiva e manca l'utente, restituisce il redirect al login."""
@@ -253,7 +233,7 @@ async def index(
             "current_group_id": current_group_id,
             "records": records,
             "year_options": year_options,
-            "month_options": _MESI_ITALIANI,  # indice 0 vuoto, 1..12
+            "month_options": MESI_ITALIANI,  # indice 0 vuoto, 1..12
             "selected_year": selected_year,
             "selected_month_num": selected_month_num,
             "today": date.today().isoformat(),
@@ -313,6 +293,13 @@ async def save_entry(
     if AUTH_ENABLED:
         user = current_user.username
         group_id = current_user.group_id
+
+    # Un utente senza gruppo (es. creato via SAML prima che l'admin lo
+    # assegni a un gruppo) NON può registrare effort: il record richiede
+    # un gruppo. Blocco il salvataggio con un messaggio chiaro.
+    if group_id is None:
+        logger.warning("Salvataggio rifiutato: utente %s senza gruppo", user)
+        return RedirectResponse(_with_month("/?error=nessun-gruppo", filter_month), status_code=303)
 
     # Eliminazione definitiva: richiede solo `record_id`.
     if action == "delete":
@@ -386,11 +373,6 @@ def _force_holiday_values(
     payload.notes = SENTINEL_NAME
     payload.description = None
     return payload
-
-
-def _is_sentinel_entry(record: EffortEntry) -> bool:
-    """True se il record è un giorno non lavorato (cliente sentinella)."""
-    return record.client is not None and record.client.name == SENTINEL_NAME
 
 
 def _delete_entry(
@@ -553,39 +535,10 @@ async def export_csv(
     filename = f"effort_{filter_month}.csv" if filter_month else "effort_tutti.csv"
     logger.info("Export CSV generato (record=%d, mese=%s)", len(records), filter_month or "tutti")
     return StreamingResponse(
-        iter([_build_csv(records)]),
+        iter([build_csv(records)]),
         media_type="text/csv; charset=utf-8",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
-
-
-def _build_csv(records: list[EffortEntry]) -> str:
-    """Costruisce il contenuto CSV (con BOM UTF-8) dai record di effort.
-
-    La colonna Utente mostra lo username reale dal JOIN su users; per i
-    record senza proprietario (legacy) mostra una stringa vuota.
-    """
-    buffer = io.StringIO()
-    buffer.write("\ufeff")  # BOM UTF-8 per compatibilità Excel/Windows.
-    writer = csv.writer(buffer)
-    writer.writerow(_CSV_HEADER)
-    for record in records:
-        if _is_sentinel_entry(record):
-            # I giorni non lavorati non compaiono nell'export (S6).
-            continue
-        writer.writerow(
-            [
-                record.work_date.strftime("%d/%m/%Y"),
-                record.client.name,
-                record.group.name,
-                record.activity.name,
-                record.user.username if record.user is not None else "",
-                record.hours_spent,
-                record.notes or "",
-                record.description or "",
-            ]
-        )
-    return buffer.getvalue()
 
 
 def _is_manager_view(user: User | None) -> bool:
@@ -686,7 +639,7 @@ async def group_view(
             "group_name": group.name if group else "Gruppo",
             "records": records,
             "year_options": year_options,
-            "month_options": _MESI_ITALIANI,
+            "month_options": MESI_ITALIANI,
             "selected_year": selected_year,
             "selected_month_num": selected_month_num,
             "current_username": user.username,
@@ -726,7 +679,7 @@ async def group_export_csv(
     filename = f"effort_{group.name if group else 'gruppo'}_{filter_month or 'tutti'}.csv"
     logger.info("Export CSV gruppo generato (record=%d, mese=%s)", len(records), filter_month or "tutti")
     return StreamingResponse(
-        iter([_build_csv(records)]),
+        iter([build_csv(records)]),
         media_type="text/csv; charset=utf-8",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )

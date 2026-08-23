@@ -4,7 +4,7 @@ Web server per la registrazione di **effort** (ore lavorate, attività giornalie
 gestionale CRUD. Sostituto moderno del vecchio tool aziendale, installabile su **Ubuntu** con
 **Python `venv`** (no Docker).
 
-> **Stato**: **v1.8.4** — versione stabile pronta per produzione.
+> **Stato**: **v1.8.5** — versione stabile pronta per produzione.
 > Autenticazione attiva (locale + login federato **SAML/MFA** con Microsoft Entra ID),
 > multiutente con ruoli (USER/MANAGER/ADMIN), hardening di sicurezza, cambio password
 > obbligatorio al primo login, suite di test completa (129 test + 5 subtests verdi).

@@ -406,6 +406,15 @@ a:hover { text-decoration: underline; }
     grid-template-columns: 1fr 1fr;
   }
 }
+/* Il <fieldset> che avvolge i campi (per disabilitare il form quando
+   l'utente non ha un gruppo) non deve introdurre bordi/margini propri:
+   lascia che il layout `.effort-form` governi la disposizione. */
+.effort-form fieldset {
+  border: none;
+  margin: 0;
+  padding: 0;
+  display: contents;
+}
 .form-row {
   display: grid;
   grid-template-columns: 1fr;
@@ -761,6 +770,18 @@ a:hover { text-decoration: underline; }
   border-left: 4px solid #1e8449;
   border-radius: var(--radius-sm);
   color: #1e8449;
+  font-size: 0.92rem;
+}
+/* Banner informativo di stato (es. utente senza gruppo): stile warn
+   ambrato coerente con error/success (sfondo tenue, bordo sinistro marcato). */
+.form-warning {
+  margin-bottom: var(--space-md);
+  padding: var(--space-sm) var(--space-md);
+  background: #fff8e1;
+  border: 1px solid #f1c40f;
+  border-left: 4px solid #e67e22;
+  border-radius: var(--radius-sm);
+  color: #9a6b00;
   font-size: 0.92rem;
 }
 

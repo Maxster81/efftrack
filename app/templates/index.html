@@ -28,12 +28,23 @@
       <div class="form-error" role="alert">La Descrizione attività è obbligatoria per l'attività selezionata.</div>
     {% elif error == "validazione" %}
       <div class="form-error" role="alert">Dati del form non validi. Controlla i campi compilati.</div>
+    {% elif error == "nessun-gruppo" %}
+      <div class="form-error" role="alert">Non hai un gruppo assegnato. Contatta l'amministratore.</div>
     {% elif success_message %}
       <div class="form-success" role="status">{{ success_message }}</div>
     {% endif %}
 
+    {# Utente senza gruppo (es. appena creato via SAML): non può registrare. #}
+    {% if not current_group_id %}
+      <div class="form-warning" role="status">
+        Non hai un gruppo assegnato. Contatta l'amministratore per poter registrare le attività.
+      </div>
+    {% endif %}
+
     <form class="effort-form" method="post" action="/"
           aria-label="Form di inserimento effort" novalidate>
+      {# Se l'utente non ha un gruppo, disabilita tutti i campi e i pulsanti. #}
+      <fieldset {% if not current_group_id %}disabled{% endif %}>
       {# Elemento nascosto che traccia il record in modalità modifica.
          Valorizzato da row-select.js al click su una riga della tabella.
          Deve stare dentro il <form> per essere incluso nella POST. #}
@@ -133,6 +144,7 @@
         <button type="button" class="btn-tertiary is-hidden" id="edit-cancel">Annulla modifica</button>
         <button type="submit" class="btn-danger is-hidden" name="action" value="delete" id="edit-delete">Elimina registrazione</button>
       </div>
+      </fieldset>
     </form>
   </section>
 

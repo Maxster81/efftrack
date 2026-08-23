@@ -6,7 +6,8 @@ di sicurezza e i gestori di errore personalizzati.
 Architettura:
 - `app/routers/web.py` espone le pagine HTML (root) e l'health check.
 - `app/routers/auth.py` espone login/logout (sessione).
-- `app/routers/admin.py` espone le pagine e azioni di amministrazione.
+- `app/routers/admin_dashboard.py`, `admin_users.py`, `admin_lookup.py`
+  espongono le pagine e azioni di amministrazione (area /admin).
 - `app/routers/api.py` è un placeholder per le future API JSON.
 - `app/static/` è montato come directory di file statici.
 """
@@ -49,8 +50,10 @@ from app.core.seed import (
     seed_test_users,
 )
 from app.db import Base, SessionLocal, engine
-from app.routers.admin import router as admin_router
 from app.routers.api import router as api_router
+from app.routers.admin_dashboard import router as admin_dashboard_router
+from app.routers.admin_users import router as admin_users_router
+from app.routers.admin_lookup import router as admin_lookup_router
 from app.routers.auth import router as auth_router
 from app.routers.profile import router as profile_router
 from app.routers.saml import router as saml_router
@@ -208,12 +211,14 @@ app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 # Registra i router applicativi.
 # `auth` espone login/logout (sessione).
 # `web` espone le pagine HTML (root) e l'health check.
-# `admin` espone le pagine e azioni di amministrazione.
+# `admin_*` espongono dashboard, gestione utenti e lookup (area /admin).
 # `api` è un prefisso riservato alle future API JSON.
 # `saml` espone gli endpoint SAML (feature MFA, /saml/*).
 app.include_router(auth_router)
 app.include_router(web_router)
 app.include_router(profile_router)
-app.include_router(admin_router)
+app.include_router(admin_dashboard_router)
+app.include_router(admin_users_router)
+app.include_router(admin_lookup_router)
 app.include_router(api_router)
 app.include_router(saml_router)
