@@ -17,7 +17,7 @@ gestionale CRUD. Sostituto moderno del vecchio tool aziendale, installabile su *
 - **Registrazione effort**: form in alto + tabella elenco in basso, CRUD completo.
 - **Copia su settimana**: inserimento bulk dei giorni feriali.
 - **Filtro per mese** nell'elenco e negli export.
-- **Export CSV** (UTF-8 con BOM) con segregazione dati per utente.
+- **Export in CSV** (UTF-8 con BOM) **o XLSX** (Excel, via `openpyxl`) con segregazione dati per utente.
 - **Autenticazione** locale con sessione firmata e password hashate (bcrypt).
 - **Login federato SAML 2.0** con **Microsoft Entra ID** (MFA gestita da Microsoft), accanto al login locale.
 - **Multiutente**: ogni utente vede/cambia/elimina solo i propri record.

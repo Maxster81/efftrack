@@ -35,8 +35,12 @@
           {% endfor %}
         </select>
         <span class="filter-bar__spacer" aria-hidden="true"></span>
-        <a class="filter-bar__export" href="/admin/records/export{% if selected_year and selected_month_num %}?year={{ selected_year }}&month_num={{ selected_month_num }}{% endif %}"
-           role="button">Esporta CSV</a>
+        <label class="filter-bar__label" for="export-format">Formato</label>
+        <select id="export-format" name="format" class="filter-bar__select">
+          <option value="xlsx" selected>Excel</option>
+          <option value="csv">CSV</option>
+        </select>
+        <button type="submit" formaction="/admin/records/export" class="filter-bar__export">Esporta</button>
       </form>
     {% endif %}
 

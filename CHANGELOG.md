@@ -3,6 +3,19 @@
 Tutte le modifiche rilevanti del progetto sono documentate qui.
 Il formato segue [Keep a Changelog](https://keepachangelog.com/) e il versioning [SemVer](https://semver.org/).
 
+## [1.9.0] - 2026-08-26
+
+### Added
+- **Export Excel (XLSX)**: gli export dei record possono ora essere generati in formato
+  `.xlsx` oltre che in CSV. Nuovo servizio `app/services/export_xlsx.py` (`build_xlsx`, con
+  `openpyxl`): stesse colonne del CSV, header in grassetto, larghezze calibrate, ore come
+  numero, esclusione dei giorni "NON LAVORATO".
+- **Parametro `format`**: gli endpoint `/export`, `/group/export`, `/admin/records/export`
+  accettano `?format=xlsx` (default CSV, retrocompatibile). Nuova dipendenza `openpyxl>=3.1.0`.
+- **UI**: nelle pagine index/group/admin_records il bottone "Esporta CSV" è stato sostituito
+  da un **menu a tendina "Formato" (Excel di default / CSV)** + bottone "Esporta" (submit del
+  form filtro verso l'endpoint export, mantiene i filtri anno/mese, nessun JS aggiuntivo).
+
 ## [1.8.9] - 2026-08-26
 
 ### Fixed

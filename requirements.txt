@@ -12,3 +12,5 @@ itsdangerous>=2.0.0
 # Autenticazione SAML 2.0 (Microsoft Entra ID / Azure AD) — feature MFA (branch MFA, SAML-1).
 # Richiede la dipendenza di sistema `xmlsec1` (es. `apt install xmlsec1 libxml2-dev libxmlsec1-dev`).
 pysaml2>=7.3.0
+# Export XLSX (Fase 8, v1.9.0): genera file .xlsx in memoria (formattazione base).
+openpyxl>=3.1.0

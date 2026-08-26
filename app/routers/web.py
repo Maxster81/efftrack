@@ -31,6 +31,7 @@ from app.dependencies import get_current_user
 from app.models import Activity, Client, EffortEntry, Group, User
 from app.schemas.effort import EffortEntryCreate
 from app.services.export_csv import MESI_ITALIANI, build_csv
+from app.services.export_xlsx import XLSX_MEDIA_TYPE, build_xlsx
 
 logger: logging.Logger = logging.getLogger(__name__)
 
@@ -506,8 +507,13 @@ async def export_csv(
     month: str | None = None,
     year: str | None = None,
     month_num: str | None = None,
+    format: str | None = None,
 ) -> StreamingResponse:
-    """Esporta i record di effort in formato CSV (protetta, segregata)."""
+    """Esporta i record di effort in CSV o XLSX (protetta, segregata).
+
+    Il parametro query `format` seleziona il formato di output:
+    `xlsx` → file Excel; qualsiasi altro valore (o assente) → CSV (default).
+    """
     redirect = _require_auth(user)
     if redirect is not None:
         return redirect
@@ -532,12 +538,19 @@ async def export_csv(
         stmt = stmt.where(func.strftime("%Y-%m", EffortEntry.work_date) == filter_month)
     records = db.execute(stmt).scalars().all()
 
-    filename = f"effort_{filter_month}.csv" if filter_month else "effort_tutti.csv"
+    base_name = f"effort_{filter_month}" if filter_month else "effort_tutti"
+    if format == "xlsx":
+        logger.info("Export XLSX generato (record=%d, mese=%s)", len(records), filter_month or "tutti")
+        return StreamingResponse(
+            iter([build_xlsx(records)]),
+            media_type=XLSX_MEDIA_TYPE,
+            headers={"Content-Disposition": f'attachment; filename="{base_name}.xlsx"'},
+        )
     logger.info("Export CSV generato (record=%d, mese=%s)", len(records), filter_month or "tutti")
     return StreamingResponse(
         iter([build_csv(records)]),
         media_type="text/csv; charset=utf-8",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        headers={"Content-Disposition": f'attachment; filename="{base_name}.csv"'},
     )
 
 
@@ -658,8 +671,9 @@ async def group_export_csv(
     month: str | None = None,
     year: str | None = None,
     month_num: str | None = None,
+    format: str | None = None,
 ) -> StreamingResponse:
-    """Esporta in CSV i record del gruppo gestito dal manager."""
+    """Esporta in CSV o XLSX i record del gruppo gestito dal manager."""
     redirect = _require_auth(user)
     if redirect is not None:
         return redirect
@@ -676,12 +690,20 @@ async def group_export_csv(
         stmt = stmt.where(func.strftime("%Y-%m", EffortEntry.work_date) == filter_month)
     records = db.execute(stmt.order_by(EffortEntry.work_date.asc())).scalars().all()
 
-    filename = f"effort_{group.name if group else 'gruppo'}_{filter_month or 'tutti'}.csv"
+    group_label = group.name if group else "gruppo"
+    base_name = f"effort_{group_label}_{filter_month or 'tutti'}"
+    if format == "xlsx":
+        logger.info("Export XLSX gruppo generato (record=%d, mese=%s)", len(records), filter_month or "tutti")
+        return StreamingResponse(
+            iter([build_xlsx(records)]),
+            media_type=XLSX_MEDIA_TYPE,
+            headers={"Content-Disposition": f'attachment; filename="{base_name}.xlsx"'},
+        )
     logger.info("Export CSV gruppo generato (record=%d, mese=%s)", len(records), filter_month or "tutti")
     return StreamingResponse(
         iter([build_csv(records)]),
         media_type="text/csv; charset=utf-8",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        headers={"Content-Disposition": f'attachment; filename="{base_name}.csv"'},
     )
 
 

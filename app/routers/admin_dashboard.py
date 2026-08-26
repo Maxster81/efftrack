@@ -4,7 +4,7 @@ Espone le route amministrative relative al pannello di controllo e
 all'elenco/export di TUTTI i record del sistema:
 - GET /admin            → dashboard di benvenuto (KPI e metriche)
 - GET /admin/records    → tabella di tutti i record (no form, con filtro anno/mese)
-- GET /admin/records/export → export CSV di tutti i record
+- GET /admin/records/export → export CSV/XLSX di tutti i record
 
 Tutte le route sono protette da `require_admin`.
 """
@@ -24,6 +24,7 @@ from app.db import get_db
 from app.models import EffortEntry, Group, User
 from app.routers.web import _resolve_month
 from app.services.export_csv import MESI_ITALIANI, build_csv
+from app.services.export_xlsx import XLSX_MEDIA_TYPE, build_xlsx
 from app.routers.admin_common import (
     base_context,
     db_size_mb,
@@ -195,8 +196,9 @@ async def admin_records_export(
     month: str | None = None,
     year: str | None = None,
     month_num: str | None = None,
+    format: str | None = None,
 ) -> StreamingResponse:
-    """Esporta in CSV tutti i record del sistema (solo admin)."""
+    """Esporta in CSV o XLSX tutti i record del sistema (solo admin)."""
     filter_month = _resolve_month(year, month_num, month)
 
     stmt = (
@@ -213,10 +215,17 @@ async def admin_records_export(
         stmt = stmt.where(func.strftime("%Y-%m", EffortEntry.work_date) == filter_month)
     records = db.execute(stmt).scalars().all()
 
-    filename = f"effort_admin_{filter_month or 'tutti'}.csv"
+    base_name = f"effort_admin_{filter_month or 'tutti'}"
+    if format == "xlsx":
+        logger.info("Export XLSX admin (record=%d, mese=%s)", len(records), filter_month or "tutti")
+        return StreamingResponse(
+            iter([build_xlsx(records)]),
+            media_type=XLSX_MEDIA_TYPE,
+            headers={"Content-Disposition": f'attachment; filename="{base_name}.xlsx"'},
+        )
     logger.info("Export CSV admin (record=%d, mese=%s)", len(records), filter_month or "tutti")
     return StreamingResponse(
         iter([build_csv(records)]),
         media_type="text/csv; charset=utf-8",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        headers={"Content-Disposition": f'attachment; filename="{base_name}.csv"'},
     )
