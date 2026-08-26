@@ -4,8 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
    <title>{% block title %}{{ app_name }}{% endblock %}</title>
-   <link rel="icon" type="image/svg+xml" href="{{ url_for('static', path='favicon.svg') }}" />
-   <link rel="stylesheet" href="{{ url_for('static', path='style.css') }}" />
+   <link rel="icon" type="image/svg+xml" href="/static/favicon.svg" />
+   <link rel="stylesheet" href="/static/style.css" />
    <!-- Applica il tema salvato prima del rendering per evitare il flash
         del tema chiaro all'avvio. -->
    <script>
@@ -106,8 +106,8 @@
   </footer>
 
    {% block scripts %}{% endblock %}
-   <script src="{{ url_for('static', path='nav.js') }}" defer></script>
-   <script src="{{ url_for('static', path='theme.js') }}" defer></script>
-   <script src="{{ url_for('static', path='user-menu.js') }}" defer></script>
+   <script src="/static/nav.js" defer></script>
+   <script src="/static/theme.js" defer></script>
+   <script src="/static/user-menu.js" defer></script>
  </body>
 </html>

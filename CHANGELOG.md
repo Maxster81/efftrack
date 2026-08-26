@@ -3,6 +3,16 @@
 Tutte le modifiche rilevanti del progetto sono documentate qui.
 Il formato segue [Keep a Changelog](https://keepachangelog.com/) e il versioning [SemVer](https://semver.org/).
 
+## [1.8.9] - 2026-08-26
+
+### Fixed
+- **CSS/JS/favicon non caricati dietro reverse proxy HTTPS (NetScaler)**: i template usavano
+  `url_for('static', path='...')` che in Starlette genera URL **assoluti** con lo scheme della
+  richiesta in ingresso (HTTP dietro il proxy) → gli asset risultavano `http://...`, bloccati
+  dalla CSP `'self'` (pagina su `https`) e da Mixed Content. Ora gli asset statici usano path
+  relativi `/static/...` (in `base.html` e `index.html`), risolti dal browser rispetto alla
+  pagina HTTPS. Non servono più `url_for('static', ...)`.
+
 ## [1.8.8] - 2026-08-26
 
 ### Added
