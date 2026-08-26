@@ -92,6 +92,9 @@ async def profile_page(
             "profile_err": request.query_params.get("profile_err"),
             "pwd_ok": request.query_params.get("pwd_ok"),
             "pwd_err": request.query_params.get("pwd_err"),
+            # Percorso bloccato dal PasswordChangeRequiredMiddleware (azione non
+            # eseguita finché l'utente non cambia la password temporanea).
+            "pwd_blocked": request.query_params.get("pwd_blocked"),
         },
     )
 

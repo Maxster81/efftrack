@@ -3,7 +3,13 @@
 
 {% block content %}
 <section class="profile-page">
-  {% if password_change_required %}
+  {% if pwd_blocked %}
+    <div class="profile-banner profile-banner--blocked" role="alert">
+      <strong>Azione non eseguita:</strong> la richiesta a
+      <code>{{ pwd_blocked }}</code> è stata bloccata. Devi prima cambiare la
+      password temporanea (sezione "Cambia password").
+    </div>
+  {% elif password_change_required %}
     <div class="profile-banner" role="alert">
       <strong>Primo accesso:</strong> devi cambiare la password prima di
       poter accedere alle altre pagine dell'applicazione.

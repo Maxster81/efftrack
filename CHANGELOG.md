@@ -3,6 +3,15 @@
 Tutte le modifiche rilevanti del progetto sono documentate qui.
 Il formato segue [Keep a Changelog](https://keepachangelog.com/) e il versioning [SemVer](https://semver.org/).
 
+## [1.8.7] - 2026-08-23
+
+### Fixed
+- **Feedback del middleware cambio password**: quando un utente con `password_change_required`
+  attivo tenta un'azione (es. cambio password di un altro utente da admin), il middleware ora
+  reindirizza a `/profile?pwd_blocked=<path>` e la pagina profilo mostra un banner esplicito
+  "Azione non eseguita" con il percorso bloccato. Prima il redirect era silenzioso e la modifica
+  non veniva applicata senza alcun avviso.
+
 ## [1.4.1] - 2026-08-06
 
 ### Fixed

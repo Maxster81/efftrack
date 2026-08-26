@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import logging
 from typing import Callable
+from urllib.parse import quote
 
 from starlette.requests import Request
 from starlette.responses import RedirectResponse, Response
@@ -92,5 +93,8 @@ class PasswordChangeRequiredMiddleware:
             user_id,
             path,
         )
-        redirect = RedirectResponse("/profile", status_code=303)
+        # Include il percorso tentato (URL-encoded, anche le '/', così il valore
+        # del parametro query resta non ambiguo) così la pagina profilo può
+        # comunicare all'utente quale azione è stata bloccata dal middleware.
+        redirect = RedirectResponse(f"/profile?pwd_blocked={quote(path, safe='')}", status_code=303)
         await redirect(scope, receive, send)

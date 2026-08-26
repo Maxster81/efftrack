@@ -1184,6 +1184,19 @@ a:hover { text-decoration: underline; }
   line-height: 1.5;
 }
 
+/* Variante "azione bloccata": tono più marcato (rosso) per segnalare che
+   un'operazione non è stata eseguita a causa della password temporanea. */
+.profile-banner--blocked {
+  background: #fdecea;
+  border-color: #e74c3c;
+  border-left-color: #c0392b;
+  color: #a93226;
+}
+.profile-banner--blocked code {
+  font-size: 0.85rem;
+  word-break: break-all;
+}
+
 /* Variante form-row a 2 colonne esplicita (già di default su desktop,
    ma serve per i form inline che non usano .effort-form). */
 .form-row--two {
