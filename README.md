@@ -173,8 +173,17 @@ sudo ./deploy.sh --update --dir /home/efftrack       # se hai installato altrove
 sudo ./deploy.sh --update --env-file /etc/efftrack.env  # se hai un env personalizzato
 ```
 
+> 💡 **`--update` esegue il `git pull` dal repository** (pattern mutuato dal progetto
+> paroleMutanti). Prima di aggiornare, lo script esegue `git pull --ff-only` nel clone
+> (la directory da cui lo lanci, ad es. la root del repo) e si **ri-esegue da solo**
+> (`exec`) per caricare l'ultima versione di se stesso; poi prosegue con rsync +
+> dipendenze + restart. Non serve più fare `git pull` a mano prima dell'update. Se la
+> directory corrente non è un repo git, il pull viene saltato e l'update procede con i
+> file già presenti.
+
 Cosa fa `--update`:
 
+0. (se il clone è un repo git) `git pull --ff-only` + ri-esecuzione automatica per caricare l'ultima versione dello script.
 1. Verifica che esista un'installazione (directory + servizio systemd).
 2. Controlla la versione installata (`DEPLOY_DIR/VERSION`): se è sotto la soglia minima
    (`1.6.0`, costante `MIN_UPDATE_VERSION` in `deploy.sh` — la prima versione con la

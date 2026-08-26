@@ -3,6 +3,17 @@
 Tutte le modifiche rilevanti del progetto sono documentate qui.
 Il formato segue [Keep a Changelog](https://keepachangelog.com/) e il versioning [SemVer](https://semver.org/).
 
+## [1.8.8] - 2026-08-26
+
+### Added
+- **`deploy.sh --update` ora fa il `git pull` dal repository** (pattern mutuato dal
+  progetto paroleMutanti): prima di aggiornare, esegue `git pull --ff-only` nel clone
+  (la directory da cui si lancia lo script, non `$DEPLOY_DIR`) e si ri-esegue con
+  `exec` per caricare l'ultima versione di se stesso. Se la directory corrente non è
+  un repo git, il pull viene saltato e l'update procede con i file già presenti.
+  Conserva `--dir`/`--env-file` personalizzati attraverso il re-exec (env
+  `EFFTRACK_DEPLOY_DIR`/`EFFTRACK_ENV_FILE`).
+
 ## [1.8.7] - 2026-08-23
 
 ### Fixed

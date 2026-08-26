@@ -12,10 +12,15 @@
 #   sudo ./deploy.sh --env                 # solo creazione file env (se assente)
 #   sudo ./deploy.sh --service             # solo installazione servizio systemd
 #   sudo ./deploy.sh --demo                # deploy con dati di esempio (solo demo/test)
-#   sudo ./deploy.sh --update              # aggiornamento in-place di un'installazione esistente
+#   sudo ./deploy.sh --update              # aggiornamento in-place (git pull nel clone + rsync + dipendenze + restart)
 #   sudo ./deploy.sh --dir /home/efftrack  # directory di installazione personalizzata (tutte le modalità)
 #   sudo ./deploy.sh --env-file /etc/efftrack.env  # file env personalizzato (tutte le modalità)
 #   sudo ./deploy.sh --help                # mostra questo aiuto
+#
+# --update (con sorgente = clone git): prima di aggiornare, esegue `git pull
+# --ff-only` nel clone e si ri-esegue (`exec`) per caricare l'ultima versione
+# dello script (pattern mutuato da paroleMutanti). Se la directory corrente non
+# è un repo git, salta il pull e procede con i file già presenti.
 #
 # Prerequisiti:
 #   - Ubuntu con systemd
@@ -27,8 +32,11 @@ set -euo pipefail
 APP_NAME="efftrack"
 DEPLOY_USER="efftrack"
 DEPLOY_GROUP="efftrack"
-DEPLOY_DIR="/opt/efftrack"
-ENV_FILE="/etc/efftrack.env"
+# Directory di installazione e file env: default standard, ma overridabili via
+# env (EFFTRACK_DEPLOY_DIR / EFFTRACK_ENV_FILE) per preservare --dir/--env-file
+# personalizzati attraverso la ri-esecuzione `exec` della modalità --update.
+DEPLOY_DIR="${EFFTRACK_DEPLOY_DIR:-/opt/efftrack}"
+ENV_FILE="${EFFTRACK_ENV_FILE:-/etc/efftrack.env}"
 VENV_DIR="${DEPLOY_DIR}/.venv"
 SERVICE_SRC="systemd/efftrack.service"
 SERVICE_DST="/etc/systemd/system/efftrack.service"
@@ -383,6 +391,28 @@ fi
 # --- 4) Update in-place ------------------------------------------------------
 if [ "$UPDATE_MODE" = "1" ]; then
     log "=== Modalità update ==="
+
+    # --- 4.0 git pull dal clone + ri-esecuzione (pattern paroleMutanti) ---
+    # Il `git pull` aggiorna la SORGENTE (clone da cui si lancia deploy.sh), NON
+    # $DEPLOY_DIR (copia rsync senza .git). FOOTGUN: il pull aggiorna il file su
+    # disco ma NON la copia già caricata in memoria da bash → ci ri-eseguiamo con
+    # `exec` per caricare SEMPRE l'ultima versione dello script (guardia
+    # EFFTRACK_REEXECED per evitare il loop). Conserviamo --dir/--env-file
+    # personalizzati attraverso il re-exec via variabili d'ambiente.
+    if [ -z "${EFFTRACK_REEXECED:-}" ]; then
+        if git rev-parse --git-dir >/dev/null 2>&1; then
+            log "git pull --ff-only per caricare l'ultima versione..."
+            git pull --ff-only
+            export EFFTRACK_REEXECED=1
+            export EFFTRACK_DEPLOY_DIR="$DEPLOY_DIR"
+            export EFFTRACK_ENV_FILE="$ENV_FILE"
+            log "Ri-esecuzione con l'ultima versione dello script..."
+            exec "$0" --update
+        else
+            log "AVVISO: la directory corrente non è un repo git — salto il git pull."
+            log "  Procedo con i file già presenti in questa directory."
+        fi
+    fi
 
     # --- 4.1 Precondizioni ---
     if [ ! -d "${DEPLOY_DIR}" ]; then
