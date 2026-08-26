@@ -3,6 +3,17 @@
 Tutte le modifiche rilevanti del progetto sono documentate qui.
 Il formato segue [Keep a Changelog](https://keepachangelog.com/) e il versioning [SemVer](https://semver.org/).
 
+## [1.9.1] - 2026-08-26
+
+### Fixed
+- **Pagina 401 chiara per sessione scaduta**: quando la sessione scade (o manca) e l'utente
+  compie un'azione su una route protetta (es. `/admin/*`), l'app mostrava la `error.html`
+  generica con il messaggio fuorviante "Controlla i permessi dell'account o l'URL". Ora il
+  codice 401 renderizza una pagina dedicata **"Sessione scaduta"** (`app/templates/401.html`)
+  con il messaggio corretto e i pulsanti "Accedi" (`/login`) e "Torna alla home". La 403 resta
+  sulla `error.html` (messaggio sui permessi, corretto). In `Issue-Suggestion.md` aperto il
+  TODO **SESSION-TIMER** per un reminder di scadenza a 5 minuti (solo UX, non implementato).
+
 ## [1.9.0] - 2026-08-26
 
 ### Added

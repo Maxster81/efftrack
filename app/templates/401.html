@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block title %}{{ app_name|default("Effort Tracking") }} &mdash; Sessione scaduta{% endblock %}
+
+{% block content %}
+  <section class="form-card" aria-labelledby="error-title">
+    <div class="admin-hero" style="text-align:center;">
+      <h2 id="error-title" class="card-title">Sessione scaduta</h2>
+      <p>La tua sessione è scaduta. Accedi di nuovo per continuare a usare l'applicazione.</p>
+      <p>
+        <a class="filter-bar__export" href="/login" role="button">Accedi</a>
+        <a class="filter-bar__export" href="/" role="button">Torna alla home</a>
+      </p>
+    </div>
+  </section>
+{% endblock %}

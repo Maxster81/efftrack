@@ -166,7 +166,8 @@ async def http_exception_handler(request: Request, exc: StarletteHTTPException) 
 
     - 404 → 404.html
     - 500 → 500.html
-    - altri codici (401, 403, 405, ...) → error.html generico
+    - 401 → 401.html (sessione scaduta / non autenticato)
+    - altri codici (403, 405, ...) → error.html generico
     """
     context = _error_context(request)
     if exc.status_code in (404, 500):
@@ -178,6 +179,16 @@ async def http_exception_handler(request: Request, exc: StarletteHTTPException) 
             name=template_name,
             context=context,
             status_code=exc.status_code,
+        )
+    if exc.status_code == 401:
+        # Il 401 si verifica quando la sessione è scaduta o mancante
+        # (require_admin/require_manager con user_id assente).
+        logger.warning("401 per %s (sessione scaduta / non autenticato)", request.url.path)
+        return templates.TemplateResponse(
+            request=request,
+            name="401.html",
+            context=context,
+            status_code=401,
         )
     # Codici generici: contexte arricchito con codice e dettaglio.
     context.update({
