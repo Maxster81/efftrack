@@ -3,6 +3,14 @@
 Tutte le modifiche rilevanti del progetto sono documentate qui.
 Il formato segue [Keep a Changelog](https://keepachangelog.com/) e il versioning [SemVer](https://semver.org/).
 
+## [1.9.3] - 2026-08-26
+
+### Fixed
+- **LOOKUP-TAB**: nella gestione lookup di admin, dopo creazione/rinomina/eliminazione di una
+  voce su una scheda diversa da "Clienti", il redirect mantiene ora la **tab attiva** (parametro
+  `?tab=<tipo>` propagato nei redirect e `active_tab` passato al template, che marca la scheda
+  corrispondente). Prima si tornava sempre su "Clienti", lasciando l'utente senza conferma dell'esito.
+
 ## [1.9.2] - 2026-08-26
 
 ### Changed

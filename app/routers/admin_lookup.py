@@ -43,8 +43,14 @@ async def admin_lookup(
     admin: User = Depends(require_admin),
     ok: str | None = None,
     err: str | None = None,
+    tab: str | None = None,
 ) -> HTMLResponse:
-    """Pagina di gestione lookup: clienti, gruppi, attività."""
+    """Pagina di gestione lookup: clienti, gruppi, attività.
+
+    Il parametro `tab` indica quale scheda attivare all'apertura (es. dopo un
+    create/edit/delete avvenuto su una scheda diversa da Clienti, LOOKUP-TAB).
+    Valori accettati: client, group, activity; altrimenti si usa `client`.
+    """
     clients = db.execute(select(Client).order_by(Client.name)).scalars().all()
     groups = db.execute(select(Group).order_by(Group.name)).scalars().all()
     activities = db.execute(select(Activity).order_by(Activity.name)).scalars().all()
@@ -60,6 +66,8 @@ async def admin_lookup(
         db.execute(select(EffortEntry.activity_id).distinct()).scalars().all()
     )
 
+    active_tab = tab if tab in ("client", "group", "activity") else "client"
+
     ctx = base_context(request, admin.username, "lookup")
     ctx.update({
         "clients": clients,
@@ -68,6 +76,7 @@ async def admin_lookup(
         "used_client_ids": used_client_ids,
         "used_group_ids": used_group_ids,
         "used_activity_ids": used_activity_ids,
+        "active_tab": active_tab,
         "ok": ok,
         "err": err,
     })
@@ -86,7 +95,9 @@ async def admin_lookup_create(
         payload: LookupCreate = LookupCreate(**lookup.model_dump())
     except ValidationError as exc:
         logger.warning("Creazione lookup non valida: %s", exc.errors())
-        return RedirectResponse("/admin/lookup?err=Dati non validi", status_code=303)
+        return RedirectResponse(
+            f"/admin/lookup?err=Dati non validi&tab={payload.type}", status_code=303
+        )
 
     # La voce sentinella "NON LAVORATO" (S6) non può essere creata via UI:
     # è gestita esclusivamente dal seed. Evita collisioni col meccanismo giorni
@@ -94,7 +105,7 @@ async def admin_lookup_create(
     if payload.name.upper() == SENTINEL_NAME:
         logger.warning("Creazione lookup '%s' bloccata (sentinella)", payload.name)
         return RedirectResponse(
-            "/admin/lookup?err=Nome riservato", status_code=303
+            f"/admin/lookup?err=Nome riservato&tab={payload.type}", status_code=303
         )
 
     model = lookup_model(payload.type)
@@ -102,12 +113,16 @@ async def admin_lookup_create(
         select(model).where(model.name == payload.name)
     ).scalar_one_or_none()
     if existing is not None:
-        return RedirectResponse("/admin/lookup?err=Nome già esistente", status_code=303)
+        return RedirectResponse(
+            f"/admin/lookup?err=Nome già esistente&tab={payload.type}", status_code=303
+        )
 
     db.add(model(name=payload.name))
     db.commit()
     logger.info("Lookup %s creato: %s", payload.type, payload.name)
-    return RedirectResponse("/admin/lookup?ok=Elemento aggiunto", status_code=303)
+    return RedirectResponse(
+        f"/admin/lookup?ok=Elemento aggiunto&tab={payload.type}", status_code=303
+    )
 
 
 @router.post("/lookup/{lookup_id}/edit", name="admin_lookup_edit")
@@ -124,12 +139,16 @@ async def admin_lookup_edit(
         payload: LookupCreate = LookupCreate(type=lookup_type, name=name)
     except ValidationError as exc:
         logger.warning("Modifica lookup non valida: %s", exc.errors())
-        return RedirectResponse("/admin/lookup?err=Nome non valido", status_code=303)
+        return RedirectResponse(
+            f"/admin/lookup?err=Nome non valido&tab={lookup_type}", status_code=303
+        )
 
     model = lookup_model(payload.type)
     target = db.get(model, lookup_id)
     if target is None:
-        return RedirectResponse("/admin/lookup?err=Elemento inesistente", status_code=303)
+        return RedirectResponse(
+            f"/admin/lookup?err=Elemento inesistente&tab={lookup_type}", status_code=303
+        )
 
     # La voce sentinella "NON LAVORATO" non è rinominabile: è un meccanismo
     # interno usato per i giorni non lavorati (S6). Rinomarla romperebbe
@@ -137,13 +156,16 @@ async def admin_lookup_edit(
     if target.name.upper() == SENTINEL_NAME:
         logger.warning("Rinomina lookup sentinella '%s' bloccata", target.name)
         return RedirectResponse(
-            "/admin/lookup?err=Elemento sentinella non modificabile", status_code=303
+            f"/admin/lookup?err=Elemento sentinella non modificabile&tab={lookup_type}",
+            status_code=303,
         )
 
     target.name = payload.name
     db.commit()
     logger.info("Lookup %s id=%s rinominato in %s", payload.type, lookup_id, payload.name)
-    return RedirectResponse("/admin/lookup?ok=Elemento aggiornato", status_code=303)
+    return RedirectResponse(
+        f"/admin/lookup?ok=Elemento aggiornato&tab={lookup_type}", status_code=303
+    )
 
 
 @router.post("/lookup/{lookup_id}/delete", name="admin_lookup_delete")
@@ -162,14 +184,17 @@ async def admin_lookup_delete(
 
     target = db.get(model, lookup_id)
     if target is None:
-        return RedirectResponse("/admin/lookup?err=Elemento inesistente", status_code=303)
+        return RedirectResponse(
+            f"/admin/lookup?err=Elemento inesistente&tab={lookup_type}", status_code=303
+        )
 
     # La voce sentinella "NON LAVORATO" non è eliminabile: è un meccanismo
     # interno (S6). Protezione esplicita, oltre al blocco per record associati.
     if target.name.upper() == SENTINEL_NAME:
         logger.warning("Eliminazione lookup sentinella '%s' bloccata", target.name)
         return RedirectResponse(
-            "/admin/lookup?err=Elemento sentinella non eliminabile", status_code=303
+            f"/admin/lookup?err=Elemento sentinella non eliminabile&tab={lookup_type}",
+            status_code=303,
         )
 
     # Colonna FK che collega il lookup a effort_entries.
@@ -189,9 +214,14 @@ async def admin_lookup_delete(
             lookup_id,
             associated,
         )
-        return RedirectResponse("/admin/lookup?err=Elemento con record associati", status_code=303)
+        return RedirectResponse(
+            f"/admin/lookup?err=Elemento con record associati&tab={lookup_type}",
+            status_code=303,
+        )
 
     db.delete(target)
     db.commit()
     logger.info("Lookup %s id=%s eliminato", lookup_type, lookup_id)
-    return RedirectResponse("/admin/lookup?ok=Elemento eliminato", status_code=303)
+    return RedirectResponse(
+        f"/admin/lookup?ok=Elemento eliminato&tab={lookup_type}", status_code=303
+    )

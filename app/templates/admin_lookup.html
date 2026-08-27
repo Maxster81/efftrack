@@ -72,37 +72,38 @@
     {# Barra tab stile schedario #}
     <nav class="lookup-tabs" role="tablist" aria-label="Sezioni lookup">
       <button
-        class="lookup-tabs__btn is-active"
+        class="lookup-tabs__btn{% if active_tab == 'client' %} is-active{% endif %}"
         role="tab"
-        aria-selected="true"
+        aria-selected="{{ 'true' if active_tab == 'client' else 'false' }}"
         aria-controls="tabpanel-client"
         id="tab-client"
         data-tab="client"
+        tabindex="{{ '0' if active_tab == 'client' else '-1' }}"
       >Clienti</button>
       <button
-        class="lookup-tabs__btn"
+        class="lookup-tabs__btn{% if active_tab == 'group' %} is-active{% endif %}"
         role="tab"
-        aria-selected="false"
+        aria-selected="{{ 'true' if active_tab == 'group' else 'false' }}"
         aria-controls="tabpanel-group"
         id="tab-group"
         data-tab="group"
-        tabindex="-1"
+        tabindex="{{ '0' if active_tab == 'group' else '-1' }}"
       >Gruppi</button>
       <button
-        class="lookup-tabs__btn"
+        class="lookup-tabs__btn{% if active_tab == 'activity' %} is-active{% endif %}"
         role="tab"
-        aria-selected="false"
+        aria-selected="{{ 'true' if active_tab == 'activity' else 'false' }}"
         aria-controls="tabpanel-activity"
         id="tab-activity"
         data-tab="activity"
-        tabindex="-1"
+        tabindex="{{ '0' if active_tab == 'activity' else '-1' }}"
       >Attività</button>
     </nav>
 
     {# Pannelli delle schede #}
     <div class="lookup-tab-panels">
       <div
-        class="lookup-tab-panel is-active"
+        class="lookup-tab-panel{% if active_tab == 'client' %} is-active{% endif %}"
         role="tabpanel"
         id="tabpanel-client"
         aria-labelledby="tab-client"
@@ -111,7 +112,7 @@
         {{ lookup_section("Clienti", "client", clients, used_client_ids) }}
       </div>
       <div
-        class="lookup-tab-panel"
+        class="lookup-tab-panel{% if active_tab == 'group' %} is-active{% endif %}"
         role="tabpanel"
         id="tabpanel-group"
         aria-labelledby="tab-group"
@@ -120,7 +121,7 @@
         {{ lookup_section("Gruppi", "group", groups, used_group_ids) }}
       </div>
       <div
-        class="lookup-tab-panel"
+        class="lookup-tab-panel{% if active_tab == 'activity' %} is-active{% endif %}"
         role="tabpanel"
         id="tabpanel-activity"
         aria-labelledby="tab-activity"
