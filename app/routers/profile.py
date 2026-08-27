@@ -221,5 +221,13 @@ async def profile_change_password(
         fresh_user.password_change_required = False
     db.commit()
 
-    logger.info("Password cambiata con successo per utente=%s", fresh_user.username)
-    return RedirectResponse("/profile?pwd_ok=1", status_code=303)
+    # Logout forzato (PWD-LOGOUT): la sessione viene invalidata così l'utente
+    # rimette subito in gioco la nuova password. Vale anche al primo cambio
+    # obbligatorio (il flag è stato azzerato qui sopra, quindi al ri-login non
+    # viene più reindirizzato a /profile dal PasswordChangeRequiredMiddleware).
+    logger.info(
+        "Password cambiata con successo per utente=%s; logout forzato",
+        fresh_user.username,
+    )
+    request.session.clear()
+    return RedirectResponse("/login?password_changed=1", status_code=303)

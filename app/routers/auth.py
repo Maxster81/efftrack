@@ -47,7 +47,7 @@ def _login_error_message(error_key: str) -> str:
     return _SAML_ERROR_MESSAGES.get(error_key, error_key)
 
 
-def _login_context(error: str = "") -> dict:
+def _login_context(error: str = "", info: str = "") -> dict:
     """Contesto minimo per il template di login (base.html lo richiede)."""
     return {
         "app_name": APP_NAME,
@@ -59,6 +59,8 @@ def _login_context(error: str = "") -> dict:
         "saml_enabled": SAML_ENABLED,
         "current_username": "",
         "error": error,
+        # Banner informativo di successo (es. dopo il cambio password forzato).
+        "info": info,
         "sidebar_items": [],
         # Nasconde hamburger e sidebar nella pagina pubblica di login.
         "hide_nav": True,
@@ -69,16 +71,22 @@ def _login_context(error: str = "") -> dict:
 async def login_page(
     request: Request,
     error: str | None = Query(None),
+    password_changed: str | None = Query(None),
 ) -> HTMLResponse:
     """Pagina di login (form username/password).
 
     Accetta `?error=<chiave>` (es. usata dai redirect SAML) e la traduce in
-    un messaggio leggibile per l'utente.
+    un messaggio leggibile per l'utente. Con `?password_changed=1` (arrivo dopo
+    il logout forzato a seguito di un cambio password, PWD-LOGOUT) mostra un
+    banner informativo.
     """
+    info = ""
+    if password_changed == "1":
+        info = "Password aggiornata. Accedi di nuovo con la nuova password."
     return templates.TemplateResponse(
         request=request,
         name="login.html",
-        context=_login_context(_login_error_message(error) if error else ""),
+        context=_login_context(_login_error_message(error) if error else "", info),
     )
 
 

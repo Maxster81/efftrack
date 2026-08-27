@@ -3,6 +3,15 @@
 Tutte le modifiche rilevanti del progetto sono documentate qui.
 Il formato segue [Keep a Changelog](https://keepachangelog.com/) e il versioning [SemVer](https://semver.org/).
 
+## [1.9.2] - 2026-08-26
+
+### Changed
+- **Logout forzato dopo il self change password (PWD-LOGOUT)**: dopo il cambio password
+  (`POST /profile/change-password`) la sessione viene invalidata (`request.session.clear()`) e
+  l'utente viene riportato a `/login?password_changed=1`, che mostra il banner "Password
+  aggiornata. Accedi di nuovo con la nuova password." Vale anche per il **primo cambio
+  obbligatorio** (`password_change_required`). Prima la sessione restava attiva dopo il cambio.
+
 ## [1.9.1] - 2026-08-26
 
 ### Fixed
