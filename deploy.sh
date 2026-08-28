@@ -156,17 +156,24 @@ wizard_collect() {
         fi
     fi
 
-    # 2) Networking: reverse proxy + porta.
-    local proxy_yn
-    proxy_yn="$(prompt_yes "L'app sarà dietro un reverse proxy (nginx/Caddy)?" "Sì")"
-    if [ "$proxy_yn" = "1" ]; then
-        proxy_host="127.0.0.1"
+    # 2) Networking: HTTPS + bind host (proxy locale vs remoto) + porta.
+    #    HTTPS e bind sono due aspetti INDIPENDENTI:
+    #    - HTTPS (TLS terminato da reverse proxy/load balancer) → SESSION_SECURE=true
+    #    - reverse proxy LOCALE (nginx/Caddy su localhost)  → bind 127.0.0.1
+    #    - reverse proxy REMOTO (es. NetScaler) o esposizione diretta → bind 0.0.0.0
+    local https_yn local_proxy_yn
+    https_yn="$(prompt_yes "L'app sarà raggiunta in HTTPS (reverse proxy/load balancer con TLS)?" "Sì")"
+    if [ "$https_yn" = "1" ]; then
         WIZARD_SESSION_SECURE="true"
     else
-        proxy_host="0.0.0.0"
         WIZARD_SESSION_SECURE="false"
     fi
-    WIZARD_UVICORN_HOST="$proxy_host"
+    local_proxy_yn="$(prompt_yes "Il reverse proxy è installato sulla STESSA macchina (localhost)?" "Sì")"
+    if [ "$local_proxy_yn" = "1" ]; then
+        WIZARD_UVICORN_HOST="127.0.0.1"
+    else
+        WIZARD_UVICORN_HOST="0.0.0.0"
+    fi
     WIZARD_UVICORN_PORT="$(prompt "Porta di ascolto" "8000")"
 
     # 3) Password admin: username fisso "admin", password auto-generata.
@@ -203,6 +210,27 @@ print("".join(secrets.choice(alphabet) for _ in range(16)))')"
         WIZARD_SAML_ACS_URL="https://efftrack.example.com/saml/acs"
         WIZARD_SAML_CERT_FILE=""
         WIZARD_SAML_KEY_FILE=""
+    fi
+
+    # 5) Proxy HTTP/HTTPS per il traffico in uscita (opzionale).
+    #    Serve quando il server deve usare un proxy aziendale per raggiungere
+    #    host esterni (es. il fetch del metadata SAML verso Microsoft Entra ID).
+    #    PySAML2 usa la libreria `requests`, che legge HTTPS_PROXY/HTTP_PROXY/
+    #    NO_PROXY dall'ambiente del processo (systemd EnvironmentFile): nessuna
+    #    modifica al codice dell'app. NO_PROXY evita di instradare il loopback
+    #    (e, se indicati, i domini interni) nel proxy.
+    local proxy_out_yn
+    proxy_out_yn="$(prompt_yes "Il server deve usare un proxy HTTP/HTTPS per il traffico in uscita (es. rete aziendale)?" "No")"
+    if [ "$proxy_out_yn" = "1" ]; then
+        local proxy_url
+        proxy_url="$(prompt "URL del proxy (es. http://proxy.azienda.local:8080)" "")"
+        WIZARD_HTTPS_PROXY="$proxy_url"
+        WIZARD_HTTP_PROXY="$proxy_url"
+        WIZARD_NO_PROXY="127.0.0.1,localhost"
+    else
+        WIZARD_HTTPS_PROXY=""
+        WIZARD_HTTP_PROXY=""
+        WIZARD_NO_PROXY=""
     fi
 
     log "Configurazione raccolta."
@@ -357,6 +385,15 @@ EFFORT_TRACKING_SAML_IDP_ENTITY_ID=${WIZARD_SAML_IDP_ENTITY_ID:-}
 EFFORT_TRACKING_SAML_IDP_METADATA_URL=${WIZARD_SAML_IDP_METADATA_URL:-}
 EFFORT_TRACKING_SAML_CERT_FILE=${WIZARD_SAML_CERT_FILE:-}
 EFFORT_TRACKING_SAML_KEY_FILE=${WIZARD_SAML_KEY_FILE:-}
+# --- Proxy HTTP/HTTPS per il traffico in uscita (es. fetch metadata SAML) ---
+# Necessari solo se il server deve raggiungere host esterni tramite un proxy
+# aziendale. PySAML2 (via `requests`) legge queste variabili dall'ambiente
+# (EnvironmentFile). Valore vuoto = connessione diretta (nessun proxy).
+# NO_PROXY elenca gli host da raggiungere SEMPRE direttamente (loopback e, se
+# indicati, i domini interni): evita di instradare il traffico interno nel proxy.
+HTTPS_PROXY=${WIZARD_HTTPS_PROXY:-}
+HTTP_PROXY=${WIZARD_HTTP_PROXY:-}
+NO_PROXY=${WIZARD_NO_PROXY:-127.0.0.1,localhost}
 EOF
         chmod 600 "${ENV_FILE}"
         log "  Creata ${ENV_FILE} con SECRET_KEY generata e configurazione del wizard."

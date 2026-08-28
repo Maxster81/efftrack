@@ -91,7 +91,7 @@ Variabili principali:
 |-----------|---------|-------------|
 | `EFFORT_TRACKING_SECRET_KEY` | placeholder dev | Chiave per firmare le sessioni. **In produzione genera una chiave robusta.** |
 | `EFFORT_TRACKING_DB_URL` | `sqlite:///./data/efftrack.db` | URL del database (SQLite oggi, PostgreSQL in futuro). |
-| `UVICORN_HOST` / `UVICORN_PORT` | `0.0.0.0` / `8000` | Host e porta del web server. Li legge direttamente uvicorn (funzionano anche con systemd). In produzione consigliato `127.0.0.1` dietro reverse proxy. |
+| `UVICORN_HOST` / `UVICORN_PORT` | `0.0.0.0` / `8000` | Host e porta del web server. Li legge direttamente uvicorn (funzionano anche con systemd). Se il reverse proxy è **locale** (nginx/Caddy su localhost) usa `127.0.0.1`; se è **remoto** (es. NetScaler) o l'app è esposta direttamente usa `0.0.0.0`. |
 | `EFFORT_TRACKING_LOG_LEVEL` | `INFO` | Livello dei log (DEBUG/INFO/WARNING/ERROR). |
 | `EFFORT_TRACKING_AUTH_ENABLED` | `true` | `true` login obbligatorio, `false` server pubblico. |
 | `EFFORT_TRACKING_DEMO_MODE` | `false` | `true` = seed dati di esempio (gruppi, utenti, record di test). In produzione resta `false` (DB pulito, solo admin). |
@@ -106,6 +106,7 @@ Variabili principali:
 | `EFFORT_TRACKING_SAML_IDP_ENTITY_ID` | *(vuoto)* | Entity ID dell'IdP Microsoft (`https://sts.windows.net/<tenant>/`). |
 | `EFFORT_TRACKING_SAML_IDP_METADATA_URL` | *(vuoto)* | URL/path del metadata XML dell'IdP. |
 | `EFFORT_TRACKING_SAML_CERT_FILE` / `EFFORT_TRACKING_SAML_KEY_FILE` | *(vuoto)* | Certificato/chiave SP (firma AuthnRequest opzionale). |
+| `HTTPS_PROXY` / `HTTP_PROXY` / `NO_PROXY` | *(vuoto)* | Proxy HTTP/HTTPS per il **traffico in uscita** (es. il fetch del metadata SAML verso Microsoft in reti aziendali). PySAML2 via `requests` le legge dall'ambiente (systemd `EnvironmentFile`). `NO_PROXY=127.0.0.1,localhost` evita di instradare il loopback nel proxy. |
 
 Il file `.env` reale **non** va committato (è coperto da `.gitignore`).
 
@@ -246,7 +247,9 @@ sudo journalctl -u efftrack -f            # log
 
 > **Nota**: il template NON hardcoda host/porta: uvicorn li legge dalle variabili native
 > `UVICORN_HOST` / `UVICORN_PORT` definite in `/etc/efftrack.env` (default interni
-> `127.0.0.1:8000`). In produzione si usa un **reverse proxy** nginx/Caddy davanti a Uvicorn.
+> `127.0.0.1:8000`). In produzione si usa un **reverse proxy** davanti a Uvicorn. Se il reverse
+> proxy è **locale** (nginx/Caddy su localhost) usa `127.0.0.1`; se è **remoto** (es. NetScaler)
+> o l'app è esposta direttamente, imposta `UVICORN_HOST=0.0.0.0`.
 > Per ascoltare su un'altra interfaccia/porta (es. pre-prod su `0.0.0.0:8010`) basta impostare
 > quelle variabili in `/etc/efftrack.env` e riavviare: `sudo systemctl restart efftrack`.
 > I log escono su **journald**.

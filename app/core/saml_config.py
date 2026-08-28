@@ -71,6 +71,12 @@ def build_saml_config() -> dict:
         },
         "xmlsec_binary": "/usr/bin/xmlsec1",
         "accepted_time_diff": 60,  # tolleranza sul timestamp (secondi)
+        # Timeout (secondi) per le richieste HTTP in uscita del client SAML
+        # (es. fetch del metadata IdP remoto). requests/urllib non hanno un
+        # timeout di default: senza questo, se rete/proxy è irraggiungibile il
+        # login resterebbe appeso all'infinito (la "rotella che gira"). Con un
+        # limite prudente il flusso fallisce presto con /login?error=... .
+        "http_client_timeout": 20,
     }
 
 
