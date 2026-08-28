@@ -476,19 +476,35 @@ def _save_week(
     current_user: User,
     month: str | None = None,
 ) -> RedirectResponse:
-    """Copia il form su tutti i giorni feriali della settimana della data.
+    """Copia il form sui giorni feriali della settimana della data.
+
+    - Limita la copia ai soli giorni dello STESSO mese del giorno selezionato
+      (quando la settimana attraversa il confine tra due mesi).
+    - Nei weekend (sabato/domenica) non ci sono attività ordinarie: non crea
+      nulla (difesa in profondità rispetto al disable del pulsante lato client).
 
     Tutti i record creati vengono associati all'utente corrente.
     """
+    # Weekend (sabato=5, domenica=6): nessuna attività ordinaria, esce senza
+    # creare record.
+    if payload.date.weekday() >= 5:
+        logger.info("Copia settimanale ignorata: %s è un weekend", payload.date.isoformat())
+        return RedirectResponse(_with_month("/", month), status_code=303)
+
     monday = payload.date - timedelta(days=payload.date.weekday())
     for offset in range(5):  # lun, mar, mer, gio, ven
+        work_date = monday + timedelta(days=offset)
+        # Salta i giorni del mese precedente/successivo: la copia bulk resta
+        # confinata al mese del giorno selezionato.
+        if (work_date.year, work_date.month) != (payload.date.year, payload.date.month):
+            continue
         db.add(
             EffortEntry(
                 user_id=current_user.id,
                 client_id=payload.client_id,
                 group_id=payload.group_id,
                 activity_id=payload.activity_id,
-                work_date=monday + timedelta(days=offset),
+                work_date=work_date,
                 hours_spent=payload.hours,
                 notes=payload.notes,
                 description=payload.description,

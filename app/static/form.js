@@ -24,6 +24,10 @@
   // Campi disabilitati quando il giorno è non lavorativo.
   var holidayFields = [clientSelect, activitySelect, hoursInput, notesInput, descriptionInput];
 
+  // Campo data e pulsante "Copia su settimana" (weekend → disabilitato).
+  var dateInput = document.getElementById("effort-date");
+  var weekAction = document.getElementById("week-action");
+
   // --- Gestione "Giorno non lavorato" ---
   // Quando attivo: disabilita cliente, attività, ore, note e descrizione,
   // popolando i valori sentinella. Il server forza comunque i valori reali.
@@ -45,6 +49,23 @@
     Array.prototype.forEach.call(holidayFields, function (field) {
       if (field) { setInvalid(field, false); }
     });
+  }
+
+  // --- Gestione "Copia su settimana" nel weekend ---
+  // Nei fine settimana non ci sono attività ordinarie: disabilita il pulsante
+  // di copia bulk. Il server fa comunque da guardia (vedi _save_week in web.py).
+  function isWeekendDate(value) {
+    if (!value) { return false; }
+    var d = new Date(value + "T00:00:00");
+    if (isNaN(d.getTime())) { return false; }
+    var dow = d.getDay(); // 0 = domenica, 6 = sabato
+    return dow === 0 || dow === 6;
+  }
+
+  function syncWeekAction() {
+    if (!weekAction) { return; }
+    var weekend = isWeekendDate(dateInput ? dateInput.value : "");
+    weekAction.disabled = weekend;
   }
 
   // --- Utility: messaggio + gestione classe errore ---
@@ -216,6 +237,9 @@
       if (field.id === "effort-holiday") {
         setHolidayMode(field.checked);
       }
+      if (field.id === "effort-date") {
+        syncWeekAction();
+      }
       if (field.classList && !field.classList.contains("is-invalid")) {
         setInvalid(field, false);
       }
@@ -230,5 +254,6 @@
   window.EffortTrack.syncDescriptionVisibility = syncDescriptionVisibility;
 
   // --- Inizializzazione ---
+  syncWeekAction();
   syncDescriptionVisibility();
 })();

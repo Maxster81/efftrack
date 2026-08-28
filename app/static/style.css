@@ -18,6 +18,7 @@
   --color-bg: #f4f6f8;
   --color-surface: #ffffff;
   --color-surface-alt: #eef1f4;
+  --color-holiday: #e3edf9;           /* sfondo righe "NON LAVORATO" (blu tenue) */
 
   /* Testi */
   --color-text: #1f2933;
@@ -59,6 +60,7 @@
   --color-bg: #f4f6f8;
   --color-surface: #ffffff;
   --color-surface-alt: #eef1f4;
+  --color-holiday: #e3edf9;
 
   --color-text: #1f2933;
   --color-text-muted: #5a6573;
@@ -74,6 +76,7 @@
   --color-bg: #14181d;
   --color-surface: #1c232b;
   --color-surface-alt: #232c36;
+  --color-holiday: #1e2b3d;
   --color-text: #e6e9ed;
   --color-text-muted: #99a2ad;
   --color-border: #2f3842;
@@ -666,9 +669,10 @@ a:hover { text-decoration: underline; }
 .records-table tbody tr:hover {
   background: var(--color-accent);
 }
-/* Riga "giorno non lavorato": sfondo tenue per distinguerla subito. */
+/* Riga "giorno non lavorato": sfondo blu tenue, distinto dal rigato zebra
+   (--color-surface-alt). Variabile definita per tema light e dark. */
 .records-table tbody tr.is-holiday {
-  background: var(--color-surface-alt);
+  background: var(--color-holiday);
 }
 .records-table tbody tr.is-holiday:hover {
   background: var(--color-accent);
