@@ -369,7 +369,7 @@ a:hover { text-decoration: underline; }
 
 /* ---------- Main ---------- */
 .app-main {
-  max-width: 1100px;
+  max-width: 1160px;
   margin: var(--space-xl) auto;
   padding: 0 var(--space-lg);
 }
@@ -698,8 +698,25 @@ a:hover { text-decoration: underline; }
   outline-offset: -2px;
 }
 .col-hours {
+  width: 72px;
+  min-width: 72px;
   text-align: right;
   white-space: nowrap;
+}
+/* Tabella record con layout fisso: colonne stabili e di larghezza simile,
+   così una "Descrizione attività" (o Note) lunga non schiaccia le altre
+   colonne. Applicato SOLO alle tabelle dei record (modificatore
+   `records-table--fixed`); le tabelle admin_users/lookup restano invariati. */
+.records-table--fixed {
+  table-layout: fixed;
+}
+.records-table--fixed thead th,
+.records-table--fixed tbody td {
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+.records-table--fixed thead th {
+  white-space: normal; /* header lunghi (es. "Descrizione attività") vanno a capo */
 }
 .empty-state {
   text-align: center;
