@@ -51,3 +51,6 @@ Thumbs.db
 
 # --- Marker locale di sincronizzazione sync-to-prod.sh (non committare) ---
 .last-sync-dev-commit
+
+# --- Output di conversione guide DOCX (tool locale, non committare) ---
+docs/export/

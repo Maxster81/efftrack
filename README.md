@@ -290,8 +290,10 @@ python -m pytest tests/ -v
 - [**Autenticazione SAML con Microsoft Entra ID**](docs/saml-autenticazione.md) — guida
   per amministratori di sistema alla configurazione del login federato SAML (Azure ed
   EffTrack, firme, testing).
-- [**Guida utente**](docs/guida-utente.md) — manuale d'uso del prodotto per gli utenti
-  finali (registrazione effort, filtro, export, ruoli e permessi).
+- [**Guide d'uso**](docs/guida-utente.md) — manuali del prodotto per ruolo:
+  - [Guida utente](docs/guida-utente.md) — per gli utenti (ruolo `user`).
+  - [Guida Manager](docs/guida-manager.md) — per i manager (vista del gruppo).
+  - [Guida Admin](docs/guida-admin.md) — per gli admin (gestione utenti, lookup, supervisione).
 
 ---
 

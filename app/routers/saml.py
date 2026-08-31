@@ -22,6 +22,7 @@ from sqlalchemy.orm import Session
 from app.config import SAML_ENABLED, SAML_IDP_ENTITY_ID
 from app.core.saml_config import get_saml_client
 from app.db import get_db
+from app.models.effort_entry import utcnow
 from app.services.saml_user import setup_user_from_saml
 
 logger: logging.Logger = logging.getLogger(__name__)
@@ -131,6 +132,15 @@ async def saml_acs(
         if user is None:
             logger.warning("SAML: impossibile risolvere/creare utente (name_id=%s)", name_id)
             return RedirectResponse("/login?error=saml-utente-non-attivo", status_code=302)
+
+        # Account disabilitato → login bloccato (coerente con il login locale).
+        if user.disabled:
+            logger.warning("Login SAML rifiutato: account disabilitato per username=%s", user.username)
+            return RedirectResponse("/login?error=saml-utente-non-attivo", status_code=302)
+
+        # Traccia l'ultimo accesso dell'utente (coerente con il login locale).
+        user.last_login = utcnow()
+        db.commit()
 
         request.session["user_id"] = user.id
         request.session["username"] = user.username
