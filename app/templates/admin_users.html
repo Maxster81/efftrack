@@ -47,29 +47,31 @@
     {% endif %}
 
     <div class="table-scroll">
-      <table class="records-table">
+      <table id="users-table" class="records-table">
         <thead>
           <tr>
-            <th scope="col">Nome e Cognome</th>
-            <th scope="col">Ruolo</th>
-            <th scope="col">Gruppo</th>
-            <th scope="col">Record</th>
-            <th scope="col">Ultimo login</th>
-            <th scope="col">Stato</th>
+            <th scope="col" class="sortable" data-sort-key="name" data-sort-type="string" aria-sort="none">Nome e Cognome <span class="sort-indicator" aria-hidden="true"></span></th>
+            <th scope="col" class="sortable" data-sort-key="role" data-sort-type="string" aria-sort="none">Ruolo <span class="sort-indicator" aria-hidden="true"></span></th>
+            <th scope="col" class="sortable" data-sort-key="group" data-sort-type="string" aria-sort="none">Gruppo <span class="sort-indicator" aria-hidden="true"></span></th>
+            <th scope="col" class="sortable" data-sort-key="records" data-sort-type="number" aria-sort="none">Record <span class="sort-indicator" aria-hidden="true"></span></th>
+            <th scope="col" class="sortable" data-sort-key="last_login" data-sort-type="string" aria-sort="none">Ultimo login <span class="sort-indicator" aria-hidden="true"></span></th>
+            <th scope="col" class="sortable" data-sort-key="status" data-sort-type="string" aria-sort="none">Stato <span class="sort-indicator" aria-hidden="true"></span></th>
             <th scope="col">Azioni</th>
           </tr>
         </thead>
         <tbody>
           {% for u in users %}
             <tr class="records-table__row{% if u.disabled %} is-disabled{% endif %}">
-              <td title="{{ u.username }}">{{ u.first_name ~ " " ~ u.last_name if (u.first_name or u.last_name) else u.username }}</td>
-              <td>{{ u.role }}</td>
-              <td>{{ u.group_name or "—" }}</td>
-              <td class="col-hours">{{ u.record_count }}</td>
-              <td>{{ u.last_login }}</td>
-              <td>
+              <td title="{{ u.username }}" data-sort="{{ (u.first_name ~ ' ' ~ u.last_name)|trim|lower if (u.first_name or u.last_name) else u.username|lower }}">{{ u.first_name ~ " " ~ u.last_name if (u.first_name or u.last_name) else u.username }}</td>
+              <td data-sort="{{ u.role }}">{{ u.role }}</td>
+              <td data-sort="{{ u.group_name|lower }}">{{ u.group_name or "—" }}</td>
+              <td class="col-hours" data-sort="{{ u.record_count }}">{{ u.record_count }}</td>
+              <td data-sort="{{ u.last_login_iso }}">{{ u.last_login }}</td>
+              <td data-sort="{{ 'disabled' if u.disabled else ('pending' if not u.has_group else 'active') }}">
                 {% if u.disabled %}
                   <span class="badge badge-disabled">Disabilitato</span>
+                {% elif not u.has_group %}
+                  <span class="badge badge-pending">Da attivare</span>
                 {% else %}
                   <span class="badge badge-active">Attivo</span>
                 {% endif %}
@@ -83,4 +85,8 @@
       </table>
     </div>
   </section>
+{% endblock %}
+
+{% block scripts %}
+  <script src="/static/table-sort.js?v={{ app_version }}" defer></script>
 {% endblock %}

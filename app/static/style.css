@@ -956,6 +956,28 @@ a:hover { text-decoration: underline; }
   color: #a93226;
   border: 1px solid #e74c3c;
 }
+/* Badge "Da attivare": utente senza gruppo (creato via Microsoft/SAML o dal
+   form di creazione ma non ancora attivo). Ambra, coerente con .form-warning. */
+.badge-pending {
+  background: #fff8e1;
+  color: #9a6b00;
+  border: 1px solid #f1c40f;
+}
+
+/* Header ordinabili della tabella utenti (client-side, table-sort.js). */
+th.sortable {
+  cursor: pointer;
+  user-select: none;
+}
+th.sortable:hover {
+  background: var(--color-surface-alt);
+}
+.sort-indicator {
+  display: inline-block;
+  min-width: 0.9em;
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+}
 
 .records-table tbody tr.is-disabled {
   opacity: 0.6;

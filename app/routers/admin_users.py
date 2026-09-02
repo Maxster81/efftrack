@@ -81,7 +81,11 @@ async def admin_users(
             "role": u.role,
             "record_count": user_stats(db, u.id),
             "last_login": format_last_login(u.last_login),
+            # Valore ISO per l'ordinamento client-side della colonna Ultimo login.
+            "last_login_iso": u.last_login.isoformat() if u.last_login else "",
             "disabled": u.disabled,
+            # Flag per lo stato "Da attivare" (senza gruppo) nella lista utenti.
+            "has_group": u.group is not None,
             "group_name": u.group.name if u.group is not None else "",
         }
         for u in users
