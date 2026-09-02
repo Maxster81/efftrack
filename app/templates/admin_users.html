@@ -50,7 +50,7 @@
       <table id="users-table" class="records-table">
         <thead>
           <tr>
-            <th scope="col" class="sortable" data-sort-key="name" data-sort-type="string" aria-sort="none">Nome e Cognome <span class="sort-indicator" aria-hidden="true"></span></th>
+            <th scope="col" class="sortable" data-sort-key="name" data-sort-type="string" aria-sort="none">Cognome e Nome <span class="sort-indicator" aria-hidden="true"></span></th>
             <th scope="col" class="sortable" data-sort-key="role" data-sort-type="string" aria-sort="none">Ruolo <span class="sort-indicator" aria-hidden="true"></span></th>
             <th scope="col" class="sortable" data-sort-key="group" data-sort-type="string" aria-sort="none">Gruppo <span class="sort-indicator" aria-hidden="true"></span></th>
             <th scope="col" class="sortable" data-sort-key="records" data-sort-type="number" aria-sort="none">Record <span class="sort-indicator" aria-hidden="true"></span></th>
@@ -62,7 +62,7 @@
         <tbody>
           {% for u in users %}
             <tr class="records-table__row{% if u.disabled %} is-disabled{% endif %}">
-              <td title="{{ u.username }}" data-sort="{{ (u.first_name ~ ' ' ~ u.last_name)|trim|lower if (u.first_name or u.last_name) else u.username|lower }}">{{ u.first_name ~ " " ~ u.last_name if (u.first_name or u.last_name) else u.username }}</td>
+              <td title="{{ u.username }}" data-sort="{{ (u.last_name ~ ' ' ~ u.first_name)|trim|lower if (u.last_name or u.first_name) else u.username|lower }}">{{ u.last_name ~ " " ~ u.first_name if (u.last_name or u.first_name) else u.username }}</td>
               <td data-sort="{{ u.role }}">{{ u.role }}</td>
               <td data-sort="{{ u.group_name|lower }}">{{ u.group_name or "—" }}</td>
               <td class="col-hours" data-sort="{{ u.record_count }}">{{ u.record_count }}</td>
