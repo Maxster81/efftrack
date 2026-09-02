@@ -969,8 +969,12 @@ th.sortable {
   cursor: pointer;
   user-select: none;
 }
+/* Hover sulle intestazioni ordinate: mantiene il testo chiaro leggibile.
+   (Non usare --color-surface-alt qui: l'header .records-table thead th ha
+   già testo bianco su blu navy; uno sfondo chiaro renderebbe illeggibile). */
 th.sortable:hover {
-  background: var(--color-surface-alt);
+  background: var(--color-primary-hover);
+  color: var(--color-text-on-primary);
 }
 .sort-indicator {
   display: inline-block;
