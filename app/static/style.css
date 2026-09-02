@@ -1327,6 +1327,26 @@ a:hover { text-decoration: underline; }
   white-space: nowrap;
 }
 
+/* Card "Utenti senza gruppo" nella dashboard: evidenzia i nuovi utenti da
+   configurare (creati via Microsoft/SAML ma senza gruppo assegnato).
+   Bordo sinistro ambra e colori testuali basati su variabili CSS, così restano
+   leggibili sia in tema chiaro sia scuro. */
+.pending-group-card {
+  border-left: 4px solid #e67e22;
+}
+.pending-group-card__hint {
+  margin: 0 0 var(--space-sm);
+  font-size: 0.92rem;
+  color: var(--color-text-muted);
+}
+.pending-group-card__action {
+  margin: var(--space-sm) 0 0;
+}
+.pending-group-card__action a {
+  font-weight: 600;
+  color: var(--color-accent-strong);
+}
+
 /* Messaggio vuoto nelle sezioni senza dati. */
 .dashboard-empty {
   padding: var(--space-md);

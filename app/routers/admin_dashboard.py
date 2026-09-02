@@ -30,6 +30,7 @@ from app.routers.admin_common import (
     db_size_mb,
     inactive_users,
     month_bounds,
+    users_without_group,
 )
 from fastapi.templating import Jinja2Templates
 
@@ -120,6 +121,7 @@ async def admin_dashboard(
         },
         "group_stats": group_rows,
         "inactive_users": inactive_users(db, days=7),
+        "users_without_group": users_without_group(db),
         "recent_records": recent_records,
         "last_record": last_record,
         "month_label": f"{MESI_ITALIANI[today.month]} {today.year}",

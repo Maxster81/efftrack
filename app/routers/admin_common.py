@@ -14,6 +14,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.config import (
+    ADMIN_USERNAME,
     APP_NAME,
     APP_VERSION,
     AUTH_ENABLED,
@@ -98,6 +99,31 @@ def inactive_users(db: Session, days: int = 7) -> list[tuple[str, int | None]]:
         reverse=True,
     )
     return rows
+
+
+def users_without_group(db: Session) -> list[User]:
+    """Utenti non disabilitati senza gruppo assegnato (es. creati via SAML/Microsoft).
+
+    Gli utenti in questo stato NON possono registrare effort: `web.py` (save_entry)
+    blocca il salvataggio se `group_id is None`. L'admin di bootstrap è escluso:
+    è un account di sistema che legittimamente opera senza gruppo.
+    Nota: quando sarà introdotto `users.is_superuser` (TODO SUPERUSER-ADMIN),
+    il filtro andrà aggiornato a `User.is_superuser.is_(False)`.
+    Restituisce la lista ordinata per username.
+    """
+    return (
+        db.execute(
+            select(User)
+            .where(
+                User.group_id.is_(None),
+                User.disabled.is_(False),
+                User.username != ADMIN_USERNAME,
+            )
+            .order_by(User.username)
+        )
+        .scalars()
+        .all()
+    )
 
 
 def format_last_login(value: datetime | None) -> str:

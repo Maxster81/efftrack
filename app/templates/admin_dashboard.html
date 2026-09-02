@@ -10,6 +10,31 @@
     </div>
   </section>
 
+  {% if users_without_group %}
+  <section class="records-card pending-group-card" aria-labelledby="pending-group-title">
+    <div class="records-card__header">
+      <h2 id="pending-group-title" class="card-title">
+        Utenti senza gruppo ({{ users_without_group|length }})
+      </h2>
+    </div>
+    <p class="pending-group-card__hint">
+      Utenti creati via Microsoft (o dall'admin) ma ancora senza gruppo: non possono
+      registrare ore finché non ne assegnate uno.
+    </p>
+    <ul class="dashboard-inactive">
+      {% for u in users_without_group %}
+      <li>
+        <span class="dashboard-inactive__name">{{ u.full_name }}</span>
+        <span class="dashboard-inactive__days">{{ u.username }} &middot; {{ u.role }}</span>
+      </li>
+      {% endfor %}
+    </ul>
+    <p class="pending-group-card__action">
+      <a href="/admin/users">Vai alla Gestione Utenti per assegnare un gruppo</a>
+    </p>
+  </section>
+  {% endif %}
+
   <section class="dashboard-kpi" aria-label="Indicatori chiave">
     <article class="kpi-card">
       <span class="kpi-card__label">Utenti totali</span>
