@@ -10,7 +10,7 @@ import logging
 from sqlalchemy import inspect, text
 from sqlalchemy.engine import Engine
 
-from app.config import APP_VERSION
+from app.config import ADMIN_USERNAME, APP_VERSION
 from app.db import Base
 
 logger: logging.Logger = logging.getLogger(__name__)
@@ -196,6 +196,51 @@ def _migrate_users_saml(engine: Engine) -> None:
         logger.info("Indice su users.saml_name_id creato")
 
 
+def _migrate_users_superuser(engine: Engine) -> None:
+    """Aggiunge la colonna `is_superuser` a `users` con backfill dell'admin.
+
+    Idempotente: se la colonna esiste già, non fa nulla (ADD COLUMN). Il
+    backfill imposta `is_superuser=True` sull'account di sistema (SUPERUSER-ADMIN):
+    prima l'utente con `username == ADMIN_USERNAME`, altrimenti il primo admin
+    con id minimo. Si esegue SOLO al momento dell'aggiunta della colonna.
+    """
+    inspector = inspect(engine)
+    if "users" not in inspector.get_table_names():
+        return
+
+    columns = {col["name"] for col in inspector.get_columns("users")}
+    if "is_superuser" in columns:
+        logger.debug("Colonna users.is_superuser già presente, migrazione non necessaria")
+        return
+
+    logger.info("Migrazione: aggiunta colonna users.is_superuser")
+    with engine.begin() as connection:
+        connection.execute(
+            text("ALTER TABLE users ADD COLUMN is_superuser BOOLEAN NOT NULL DEFAULT 0")
+        )
+    logger.info("Colonna users.is_superuser aggiunta")
+
+    # Backfill: individua l'account di sistema e lo marca come superuser.
+    with engine.begin() as connection:
+        row = connection.execute(
+            text("SELECT id FROM users WHERE username = :admin LIMIT 1"),
+            {"admin": ADMIN_USERNAME},
+        ).fetchone()
+        if row is None:
+            row = connection.execute(
+                text(
+                    "SELECT id FROM users WHERE role = 'admin' AND is_superuser = 0 "
+                    "ORDER BY id ASC LIMIT 1"
+                )
+            ).fetchone()
+        if row is not None:
+            connection.execute(
+                text("UPDATE users SET is_superuser = 1 WHERE id = :uid"),
+                {"uid": row[0]},
+            )
+            logger.info("Backfill superuser: users.id=%s marcato is_superuser", row[0])
+
+
 def _ensure_schema_version_table(engine: Engine) -> None:
     """Crea la tabella `schema_version` se non esiste.
 
@@ -260,5 +305,6 @@ def run_schema_migrations(engine: Engine) -> None:
     _migrate_users_disabled(engine)
     _migrate_users_profile(engine)
     _migrate_users_saml(engine)
+    _migrate_users_superuser(engine)
     _ensure_schema_version_table(engine)
     _update_schema_version(engine)

@@ -52,9 +52,14 @@ async def admin_dashboard(
     m_start, m_end = month_bounds()
 
     # --- KPI base -----------------------------------------------------------
-    total_users = db.execute(select(func.count()).select_from(User)).scalar() or 0
+    total_users = db.execute(
+        select(func.count()).select_from(User).where(User.is_superuser.is_(False))
+    ).scalar() or 0
     active_users = db.execute(
-        select(func.count()).select_from(User).where(User.disabled.is_(False))
+        select(func.count()).select_from(User).where(
+            User.disabled.is_(False),
+            User.is_superuser.is_(False),
+        )
     ).scalar() or 0
     disabled_users = total_users - active_users
     total_records = db.execute(
@@ -80,6 +85,7 @@ async def admin_dashboard(
             select(func.count()).select_from(User).where(
                 User.group_id == g.id,
                 User.disabled.is_(False),
+                User.is_superuser.is_(False),
             )
         ).scalar() or 0
         hours = db.execute(

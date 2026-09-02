@@ -147,6 +147,8 @@ def seed_admin_user(db: Session) -> None:
             email="admin@efftrack.local",
             # Al primo login l'admin deve cambiare la password di bootstrap.
             password_change_required=True,
+            # Account di sistema (superuser): solo locale, fuori dagli standard.
+            is_superuser=True,
         )
     )
     db.commit()

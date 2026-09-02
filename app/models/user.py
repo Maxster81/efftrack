@@ -50,6 +50,13 @@ class User(Base):
     password_change_required: Mapped[bool] = mapped_column(
         Boolean, default=False, nullable=False,
     )
+    # Account di sistema (superuser): l'utente ADMIN di bootstrap. Distinto dal
+    # ruolo "admin" (ruolo normale, assegnabile anche a utenti SAML). Il
+    # superuser è solo locale (mai SAML), mai disabilitabile/declassabile/
+    # eliminabile e nascosto da /admin/users e dalle statistiche (SUPERUSER-ADMIN).
+    is_superuser: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False,
+    )
 
     # Relazione verso il gruppo (per leggere il nome nel template).
     group: Mapped["Group | None"] = relationship()  # noqa: F821

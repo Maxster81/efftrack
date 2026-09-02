@@ -68,7 +68,9 @@ async def admin_users(
     `ok`/`err` alimentano il banner nella card "Utenti" (operazioni sulla lista);
     `form_ok`/`form_err` alimentano il banner nella card "Nuovo utente" (creazione).
     """
-    users = db.execute(select(User).order_by(User.username)).scalars().all()
+    users = db.execute(
+        select(User).where(User.is_superuser.is_(False)).order_by(User.username)
+    ).scalars().all()
     groups = db.execute(select(Group).order_by(Group.name)).scalars().all()
     rows = [
         {
@@ -116,10 +118,16 @@ async def admin_users_edit(
     target = db.get(User, user_id)
     if target is None:
         return RedirectResponse("/admin/users?err=Utente inesistente", status_code=303)
+    if target.is_superuser:
+        logger.warning("Tentativo di aprire la modifica del superuser (%s)", target.username)
+        return RedirectResponse("/admin/users?err=Account di sistema: gestione non disponibile", status_code=303)
 
     groups = db.execute(select(Group).order_by(Group.name)).scalars().all()
     admin_count = db.execute(
-        select(func.count()).select_from(User).where(User.role == "admin")
+        select(func.count()).select_from(User).where(
+            User.role == "admin",
+            User.is_superuser.is_(False),
+        )
     ).scalar() or 0
     record_count = user_stats(db, target.id)
 
@@ -173,6 +181,12 @@ async def admin_users_disable(
     target = db.get(User, user_id)
     if target is None:
         return RedirectResponse("/admin/users?err=Utente inesistente", status_code=303)
+    if target.is_superuser:
+        logger.warning("Disabilitazione del superuser bloccata (%s)", target.username)
+        return RedirectResponse(
+            f"/admin/users/{user_id}/edit?err=Account di sistema: non disabilitabile",
+            status_code=303,
+        )
 
     target.disabled = not target.disabled
     # Traccia il momento della disabilitazione (azzerato in riabilitazione).
@@ -278,6 +292,12 @@ async def admin_users_profile(
     target = db.get(User, user_id)
     if target is None:
         return RedirectResponse("/admin/users?err=Utente inesistente", status_code=303)
+    if target.is_superuser:
+        logger.warning("Modifica anagrafica del superuser bloccata (%s)", target.username)
+        return RedirectResponse(
+            f"/admin/users/{user_id}/edit?err=Account di sistema: dati non modificabili",
+            status_code=303,
+        )
 
     # Eventuale email distinta dall'username (se non fornita, usa l'username).
     stripped_email = (email or "").strip()
@@ -319,6 +339,12 @@ async def admin_users_group(
     target = db.get(User, user_id)
     if target is None:
         return RedirectResponse("/admin/users?err=Utente inesistente", status_code=303)
+    if target.is_superuser:
+        logger.warning("Assegnazione gruppo al superuser bloccata (%s)", target.username)
+        return RedirectResponse(
+            f"/admin/users/{user_id}/edit?err=Account di sistema: gruppo non assegnabile",
+            status_code=303,
+        )
     if group_id is not None:
         group = db.get(Group, group_id)
         if group is None:
@@ -356,6 +382,12 @@ async def admin_users_password(
     target = db.get(User, user_id)
     if target is None:
         return RedirectResponse("/admin/users?err=Utente inesistente", status_code=303)
+    if target.is_superuser:
+        logger.warning("Cambio password del superuser bloccato (%s)", target.username)
+        return RedirectResponse(
+            f"/admin/users/{user_id}/edit?err=Account di sistema: password via /profile",
+            status_code=303,
+        )
     target.password_hash = hash_password(payload.password)
     db.commit()
     logger.info("Password cambiata per %s da admin", target.username)
@@ -394,6 +426,12 @@ async def admin_users_role(
     target = db.get(User, user_id)
     if target is None:
         return RedirectResponse("/admin/users?err=Utente inesistente", status_code=303)
+    if target.is_superuser:
+        logger.warning("Cambio ruolo del superuser bloccato (%s)", target.username)
+        return RedirectResponse(
+            f"/admin/users/{user_id}/edit?err=Account di sistema: ruolo non modificabile",
+            status_code=303,
+        )
     target.role = payload.role
     db.commit()
     logger.info("Ruolo di %s cambiato in %s", target.username, payload.role)
@@ -423,10 +461,19 @@ async def admin_users_delete(
     target = db.get(User, user_id)
     if target is None:
         return RedirectResponse("/admin/users?err=Utente inesistente", status_code=303)
+    if target.is_superuser:
+        logger.warning("Eliminazione del superuser bloccata (%s)", target.username)
+        return RedirectResponse(
+            f"/admin/users/{user_id}/edit?err=Account di sistema: non eliminabile",
+            status_code=303,
+        )
 
     if target.role == "admin":
         admin_count = db.execute(
-            select(func.count()).select_from(User).where(User.role == "admin")
+            select(func.count()).select_from(User).where(
+                User.role == "admin",
+                User.is_superuser.is_(False),
+            )
         ).scalar() or 0
         if admin_count <= 1:
             logger.warning("Tentativo di eliminare l'ultimo admin (%s)", target.username)

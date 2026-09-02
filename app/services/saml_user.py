@@ -55,6 +55,10 @@ def setup_user_from_saml(
         )
     ).scalar_one_or_none()
     if user is not None:
+        # Il superuser non può mai avere controparte SAML (SUPERUSER-ADMIN).
+        if user.is_superuser:
+            logger.warning("SAML: accesso al superuser rifiutato (username=%s)", user.username)
+            return None
         _ensure_saml_ok(db, user, attributes, associato=True)
         return user
 
@@ -72,6 +76,10 @@ def setup_user_from_saml(
             select(User).where(User.username == name_id)
         ).scalar_one_or_none()
     if user is not None:
+        # Il superuser è solo locale: mai associarlo a un'identità SAML (SUPERUSER-ADMIN).
+        if user.is_superuser:
+            logger.warning("SAML: associazione al superuser rifiutata (username=%s)", user.username)
+            return None
         user.saml_entity_id = SAML_IDP_ENTITY_ID
         user.saml_name_id = name_id
         db.commit()  # l'associazione va sempre persistita, anche se _ensure_saml_ok non ha altre modifiche

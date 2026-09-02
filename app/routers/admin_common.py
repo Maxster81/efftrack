@@ -14,7 +14,6 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.config import (
-    ADMIN_USERNAME,
     APP_NAME,
     APP_VERSION,
     AUTH_ENABLED,
@@ -77,7 +76,9 @@ def inactive_users(db: Session, days: int = 7) -> list[tuple[str, int | None]]:
     inattivi con giorni = None.
     """
     cutoff = date.today() - timedelta(days=days)
-    users = db.execute(select(User)).scalars().all()
+    users = db.execute(
+        select(User).where(User.is_superuser.is_(False))
+    ).scalars().all()
     last_date_expr = (
         select(func.max(EffortEntry.work_date))
         .where(EffortEntry.user_id == User.id)
@@ -105,10 +106,8 @@ def users_without_group(db: Session) -> list[User]:
     """Utenti non disabilitati senza gruppo assegnato (es. creati via SAML/Microsoft).
 
     Gli utenti in questo stato NON possono registrare effort: `web.py` (save_entry)
-    blocca il salvataggio se `group_id is None`. L'admin di bootstrap è escluso:
-    è un account di sistema che legittimamente opera senza gruppo.
-    Nota: quando sarà introdotto `users.is_superuser` (TODO SUPERUSER-ADMIN),
-    il filtro andrà aggiornato a `User.is_superuser.is_(False)`.
+    blocca il salvataggio se `group_id is None`. Il superuser (account di sistema)
+    è escluso: legittimamente opera senza gruppo ed è nascosto (SUPERUSER-ADMIN).
     Restituisce la lista ordinata per username.
     """
     return (
@@ -117,7 +116,7 @@ def users_without_group(db: Session) -> list[User]:
             .where(
                 User.group_id.is_(None),
                 User.disabled.is_(False),
-                User.username != ADMIN_USERNAME,
+                User.is_superuser.is_(False),
             )
             .order_by(User.username)
         )
